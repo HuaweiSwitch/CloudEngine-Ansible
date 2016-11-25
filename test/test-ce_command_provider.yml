@@ -1,0 +1,16 @@
+---
+- name: cloudengine command test
+  hosts: ce78
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - ce_command:
+      commands: 'display device'
+      provider: "{{ cli }}"
+      transport: cli

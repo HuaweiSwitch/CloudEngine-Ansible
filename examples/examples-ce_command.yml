@@ -1,0 +1,16 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+    username: rootDC
+    password: Admin@123
+  
+  tasks:
+  - ce_command: commands='display device' host={{inventory_hostname}} username={{username}} password={{password}}
+
+  - ce_command: commands='display device, display version' host={{inventory_hostname}} username={{username}} password={{password}}
+
+  - ce_command: commands='display interface' host={{inventory_hostname}} username={{username}} password={{password}}
+
+  - ce_command: commands='display device, display version, display interface' host={{inventory_hostname}} username={{username}} password={{password}}

@@ -1,0 +1,104 @@
+---
+
+- name: cloudengine mtu module test
+  hosts: ce78
+  vars:
+    test_intf: 40GE1/0/22
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "Config mtu on interface (routed interface)"
+    ce_mtu: interface={{test_intf}} state=present mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "Config mtu on interface (routed interface)"
+    ce_mtu: interface={{test_intf}} state=present mtu=9216 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+ 
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true 
+  
+  - name: "Unconfigure mtu on a given interface"
+    ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+  
+  - name: "interface invalid"
+    ce_mtu: interface=tunnel0 state=present mtu=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+       
+  - name: "mtu invalid"
+    ce_mtu: interface={{test_intf}} state=present mtu=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "mtu invalid"
+    ce_mtu: interface={{test_intf}} state=present mtu=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mtu invalid"
+    ce_mtu: interface={{test_intf}} state=present mtu=45 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mtu invalid"
+    ce_mtu: interface={{test_intf}} state=present mtu=9601 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mtu 9600"
+    ce_mtu: interface={{test_intf}} state=present mtu=9600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+   
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "mtu 46"
+    ce_mtu: interface={{test_intf}} state=present mtu=46 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+   
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true 
+
+        

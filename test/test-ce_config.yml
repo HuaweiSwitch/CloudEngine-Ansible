@@ -1,0 +1,71 @@
+---
+
+- name: cloudengine config module test
+  hosts: Boardleaf1
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  
+  - name: "configure top level configuration and save it"
+    ce_config: lines='sysname boardleaf1' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+  
+  - name: "configure acl configuration"
+    ce_config: before='undo acl 2000' parents='acl 2000' lines='rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32,rule 50 permit source 5.5.5.5 32' match=exact host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "repeat configure acl configuration "
+    ce_config: parents='acl 2000' lines='rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32' replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+ 
+  - name: "Error command"
+    ce_config: parents='sys' lines='sysname boardleaf' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure bgp "
+    ce_config: parents='bgp 50' lines='peer 1.2.3.4 as-nu 100' after='q' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo configure bgp "
+    ce_config: parents='bgp 50' lines='undo peer 1.2.3.4 as-nu 100' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Multiple configure"
+    ce_config: before='bgp 50,quit' lines='interface 10 2/0/1,p t a v 120' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false
+
+

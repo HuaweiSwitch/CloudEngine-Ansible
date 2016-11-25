@@ -1,0 +1,152 @@
+---
+
+- name: cloudengine vlan module test
+  hosts: Boardleaf1
+  vars:
+    
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  
+  - name: "Ensure a range of VLANs are not present on the switch"
+    ce_vlan: vlan_range="20-21" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "Ensure VLAN 50 exists with the name WEB"
+    ce_vlan: vlan_id="50" name="WEB" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "Ensure VLAN is NOT on the device"
+    ce_vlan: vlan_range="20,21,50" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "Ensure vlan boundary value"
+    ce_vlan: vlan_range="4060,4063" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Ensure failure vlan"
+    ce_vlan: vlan_id="a" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Ensure failure vlan"
+    ce_vlan: vlan_id="2.1" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.failed == true
+ 
+  - name: "Ensure failure vlan range"
+    ce_vlan: vlan_range="4000-4500" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Ensure failure vlan range"
+    ce_vlan: vlan_range="3900-4000.1" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Delete vlan range"
+    ce_vlan: vlan_range="3900-4000" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Delete vlan"
+    ce_vlan: vlan_id="111" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+  
+  - name: "Merge vlan name"
+    ce_vlan: vlan_id="111" name="vlan111" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Merge vlan name"
+    ce_vlan: vlan_id="111" name="vlanaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Merge vlan description"
+    ce_vlan: vlan_id="111" description="vlan111" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Merge vlan description"
+    ce_vlan: vlan_id="111" description="vlanbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} 
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Performance of vlan range"
+    ce_vlan: vlan_range="2-4094" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true

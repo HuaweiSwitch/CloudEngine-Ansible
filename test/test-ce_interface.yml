@@ -1,0 +1,114 @@
+---
+
+- name: cloudengine interface module test
+  hosts: ce78
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "Ensure an interface is a Layer 3 port and that it has the proper description"
+    ce_interface: interface="40GE1/0/22"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Admin down an interface"
+    ce_interface: interface="40GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Admin down an interface"
+    ce_interface: admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Admin down an interface"
+    ce_interface: interface="00GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Admin down an interface"
+    ce_interface: interface="4000GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Admin down an interface"
+    ce_interface: interface="40GE1/0/200"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Admin down an interface"
+    ce_interface: interface="40GE1/0/20" interface_type=tunnel admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Create tunnel 100 interface"
+    ce_interface: interface=tunnel100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Create tunnel 200 interface"
+    ce_interface: interface=tunnel200 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Remove all tunnel interface"
+    ce_interface: interface_type=tunnel state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Remove all tunnel interface"
+    ce_interface: interface_type=tunnellt state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Admin up all 40GE interfaces"
+    ce_interface: interface_type=40ge admin_state=up host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

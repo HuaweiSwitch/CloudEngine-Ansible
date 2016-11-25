@@ -1,0 +1,387 @@
+---
+
+- name: cloudengine ip interface module test
+  hosts: ce78
+  vars:
+    test_intf: 40GE1/0/24
+    test_vlan: 100
+    test_vlanif: vlanif100
+    test_tunnel: tunnel100
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "Ensure layer3 interface"
+    ce_interface: interface={{test_intf}} mode=layer3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+   
+  - name: "set ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "merge ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=30.30.30.30 mask=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "delete ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=30.30.30.30 mask=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "set ipv6 disable"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "set ipv6 enable"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "add ipv6 addr 1"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=present addr=2001::db8:800:200c:cccb mask=64 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "add ipv6 addr 2"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=present addr=1::1 mask=32 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "del ipv6 addr 2"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=absent addr=1::1 mask=32 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "set ipv6 disable"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "interface name check"
+    ce_ip_interface: interface=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+        
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "Ensure layer2 interface"
+    ce_interface: interface={{test_intf}} mode=layer2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "interface layer3 check"
+    ce_ip_interface: interface={{test_intf}} addr="30.30.30.30" mask=24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "Ensure layer3 interface"
+    ce_interface: interface={{test_intf}} mode=layer3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "ipv4 address check 1"
+    ce_ip_interface: interface={{test_intf}} addr='abc.add.ddd.ss' mask=24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+    
+  - name: "ipv4 address check 2"
+    ce_ip_interface: interface={{test_intf}} addr='192.168.1.256' mask=24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv4 address check 3"
+    ce_ip_interface: interface={{test_intf}} addr='no address' mask=24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv4 address mask check 1"
+    ce_ip_interface: interface={{test_intf}} addr='20.20.20.20' mask=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv4 address mask check 3"
+    ce_ip_interface: interface={{test_intf}} addr='20.20.20.20' mask=33 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv4 address mask check 4"
+    ce_ip_interface: interface={{test_intf}} addr='20.20.20.20' mask=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv4 address mask check 5"
+    ce_ip_interface: interface={{test_intf}} addr='20.20.20.20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv6 address addr check 1"
+    ce_ip_interface: interface={{test_intf}} addr='20.20.20.20' mask=64 version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv6 address addr check 1"
+    ce_ip_interface: interface={{test_intf}} addr='123456' mask=64 version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv6 address addr check 2"
+    ce_ip_interface: interface={{test_intf}} addr=':::1' mask=64 version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "ipv6 address mask chek 1"
+    ce_ip_interface: interface={{test_intf}} addr='1::1' mask=0 version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "ipv6 address mask chek 2"
+    ce_ip_interface: interface={{test_intf}} addr='1::1' mask=abc version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "ipv6 address mask chek 3"
+    ce_ip_interface: interface={{test_intf}} addr='1::1' mask=129 version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "ipv6 address mask chek 4"
+    ce_ip_interface: interface={{test_intf}} addr='1::1' version=v6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "set ipv6 disable, clear config"
+    ce_ip_interface: interface={{test_intf}} version=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "reset interface default"
+    ce_interface: interface={{test_intf}} state=default host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "create interface tunnel "
+    ce_interface: interface={{test_tunnel}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "set tunnel ipv4"
+    ce_ip_interface: interface={{test_tunnel}} addr='20.20.20.20' mask=24 version=v4 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "unset tunnel ipv4"
+    ce_ip_interface: interface={{test_tunnel}} addr='20.20.20.20' mask=24 version=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true  
+        
+  - name: "delete interface tunnel "
+    ce_interface: interface={{test_tunnel}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true  
+        
+  - name: "create vlan "
+    ce_vlan: vlan_id={{test_vlan}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "create vlanif"
+    ce_interface: interface={{test_vlanif}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "set vlanif ipv4"
+    ce_ip_interface: interface={{test_vlanif}} addr='20.20.20.20' mask=24 version=v4 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true 
+    
+  - name: "unset vlanif ipv4"
+    ce_ip_interface: interface={{test_vlanif}} addr='20.20.20.20' mask=24 version=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "delete vlanif"
+    ce_interface: interface={{test_vlanif}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "delete vlan "
+    ce_vlan: vlan_id={{test_vlan}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+
+    

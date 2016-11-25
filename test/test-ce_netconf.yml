@@ -1,0 +1,63 @@
+---
+
+- name: cloudengine command test
+  hosts: ce78
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "get operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=get cfg_xml="<filter type=\"subtree\"><vlan xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><vlans><vlan><vlanId>10</vlanId><vlanif><ifName></ifName><cfgBand></cfgBand><dampTime></dampTime></vlanif></vlan></vlans></vlan></filter>"
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "get operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=get_ cfg_xml="<filter type=\"subtree\"><vlan xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><vlans><vlan><vlanId>10</vlanId><vlanif><ifName></ifName><cfgBand></cfgBand><dampTime></dampTime></vlanif></vlan></vlans></vlan></filter>"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data | failed
+
+  - name: "edit-config operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=edit-config cfg_xml="<config><aaa xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><authenticationSchemes><authenticationScheme  operation=\"create\"><authenSchemeName>default_wdz</authenSchemeName><firstAuthenMode>local</firstAuthenMode><secondAuthenMode>invalid</secondAuthenMode></authenticationScheme></authenticationSchemes></aaa></config>"
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "edit-config operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=edit-config cfg_xml="<config><aaa xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><authenticationSchemes><authenticationScheme operation=\"delete\"><authenSchemeName>default_wdz</authenSchemeName><firstAuthenMode>local</firstAuthenMode><secondAuthenMode>invalid</secondAuthenMode></authenticationScheme></authenticationSchemes></aaa></config>"
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "execute-action operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=execute-action cfg_xml="<action><l2mc xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><l2McResetAllVlanStatis><addrFamily>ipv4unicast</addrFamily></l2McResetAllVlanStatis></l2mc></action>"
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "execute-cli operation"
+    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=execute-cli cfg_xml="<cmd><id>1</id><cmdline>display current-configuration</cmdline></cmd>"
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false

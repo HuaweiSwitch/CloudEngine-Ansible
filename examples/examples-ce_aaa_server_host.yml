@@ -1,0 +1,48 @@
+---
+
+- name: cloudengine config module test
+  hosts: ce78
+  gather_facts: no
+
+
+  tasks:
+  
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wdz local_password=wdz
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wdz local_password=wdz
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000	
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_

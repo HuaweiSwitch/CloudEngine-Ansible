@@ -1,0 +1,57 @@
+---
+
+- name: cloudengine command test
+  hosts: Boardleaf
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "display device"
+    ce_command: commands='display device' host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "FAIL DUE TO NOT EXISTENT CONFIGURATION"
+    ce_command: commands='display 123' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "ENSURE FAIL WITH COMMANDS AN THE SAME TIME"
+    ce_command: commands='sys,interface loop 11,ip add 11.11.11.11 255.255.255.255,com,dis int loop 11' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    register: data
+    ignore_errors: true
+  
+  - name: "TEST 3"
+    assert:
+      that:
+        - data | failed
+
+  - name: "ENSURE 'DISPLAY' FAILS WITHOUT COMMANDS AT THE SAME TIME"
+    ce_command: host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    register: date
+    ignore_errors: true
+ 
+  - name: "TEST 4"
+    assert:
+      that:
+        - data | failed
+
+  - name: "ENSURE SUPPORTED COMMAND FORMAT"
+    ce_command: commands='di trapbu size 10,dis al ac | incl Major' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    register: data
+
+  - name: "TEST5"
+    assert:
+      that:
+        - data.changed == false
+

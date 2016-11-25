@@ -1,0 +1,14 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+  
+  tasks:  
+  - ce_interface: interface="40GE1/0/22"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_interface: interface="40GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_interface: interface_type=tunnel state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_interface: interface_type=40ge admin_state=up host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

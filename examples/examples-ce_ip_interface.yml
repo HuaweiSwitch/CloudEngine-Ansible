@@ -1,0 +1,25 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+    username: rootDC
+    password: Admin@123
+    test_intf: 40GE1/0/24
+  
+  tasks:  
+  - ce_interface: interface={{test_intf}} mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_ip_interface: interface={{test_intf}} version=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_ip_interface: interface={{test_intf}} version=v6 state=present addr=2001::db8:800:200c:cccb mask=64 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_ip_interface: interface={{test_intf}} version=v6 state=absent addr=2001::db8:800:200c:cccb mask=64 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_ip_interface: interface={{test_intf}} version=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_interface: interface={{test_intf}} state=default host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

@@ -1,0 +1,303 @@
+---
+
+- name: cloudengine config module test
+  hosts: ce78
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure accounting scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo accounting scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "configure authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wdz1 first_authen_mode=local
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authentication scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wdz1 first_authen_mode=local
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=local
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authentication scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=local
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "configure authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wdz2 first_author_mode=local
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authorization scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wdz2 first_author_mode=local
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wdz2 first_author_mode=local
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authorization scheme again"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wdz2 first_author_mode=local
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+
+# boundary and invalid value test
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=//\\:**** accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure accounting scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=""???|||<><> accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=w first_authen_mode=local
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=w first_authen_mode=local
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwddddddddwwwwwwww first_authen_mode=local
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure authentication scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=//\\:****""???|||<><> first_authen_mode=local
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=w first_author_mode=local
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=w first_author_mode=local
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wwwwwwwwwwwwwwwwwddddddddwwwwwwwwwwwwwww first_author_mode=local
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure authorization scheme"
+    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=//\\:****""???|||<><> first_author_mode=local
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data | failed
+
+
+
+
+

@@ -1,0 +1,16 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+    username: rootDC
+    password: Admin@123
+  connection: local
+  gather_facts: no
+ 
+  tasks:
+  - ce_facts: host=10.135.182.157 port=12347 username={{username}} password={{password}} gather_subset=all
+
+  - ce_facts: host=10.135.182.157 port=12347 username={{username}} password={{password}} gather_subset=config
+
+  - ce_facts: host=10.135.182.157 port=12347 username={{username}} password={{password}} gather_subset=!config

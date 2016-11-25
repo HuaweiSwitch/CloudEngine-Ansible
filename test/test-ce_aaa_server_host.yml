@@ -1,0 +1,516 @@
+---
+
+- name: cloudengine config module test
+  hosts: ce78
+  gather_facts: no
+
+
+  tasks:
+ 
+# normal argument test
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure local user again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wdz local_password=wdz
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo local user again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wdz local_password=wdz
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure radius server by ip again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo radius server by ip again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false		
+
+  - name: "configure radius server by name"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_ radius_server_name=wdz
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true		
+
+  - name: "configure radius server by name again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_ radius_server_name=wdz
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo radius server by name"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_ radius_server_name=wdz
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true		
+
+  - name: "undo radius server by name again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_ radius_server_name=wdz
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by ip again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo hwtacacs server by ip again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "configure hwtacacs server by name"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_ hwtacacs_server_host_name=wdz
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by name again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_ hwtacacs_server_host_name=wdz
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo hwtacacs server by name"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_ hwtacacs_server_host_name=wdz
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo hwtacacs server by name again"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wdz hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_ hwtacacs_server_host_name=wdz
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+
+# boundary and invalid value test
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=w local_password=w
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=w local_password=w
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww local_password=wdz
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww local_password=w
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwRRRRRRRRRRRRRRRRRRRRRRR local_password=wdz
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=w raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=w raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wwwwwwwwwwwwwwwwwwwwwwddddddddddwwwwwwwwww raduis_server_type=Authentication radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authenti radius_server_ip=10.135.182.157 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182 radius_server_port=2000 radius_server_mode=Primary-server radius_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure radius server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_ip=10.135.182 radius_server_port=2000 radius_server_mode=PrimaryServer radius_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=w hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=w hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent hwtacacs_template=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wwwwwwwwwwdddddddddwwwwwwwwwwwwwwwwwwwwww hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.18 hwtacacs_server_type=Authorization hwtacacs_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=wdz hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authori hwtacacs_vpn_name=_public_
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data | failed
+
+  - name: "configure hwtacacs server by ip"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present hwtacacs_template=w hwtacacs_server_ip=10.135.182.157 hwtacacs_server_type=Authorization
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 41"
+    assert:
+      that:
+        - data | failed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,378 @@
+---
+
+- name: cloudengine switchport module test
+  hosts: ce78
+  vars:
+    test_intf: 40GE1/0/23
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "Ensure a range of VLANs are not present on the switch"
+    ce_vlan: vlan_range="2-100" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+    ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+  
+  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+    ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+  
+  - name: "ENSURE 40GE1/0/22 is configured for access vlan 20"
+    ce_switchport: interface={{test_intf}} mode=access access_vlan=20 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "ENSURE 40GE1/0/22 only has vlans 5-10 as trunk vlans"
+    ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=5-10 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "Ensure 40GE1/0/22 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)"
+    ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=2-50 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "Ensure these VLANs are not being tagged on the trunk"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans=51-4000 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "interface is invalid"
+    ce_switchport: interface=Tunnel mode=trunk trunk_vlans=51-4000 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "interface is invalid"
+    ce_switchport: interface=Tunnel mode=trunk trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "interface is invalid"
+    ce_switchport: interface=abc40GE1/0/22 mode=trunk trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+ 
+  - name: "interface is invalid"
+    ce_switchport: interface=40GE1/20/22 mode=trunk trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+ 
+  - name: "mode is invalid"
+    ce_switchport: interface={{test_intf}} mode=trunkab trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mode is invalid"
+    ce_switchport: interface={{test_intf}} mode=hybrid trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "trunk_vlans invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "trunk_vlans invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans=21-10 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "trunk_vlans invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="10 to 20" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "trunk_vlans invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="20,30,4095" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "trunk_vlans invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="20,30,4097" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "native_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="20,30" native_vlan=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "native_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="20,30" native_vlan=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "native_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans="20,30" native_vlan=4095 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "access_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=access access_vlan=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "access_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=access access_vlan=addsfa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "access_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=access access_vlan=4095 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "access_vlan invalid"
+    ce_switchport: interface={{test_intf}} mode=access access_vlan=4096 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mode not set"
+    ce_switchport: interface={{test_intf}} access_vlan=4096 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "mode not set"
+    ce_switchport: interface={{test_intf}} access_vlan=4096 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "set interface default"
+    ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "set interface access and access_vlan 1"
+    ce_switchport: interface={{test_intf}} state=unconfigured mode=access access_vlan=1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false 
+        
+  - name: "set interface access and access_vlan 2"
+    ce_switchport: interface={{test_intf}} state=present mode=access access_vlan=2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "unset interface access and access_vlan 2"
+    ce_switchport: interface={{test_intf}} state=absent mode=access access_vlan=2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "set interface access to trunk"
+    ce_switchport: interface={{test_intf}} state=present mode=trunk host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "set interface trunk and native_vlan 2"
+    ce_switchport: interface={{test_intf}} state=present mode=trunk native_vlan=2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "set interface trunk and native_vlan 2, trunk_vlans 2-5"
+    ce_switchport: interface={{test_intf}} state=present mode=trunk native_vlan=2 trunk_vlans=2-5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "unset interface trunk native_vlan 2"
+    ce_switchport: interface={{test_intf}} state=absent mode=trunk native_vlan=2  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "unset interface trunk trunk_vlans 6-10, but its not exist"
+    ce_switchport: interface={{test_intf}} state=absent mode=trunk trunk_vlans=6-10  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false 
+        
+  - name: "unset interface trunk trunk_vlans 4-5"
+    ce_switchport: interface={{test_intf}} state=absent mode=trunk trunk_vlans=4-5  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+        
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+    ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+        
