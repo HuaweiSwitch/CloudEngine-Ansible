@@ -1,0 +1,13 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+    username: rootDC
+    password: Admin@123
+    process: 10
+  
+  tasks:  
+  - ce_ospf: process_id={{process}} area=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_ospf: process_id={{process}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

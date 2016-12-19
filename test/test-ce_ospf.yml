@@ -1,0 +1,743 @@
+---
+
+- name: cloudengine ospf module test
+  hosts: ce78
+  vars:
+    process: 100
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "Ensure ospf process does not exist"
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "Ensure ospf process exist"
+    ce_ospf: process_id={{process}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "create area 100"
+    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "create area 100 again"
+    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "create area 1.2.3.4"
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "delete area 1.2.3.4"
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "delete area 1.2.3.4 again"
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "area 100, add network 99.99.1.0 mask=24"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, add network 99.99.2.0 mask=24"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, add network 99.99.2.0 mask=24, again"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "area 100, del network 99.99.2.0 mask=24"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, del network 99.99.1.0 mask=24"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=none"
+    ce_ospf: process_id={{process}} area=100 auth_mode=none state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=simple"
+    ce_ospf: process_id={{process}} area=100 auth_mode=simple state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=simple, auth_text_simple=abc"
+    ce_ospf: process_id={{process}} area=100 auth_mode=simple auth_text_simple=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=md5"
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=hmac-sha256"
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-sha256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=hmac-md5"
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "area 100, auth_mode=hmac-md5 with key "
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 auth_key_id=22 auth_text_md5=aaaa state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set max_load_balance=22 "
+    ce_ospf: process_id={{process}} area=100 max_load_balance=22 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set max_load_balance=2 "
+    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set max_load_balance=2 again"
+    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "add nexthop weight 1"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "add nexthop weight 2"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "add nexthop weight 3"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "add nexthop weight 3 again"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "del nexthop weight 3"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "del nexthop weight 1"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "delete process"
+    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "delete process again"
+    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+        
+        
+  - name: "procee_id check 1"
+    ce_ospf: process_id=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "procee_id check 2"
+    ce_ospf: process_id="   " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "procee_id check 3"
+    ce_ospf: process_id=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "procee_id check 4"
+    ce_ospf: process_id=4294967296 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "procee_id check 5"
+    ce_ospf: process_id=4294967295 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "procee_id check 6"
+    ce_ospf: process_id=4294967295 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true 
+        
+  - name: "area id check 1"
+    ce_ospf: process_id={{process}} area=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area id check 2"
+    ce_ospf: process_id={{process}} area="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area id check 3"
+    ce_ospf: process_id={{process}} area=4294967296 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area id check 4"
+    ce_ospf: process_id={{process}} area=255.255.255.256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area id check 5"
+    ce_ospf: process_id={{process}} area=256.255.255.255 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 1"
+    ce_ospf: process_id={{process}} area=100 addr=abc mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 41"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 2"
+    ce_ospf: process_id={{process}} area=100 addr="  " mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 42"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 3"
+    ce_ospf: process_id={{process}} area=100 addr=1000 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 43"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 4"
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 44"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 5"
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 45"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network addr check 6"
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 46"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network mask check 1"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0  state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 47"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network mask check 2"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 48"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network mask check 3"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 49"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area network mask check 4"
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=33 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 50"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area auth, key_id and text_md5 set at same time check"
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 51"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area auth, key_id check 1"
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=0 auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 52"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area auth, key_id check 2"
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=256 auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 53"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area auth, key_id check 3"
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=abc auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 54"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "max_load_balance check 1"
+    ce_ospf: process_id={{process}} max_load_balance=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 55"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "max_load_balance check 2"
+    ce_ospf: process_id={{process}} max_load_balance=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 56"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "max_load_balance check 3"
+    ce_ospf: process_id={{process}} max_load_balance=255 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 57"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "max_load_balance check 4"
+    ce_ospf: process_id={{process}} max_load_balance="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 58"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_addr check 1"
+    ce_ospf: process_id={{process}} nexthop_addr=abc weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 59"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_addr check 2"
+    ce_ospf: process_id={{process}} nexthop_addr=256.0.0.1 weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 60"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_addr check 3"
+    ce_ospf: process_id={{process}} nexthop_addr=12345 weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 61"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_addr check 4"
+    ce_ospf: process_id={{process}} nexthop_addr="  " weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 62"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 1"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 63"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 2"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 64"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 3"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 65"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 4"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 66"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 5"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 67"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "nexthop_weight check 6"
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=254 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 68"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "ensure procss delete"
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 69"
+    assert:
+      that:
+        - data.changed == true
+        

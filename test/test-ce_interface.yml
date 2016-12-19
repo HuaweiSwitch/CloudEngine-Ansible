@@ -2,6 +2,7 @@
 
 - name: cloudengine interface module test
   hosts: ce78
+  connection: local
   gather_facts: no
 
 

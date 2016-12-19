@@ -1,0 +1,368 @@
+---
+
+- name: cloudengine interface ospf module test
+  hosts: ce78
+  vars:
+    process: 101
+    area_id: 101
+    test_intf: 40GE2/0/30
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "interface ospf disable"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "Ensure ospf process does not exist"
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "interface ospf disable"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "interface ospf enable"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable again"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+  
+  - name: "interface ospf enable, with cost"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} cost=100 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with hello_interval"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} hello_interval=15 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with dead_interval"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} dead_interval=20 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with silent_interface"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} silent_interface=true state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "interface ospf enable, with auth_mode null"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=null state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode none"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=none state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode md5"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "interface ospf enable, with auth_mode md5, key_id"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=md5 auth_key_id=2 auth_text_md5=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode hmac-sha256"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=hmac-sha256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode hmac-md5"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=hmac-md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode simple"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=simple state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf enable, with auth_mode simple, auth_text_simple"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} auth_mode=simple auth_text_simple=abccc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "interface ospf disable"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "process check 1"
+    ce_interface_ospf: process_id=abc area={{area_id}} interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+  
+  - name: "process check 2"
+    ce_interface_ospf: process_id=0 area={{area_id}} interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+
+  - name: "process check 3"
+    ce_interface_ospf: process_id=4294967296 area={{area_id}} interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area check 1"
+    ce_interface_ospf: process_id={{process}} area=abc interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "area check 2"
+    ce_interface_ospf: process_id={{process}} area=4294967296 interface={{test_intf}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "interface check 1"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "interface check 2"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface=40ge999 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "cost check 1"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} cost=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "cost check 2"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} cost=65536 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "cost check 3"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} cost=abbb state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed   
+        
+  - name: "hello_interval check 1"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} hello_interval=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed   
+        
+  - name: "hello_interval check 2"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} hello_interval=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed   
+        
+  - name: "hello_interval check 3"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} hello_interval=65536 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed   
+        
+  - name: "dead_interval check 1"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} dead_interval=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "dead_interval check 2"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} dead_interval=235926001 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "dead_interval check 3"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} dead_interval=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "interface ospf disable"
+    ce_interface_ospf: process_id={{process}} area={{area_id}} interface={{test_intf}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+        
+  - name: "Ensure ospf process does not exist"
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+
+        
+        

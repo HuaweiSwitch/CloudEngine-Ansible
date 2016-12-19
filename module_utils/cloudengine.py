@@ -47,12 +47,16 @@ def ce_unknown_host_cb(host, fingerprint):
 class CeConfigMixin(object):
     """ CeConfigMixin """
 
-    def get_config(self, include_defaults=False, **kwargs):
+    def get_config(self, include_defaults=False, include_all=False, regular="", **kwargs):
         """ get_config """
 
         cmd = 'display current-configuration '
-        if include_defaults:
+        if include_all:
             cmd += ' all'
+        if include_defaults:
+            cmd += ' include-default'
+        if regular:
+            cmd += ' ' + regular
 
         return self.execute([cmd])[0]
 

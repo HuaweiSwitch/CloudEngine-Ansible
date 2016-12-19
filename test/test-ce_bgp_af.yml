@@ -1,0 +1,393 @@
+---
+
+- name: cloudengine bgp af module test
+  hosts: Boardleaf1
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "enable bgp address family"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable bgp af"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "enable bgp import route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable bgp import route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "enable bgp network route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=1.1.1.1 mask_len=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable bgp network route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=1.1.1.1 mask_len=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the load balance route1 of bgp network "
+    ce_bgp_af: vrf_name=js af_type=ipv4uni max_load_ibgp_num=32 max_load_ebgp_num=32 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the load balance route2 of bgp network "
+    ce_bgp_af: vrf_name=js af_type=ipv4uni maximum_load_balance=32 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set state of load balance route "
+    ce_bgp_af: vrf_name=js af_type=ipv4uni ibgp_ecmp_nexthop_changed=true ebgp_ecmp_nexthop_changed=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the default local preference and the default med and the import route featrue of bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni default_local_pref=1000 default_med=1000 default_rt_import_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the default local preference and the default med and the import route featrue of bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni default_local_pref=2000 default_med=2000 default_rt_import_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set route id of vrf"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni router_id=1.1.1.1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change route id of vrf"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni router_id=2.2.2.2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete route id of vrf"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni router_id=2.2.2.2 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the feautrue of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni vrf_rid_auto_sel=true nexthop_third_party=true summary_automatic=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete the feautrue of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni vrf_rid_auto_sel=false nexthop_third_party=false summary_automatic=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the frr and as_path of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni auto_frr_enable=true load_balancing_as_path_ignore=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete the frr and as_path of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni auto_frr_enable=false load_balancing_as_path_ignore=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the preference of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni preference_external=100 preference_internal=100 preference_local=100  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the preference of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni preference_external=150 preference_internal=160 preference_local=170  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the reflect feature of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni reflect_between_client=true reflector_cluster_id=123 reflector_cluster_ipv4=4.4.4.4   state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the reflect feature of bgp vpn route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni reflect_between_client=true reflector_cluster_id=345 reflector_cluster_ipv4=5.5.5.5   state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the type of next hop dependence"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependTunnel state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the type of next hop dependence"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependIp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the sensitive feature of bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependTunnel state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the type of next hop dependence"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependIp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set ebgp sensitive feature"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni ebgp_if_sensitive=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable ebgp sensitive feature"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni  ebgp_if_sensitive=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set route delay time"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni route_sel_delay=3600 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change route delay time"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni route_sel_delay=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "add path number of bgp"
+    ce_bgp_af: vrf_name=_public_ af_type=ipv4uni add_path_sel_num=64 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change path number of bgp"
+    ce_bgp_af: vrf_name=_public_ af_type=ipv4uni add_path_sel_num=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data | failed
+
+  - name: "add the priority of bgp route"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni lowest_priority=true originator_prior=true relay_delay_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change path number of bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni lowest_priority=false originator_prior=false relay_delay_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "import other route protocol to bgp "
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 originator_prior=true relay_delay_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the import route protocol1 to bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=direct state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the import route protocol2 to bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=static state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the import route protocol3 to bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=isis import_process_id=123 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the import route protocol4 to bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=rip import_process_id=123 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the network address of bgp"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=10.10.10.10 mask_len=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data.changed == true

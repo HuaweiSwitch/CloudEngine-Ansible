@@ -1,0 +1,11 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  
+  tasks:
+  - ce_bgp: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present as_number=100 confed_id_number=250
+
+  - ce_bgp: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present confed_peer_as_num=260
+  
+  - ce_bgp: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent as_number=100 confed_id_number=250

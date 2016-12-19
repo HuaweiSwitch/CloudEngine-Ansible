@@ -1,0 +1,260 @@
+---
+
+- name: cloudengine ntp_auth module test
+  hosts: ce78
+  vars:
+    test_auth_pwd: 11111111111111111111
+    test_invalid_auth_pwd: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"                      
+    test_long_auth_pwd1: 111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111      
+    test_invalid_auth_pwd1: 1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "config ntp authentication key-id"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp authentication key-id with auth_mode hmac-sha256"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=hmac-sha256 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp authentication key-id and ntp authentication enable"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=md5 authentication=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "config ntp authentication key-id with auth_type text"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=md5 auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+   
+  - name: "unconfig ntp authentication key-id"
+    ce_ntp_auth: key_id=2526 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "config ntp authentication key-id"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+  
+  - name: "unconfig ntp authentication key-id and unconfig ntp authentication enable"
+    ce_ntp_auth: key_id=2526 authentication=disable state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+ 
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=-1 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=0 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=1 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=4294967295 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+   
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=4294967296 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "check key_id parameter"
+    ce_ntp_auth: key_id=j@.w auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "check auth_pwd parameter"
+    ce_ntp_auth: key_id=2526 auth_pwd=2 auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+  
+  - name: "check auth_pwd parameter"
+    ce_ntp_auth: key_id=2526 auth_pwd=11111111111111111111 auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+ 
+  - name: "check auth_pwd parameter"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_invalid_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+  
+  - name: "no auth_mode field"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "no auth_pwd field"
+    ce_ntp_auth: key_id=2526  auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "no key_id field"
+    ce_ntp_auth: auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+  
+  - name: "no key_id field"
+    ce_ntp_auth: auth_pwd={{test_auth_pwd}} auth_mode=md5 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+  
+  - name: "check auth_pwd parameter with auth_type text"
+    ce_ntp_auth: key_id=2526 auth_pwd= auth_mode=md5 auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+  
+  - name: "check auth_pwd parameter with auth_type text"
+    ce_ntp_auth: key_id=2526 auth_pwd=1 auth_mode=md5 auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "check auth_pwd parameter with auth_type text"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_long_auth_pwd1}} auth_mode=md5 auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "check auth_pwd parameter with auth_type text"
+    ce_ntp_auth: key_id=2526 auth_pwd={{test_invalid_auth_pwd1}} auth_mode=md5 auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed

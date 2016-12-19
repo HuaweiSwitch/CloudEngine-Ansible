@@ -24,7 +24,7 @@ short_description: Manages Layer 2 switchport interfaces.
 extends_documentation_fragment: CloudEngine
 description:
     - Manages Layer 2 interfaces
-author: Pan Qijun (@jedelman8)
+author: Pan Qijun (@privateip)
 notes:
     - When C(state=absent), VLANs can be added/removed from trunk links and
       the existing access VLAN can be 'unconfigured' to just having VLAN 1

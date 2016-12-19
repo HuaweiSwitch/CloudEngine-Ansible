@@ -1,0 +1,14 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+  
+  tasks:  
+  - ce_ntp: server=192.8.5.6 source_int=vlanif4002 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_ntp: peer=192.8.5.3  source_int=vlanif4002 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_ntp: server=192.8.5.6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_ntp: peer=192.8.5.3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

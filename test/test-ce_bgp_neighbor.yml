@@ -1,0 +1,259 @@
+---
+
+- name: cloudengine bgp module test
+  hosts: Boardleaf1
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "present bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "absent bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "add description1 of bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 description=asdf1234 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "add description2 of bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 description=asdf_1234 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "add description3 of bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 description=asdfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaasdfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data | failed
+
+  - name: "add fack as number1 of bgp"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500  fake_as=120 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "add fack as number2 of bgp"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500  fake_as=aaa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set a dual an number of bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 dual_as=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete a dual an number of bgp peer"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 dual_as=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the conventional route feature"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 conventional=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete the conventional route feature"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 conventional=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "abort the route feature"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_ignore=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "restore the route feature"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_ignore=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the source interface and source address1"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 local_if_name='interface 10 1/0/11' local_if_address=2.2.2.2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set the source interface and source address2"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 local_if_name='loopback1' local_if_address=2.2.2.2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the bgp maximum hop counter"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 ebgp_max_hop=255 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the bgp connectation mode"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 connect_mode='listenOnly' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the bgp connectation mode"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 connect_mode='connectOnly' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the log feature of bgp"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_log_change=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "change the log feature of bgp"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_log_change=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the connectation retry time log"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 conn_retry_time=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the password of MD5"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 pswd_type=cipher pswd_cipher_text=huaweiDC state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the state of bfd"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_bfd_block=true multiplier=10 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change the state of bfd"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_bfd_block=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "enable the bfd"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_bfd_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable the bfd"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 is_bfd_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "absent peer bgp"
+    ce_bgp_neighbor: peer_addr=192.168.10.10 remote_as=500 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true

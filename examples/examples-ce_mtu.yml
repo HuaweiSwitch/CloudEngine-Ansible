@@ -11,3 +11,15 @@
   - ce_mtu: interface={{test_intf}} state=present mtu=9216 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
   
   - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=present jbfMax=8888 jbfMin=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=present jbfMax=8887 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=present jbfMax=8888 jbfMin=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=present jbfMax=8887 jbfMin=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

@@ -1,7 +1,8 @@
 ---
 
 - name: cloudengine config module test
-  hosts: ce78
+  hosts: Boardleaf1
+  connection: local
   gather_facts: no
 
 

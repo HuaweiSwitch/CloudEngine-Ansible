@@ -1,0 +1,287 @@
+---
+
+- name: cloudengine bgp module test
+  hosts: Boardleaf1
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "enable BGP"
+    ce_bgp: as_number=4294967295 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "enable BGP agein"
+    ce_bgp: as_number=4294967295 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "disable BGP"
+    ce_bgp: as_number=4294967295 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "create confederation peer AS num"
+    ce_bgp: as_number=100 confed_id_number=250 confed_peer_as_num=260 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change confederation peer AS num"
+    ce_bgp: confed_peer_as_num=360 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change confederation ID AS num"
+    ce_bgp: confed_id_num=350 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data | failed
+
+  - name: "create graceful restart"
+    ce_bgp: graceful_restart=true time_wait_for_rib=22 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change graceful restart time"
+    ce_bgp: graceful_restart=true time_wait_for_rib=33 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete graceful restart"
+    ce_bgp: graceful_restart=false time_wait_for_rib=22 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set as path limit"
+    ce_bgp: as_path_limit=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "change as path limit"
+    ce_bgp: as_path_limit=300 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "set routerid vpn-instance auto select"
+    ce_bgp: bgp_rid_auto_sel=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete routerid vpn-instance auto select"
+    ce_bgp: bgp_rid_auto_sel=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "keep all routes information"
+    ce_bgp:  keep_all_routes=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete keep all routes information"
+    ce_bgp:  keep_all_routes=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "shutdown all bgp protocal"
+    ce_bgp:  is_shutdown=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo shutdown all bgp protocal"
+    ce_bgp:  is_shutdown=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set time of counter when the bgp protocal was down"
+    ce_bgp: suppress_interval=500 hold_interval=600 clear_interval=700 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change time of counter when the bgp protocal was down"
+    ce_bgp: suppress_interval=600 hold_interval=700 clear_interval=800 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set route id of bgp"
+    ce_bgp: vrf_name='_public_' router_id=2.2.2.2 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change route id of bgp1"
+    ce_bgp: vrf_name='_public_' router_id=2.2.2::2 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data | failed
+
+  - name: "change route id of bgp2"
+    ce_bgp: vrf_name='aaa' router_id=2.2.2.2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set time of bgp router1"
+    ce_bgp: hold_time=1000 keepalive_time=500 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set time of bgp router2"
+    ce_bgp: hold_time=1000 keepalive_time=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set time of bgp connection retry"
+    ce_bgp: conn_retry_time=1000 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change time of bgp connection retry"
+    ce_bgp: conn_retry_time=65536 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data | failed
+
+  - name: "delete time of bgp connection retry"
+    ce_bgp: conn_retry_time=1000 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data | failed
+
+  - name: "set default address family type"
+    ce_bgp: default_af_type='ipv4uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "change default address family type"
+    ce_bgp: default_af_type='ipv6uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "disable bgp"
+    ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true

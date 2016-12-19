@@ -109,6 +109,7 @@ try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
+    HAS_NCCLIENT = False
     pass
 
 CE_NC_GET_INTF = """
@@ -148,6 +149,33 @@ CE_NC_ADD_IPV4 = """
   </ifm>
 </config>
 """
+
+CE_NC_MERGE_IPV4 = """
+<config>
+  <ifm xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+    <interfaces>
+      <interface>
+        <ifName>%s</ifName>
+        <ifmAm4>
+          <am4CfgAddrs>
+            <am4CfgAddr operation="delete">
+              <ifIpAddr>%s</ifIpAddr>
+              <subnetMask>%s</subnetMask>
+              <addrType>main</addrType>
+            </am4CfgAddr>
+            <am4CfgAddr operation="merge">
+              <ifIpAddr>%s</ifIpAddr>
+              <subnetMask>%s</subnetMask>
+              <addrType>main</addrType>
+            </am4CfgAddr>
+          </am4CfgAddrs>
+        </ifmAm4>
+      </interface>
+    </interfaces>
+  </ifm>
+</config>
+"""
+
 
 CE_NC_DEL_IPV4 = """
 <config>
@@ -455,12 +483,21 @@ class IpInterface(object):
 
         for address in addrs:
             if address["ifIpAddr"] == addr:
-                if address["subnetMask"] == maskstr and address["addrType"] == "main":
-                    return True
-                else:
-                    return False
-
+                return address["subnetMask"] == maskstr and address["addrType"] == "main"
         return False
+
+    def get_ipv4_main_addr(self):
+        """get IPv4 main address"""
+
+        addrs = self.intf_info["am4CfgAddr"]
+        if not addrs:
+            return None
+
+        for address in addrs:
+            if address["addrType"] == "main":
+                return address
+
+        return None
 
     def is_ipv6_exist(self, addr, masklen):
         """Check IPv6 address exist"""
@@ -488,8 +525,17 @@ class IpInterface(object):
         maskstr = self.convert_len_to_mask(mask)
         if self.state == "present":
             if not self.is_ipv4_exist(addr, maskstr):
-                xml_str = CE_NC_ADD_IPV4 % (ifname, addr, maskstr)
-                self.netconf_set_config(xml_str, "ADD_IPV4_ADDR")
+                main_addr = self.get_ipv4_main_addr()
+                if not main_addr:
+                    # no ipv4 main address in this interface
+                    xml_str = CE_NC_ADD_IPV4 % (ifname, addr, maskstr)
+                    self.netconf_set_config(xml_str, "ADD_IPV4_ADDR")
+                else:
+                    # remove old address and set new
+                    xml_str = CE_NC_MERGE_IPV4 % (ifname, main_addr["ifIpAddr"],
+                                                  main_addr["subnetMask"],
+                                                  addr, maskstr)
+                    self.netconf_set_config(xml_str, "MERGE_IPV4_ADDR")
                 self.updates_cmd.append("interface %s" % ifname)
                 self.updates_cmd.append("ip address %s %s" % (addr, maskstr))
                 self.changed = True

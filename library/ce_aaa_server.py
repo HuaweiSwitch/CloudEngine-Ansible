@@ -1050,9 +1050,7 @@ class ce_aaa_server(object):
         con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
 
         xml_str = con_obj.xml
-        result = dict()
-        result["domainName"] = list()
-        result["acctSchemeName"] = list()
+        result = list()
 
         if "<data/>" in xml_str:
             return result
@@ -1062,11 +1060,9 @@ class ce_aaa_server(object):
                 r'<acctSchemeName>(.*)</acctSchemeName>.*', xml_str)
 
             if re_find:
-                for item in re_find:
-                    result["domainName"].append(item[0].lower())
-                    result["acctSchemeName"].append(item[1].lower())
-
-        return result
+                return re_find
+            else:
+                return result
 
     def merge_accounting_scheme(self, **kwargs):
         """ merge_accounting_scheme """

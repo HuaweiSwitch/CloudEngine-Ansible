@@ -1,0 +1,228 @@
+---
+
+- name: cloudengine ntp module test
+  hosts: ce78
+  vars:
+    source_int: vlanif4002
+    ipv4_addr: "192.8.5.6"
+    ipv6_addr: "192:1:1:1:1:1:1:1"
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+  - name: "config ntp server"
+    ce_ntp: server={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp server again"
+    ce_ntp: server={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo config ntp server"
+    ce_ntp: server={{ipv4_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "config ntp server and specify source-interface"
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+   
+  - name: "config ntp server and specify source-interface again"
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false
+  
+  - name: "undo config ntp server"
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+ 
+  - name: "config ntp peer"
+    ce_ntp: peer={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp peer again"
+    ce_ntp: peer={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo config ntp peer"
+    ce_ntp: peer={{ipv4_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "config ntp peer and specify source-interface"
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+   
+  - name: "config ntp peer and specify source-interface again"
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+  
+  - name: "undo config ntp peer"
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "Specify invalid ipaddress"
+    ce_ntp: peer="192.8.8" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "Specify invalid ipaddress"
+    ce_ntp: peer="256.8.8.1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+  
+  - name: "Specify invalid ipaddress"
+    ce_ntp: peer="258:258:1:1:1:1:1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "Specify invalid ipaddress"
+    ce_ntp: peer="258:258:1:1:1:1:1:65536" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+  
+  - name: "config ntp ipv6 server"
+    ce_ntp: server={{ipv6_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp ipv6 server"
+    ce_ntp: server={{ipv6_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo config ntp ipv6 server"
+    ce_ntp: server={{ipv6_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "Specify invalid VPN name"
+    ce_ntp: peer="192.8.5.6" vpn_name="dddddddddddddddddddddddddddddddd" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+  
+  - name: "Specify invalid source_interface"
+    ce_ntp: peer="192.8.5.6" source_int="Vlanif9000" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
