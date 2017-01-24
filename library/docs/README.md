@@ -4,27 +4,65 @@ Huawei CloudEngine Switch support for using Ansible to deploy devices. The Huawe
 
 ## OVERVIEW OF MODULES
 
-- aaa | ce_aaa_server - Manages AAA server global configuration
-- aaa | ce_aaa_server_host - Manages AAA server host-specific configuration
-- bgp | ce_bgp - Manages BGP configuration
-- bgp | ce_bgp_af - Manages BGP Address-family configuration
-- bgp | ce_bgp_neighbor - Manages BGP neighbors configurations
-- bgp | ce_bgp_neighbor_af - Manages BGP address-family’s neighbors configuration
-- command | ce_command - Run arbitrary command on Huawei CloudEngine devices
-- config | ce_config - Manage Huawei CloudEngine configuration sections
-- facts | ce_facts - Gets facts about Huawei CloudEngine switches
-- interface | ce_interface - Manages physical attributes of interfaces
-- interface | ce_mtu - Manages MTU settings on CloudEngine switch
-- interface | ce_ip_interface - Manages L3 attributes for IPv4 and IPv6 interfaces
-- interface | ce_interface_ospf - Manages configuration of an OSPF interface instance
-- L2 | ce_vlan - Manages VLAN resources and attributes
-- L2 | ce_switchport - Manages Layer 2 switchport interfaces
-- L2 | ce_eth_trunk - Manages ethernet trunk attributes of interfaces
-- L3 | ce_static_route - Manages static route configuration
-- netconf | ce_netconf - To execute netconf RPC on Huawei CloudEngine devices and save output locally
-- ntp | ce_ntp - Manages - Manages core NTP configuration
-- ntp | ce_ntp_auth - Manages NTP authentication
-- ospf | ce_ospf - Manages configuration of an ospf instance
+- ce_aaa_server - Manages AAA server global configuration.
+- ce_aaa_server_host - Manages AAA server host configuration.
+- ce_acl - Manages base acl configuration.
+- ce_acl_advance - Manages advance acl configuration.
+- ce_acl_interface - Manages applying ACLs to interfaces.
+- ce_bgp - Manages BGP configuration.
+- ce_bgp_af - Manages BGP Address-family configuration.
+- ce_bgp_neighbor - Manages BGP peer configuration.
+- ce_bgp_neighbor_af - Manages BGP neighbor Address-family configuration.
+- ce_command - Run arbitrary command on Huawei CloudEngine devices.
+- ce_config - Manage Huawei CloudEngine configuration sections.
+- ce_dldp - Manages global DLDP configration.
+- ce_dldp_interface - Manages interface DLDP configuration.
+- ce_eth_trunk - Manages Eth-Trunk interfaces.
+- ce_evpn_bd_vni - Manages Huawei EVPN VXLAN Network Identifier (VNI).
+- ce_evpn_bgp - Manages BGP EVPN configuration.
+- ce_evpn_bgp_rr - Manages RR for the VXLAN Network.
+- ce_evpn_global - Manage global configration of EVPN.
+- ce_facts - Gets facts about HUAWEI CloudEngine switches.
+- ce_file_copy - Copy a file to a remote cloudengine device over SCP.
+- ce_info_center_debug - Manages info center debug configuration.
+- ce_info_center_global - Manages outputting Logs.
+- ce_info_center_log - Manages Log Output.
+- ce_info_center_trap - Manages info center trap configuration.
+- ce_interface - Manages physical attributes of interfaces.
+- ce_interface_ospf - Manages configuration of an OSPF interface instance.
+- ce_ip_interface - Manages L3 attributes for IPv4 and IPv6 interfaces.
+- ce_mtu - Manages MTU settings on CloudEngine switch.
+- ce_netconf - Run arbitrary netconf command on cloudengine devices.
+- ce_netstream_aging - Manages timeout mode of netstream.
+- ce_netstream_export - Configure NetStream flow statistics exporting and versions for exported packets.
+- ce_netstream_global - Manages global parameters of netstream.
+- ce_netstream_template - Manages netstream template configuration.
+- ce_ntp - Manages core NTP configuration.
+- ce_ntp_auth - Manages NTP authentication.
+- ce_ospf - Manages configuration of an ospf instance.
+- ce_ospf_vrf - Manages configuration of an ospf vpn instance.
+- ce_reboot - Reboot a network device.
+- ce_rollback - Set a checkpoint or rollback to a checkpoint.
+- ce_sflow - Manages sFlow.
+- ce_snmp_community - Manages SNMP Community configuration.
+- ce_snmp_contact - Manages SNMP contact configuration.
+- ce_snmp_location - Manages SNMP location configuration.
+- ce_snmp_target_host - Manages SNMP target host configuration.
+- ce_snmp_traps - Manages SNMP traps configuration.
+- ce_snmp_user - Manages SNMP Community configuration.
+- ce_static_route - Config or delete static route.
+- ce_stp - Manages stp configuration.
+- ce_switchport - Manages Layer 2 switchport interfaces.
+- ce_vlan - Manages VLAN resources and attributes.
+- ce_vrf - Manage vpn instance.
+- ce_vrf_af - Manage vpn instance address family.
+- ce_vrf_interface - Manage VPN Instance to an Interface.
+- ce_vxlan_arp - Manages arp attributes of VXLAN.
+- ce_vxlan_gateway - Manages Gateway for the VXLAN Network.
+- ce_vxlan_global - Manages global attributes of VXLAN and bridge domain.
+- ce_vxlan_tunnel - A VNI is created and mapped to the BD, and configure an ingress replication list.
+- ce_vxlan_vap - Manages VXLAN virtual access point.
+
 
 ## INSTALLATION
 
