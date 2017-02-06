@@ -71,9 +71,9 @@ Ansible network module is suitable for ansible version 2.2. The available ncclie
 
 Main steps:
 
-- Install suitable Ansible master
-- Install suitable ncclient library
-- Install Huawei Ansible library
+Install suitable Ansible master
+Install suitable ncclient library
+Install Huawei Ansible library
 
 ## EXAMPLE USAGE
 An example of static manifest for CloudEngine switch is followed. The network functions is satisfied based on the assumed that Ansible moudle is available.
