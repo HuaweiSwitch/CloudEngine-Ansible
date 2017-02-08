@@ -28,7 +28,7 @@ Install suitable ncclient library
 Install Huawei Ansible library
 
 ## EXAMPLE USAGE
-An example of static manifest for CloudEngine switch is followed. The network functions is satisfied based on the assumed that Ansible moudle is available.
+An example of static manifest for CloudEngine switch is followed. The network functions is satisfied based on the assumed that Ansible module is available.
 ```
 root@localhost:~# ansible -m ce_command -a "commands='display vlan summary' transport='cli' host=192.168.1.1 port=22 username=huawei password=huawei123" localhost --connection local
 localhost | SUCCESS => {
