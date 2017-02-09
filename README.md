@@ -19,13 +19,13 @@ Huawei CloudEngine Switch support for using Ansible to deploy devices. The Huawe
 ## INSTALLATION
 
 Circumstance instruction:
-Ansible network module is suitable for ansible version 2.2. The available ncclient version is 0.5.2.
+Ansible network module is suitable for ansible version 2.2. The available ncclient version is 0.5.3.
 
 Main steps:
 
-Install suitable Ansible master
-Install suitable ncclient library
-Install Huawei Ansible library
+- Install suitable Ansible
+- Install suitable ncclient library
+- Install Huawei Ansible library
 
 ## EXAMPLE USAGE
 An example of static manifest for CloudEngine switch is followed. The network functions is satisfied based on the assumed that Ansible moudle is available.
@@ -54,9 +54,9 @@ localhost | SUCCESS => {
 
 ## DEPENDENCIES
 
-Thes modules require the following to be installed on the Ansible server:
+These modules require the following to be installed on the Ansible server:
 
 * Python 2.6 or 2.7
 * [Ansible](http://www.ansible.com) 2.2 or later
-* [ncclient](https://github.com/ncclient/ncclient) 0.5.2 or later
+* [ncclient](https://github.com/ncclient/ncclient) 0.5.3 or later
 * [Huawei support](http://www.huawei.com/en/)
