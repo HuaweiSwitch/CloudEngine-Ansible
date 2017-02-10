@@ -1,0 +1,223 @@
+---
+
+- name: cloudengine ospf vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure ospf 2 not exist"
+    ce_ospf: process_id=2 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure a vpn named vpna"
+    ce_vrf: vrf=vpna state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure a vpn named vpnb"
+    ce_vrf: vrf=vpnb state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure vpna, set address family is ipv4"
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure ospf 2, vrf is vpna"
+    ce_ospf_vrf: ospf=2 vrf=vpna host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, vrf is vpnb, the result should be false"
+    ce_ospf_vrf: ospf=2 vrf=vpnb host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Configure ospf 2, set route_id is 2.2.2.2 description is test"
+    ce_ospf_vrf: ospf=2 route_id=2.2.2.2 description=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set route_id is 2.2.2.2 description is test,the change is false"
+    ce_ospf_vrf: ospf=2 route_id=2.2.2.2 description=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configure ospf 2, delete description is test"
+    ce_ospf_vrf: ospf=2 description=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set bandwidth reference 300Mbps"
+    ce_ospf_vrf: ospf=2 bandwidth=300 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set bandwidth reference 100Mbps,the default value"
+    ce_ospf_vrf: ospf=2 bandwidth=300 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set bandwidth reference 100Mbps,the default value,change is false"
+    ce_ospf_vrf: ospf=2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configure ospf 2, set lsaArrivalFlag true ,lsaArrivalInterval is 1000ms"
+    ce_ospf_vrf: ospf=2 lsaalflag=true lsaainterval=100 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set lsaArrivalFlag false ,lsaArrivalMaxInterval is 800ms lsaArrivalStartInterval is 400ms,lsaArrivalHoldInterval is 400ms"
+    ce_ospf_vrf: ospf=2 lsaamaxinterval=800 lsaastartinterval=400 lsaaholdinterval=400 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set lsaArrivalFlag false ,lsaArrivalMaxInterval is 800ms lsaArrivalStartInterval is 400ms,lsaArrivalHoldInterval is 500"
+    ce_ospf_vrf: ospf=2 lsaamaxinterval=800 lsaastartinterval=400 lsaaholdinterval=500 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set lsaOriginateIntervalFlag false ,lsaOriginateInterval is 4s,lsaOriginateMaxInterval is 4000ms lsaOriginateStartInterval is 400ms,lsaOriginateHoldInterval is 800ms"
+    ce_ospf_vrf: ospf=2 lsaointerval=4 lsaomaxinterval=4000 lsaostartinterval=400 lsaoholdinterval=800 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure ospf 2, set spfScheduleIntervalType intelligent timer ,spfScheduleMaxInterval is 8000ms spfScheduleStartInterval is 400ms spfScheduleHoldInterval is 800ms "
+    ce_ospf_vrf: ospf=2 spfintervaltype=intelligent-timer spfmaxinterval=8000 spfstartinterval=400 spfholdinterval=800 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigure ospf 2, set spfScheduleIntervalType intelligent timer ,spfScheduleMaxInterval is 8000ms spfScheduleStartInterval is 400ms spfScheduleHoldInterval is 800ms "
+    ce_ospf_vrf: ospf=2 spfintervaltype=intelligent-timer spfmaxinterval=8000 spfstartinterval=400 spfholdinterval=800 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+#  - name: "Configure ospf 2, set spfScheduleIntervalType millisecond level timer ,spfScheduleIntervalMillisecond is 400ms"
+#    ce_ospf_vrf: ospf=2 spfintervaltype=millisecond spfintervalmi=400 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+#    register: data
+#    ignore_errors: false
+
+#  - name: "TEST 17"
+#    assert:
+#      that:
+#        - data.changed == true
+
+#  - name: "Configure ospf 2, set spfScheduleIntervalType second level timer ,spfScheduleInterval is 4s"
+#    ce_ospf_vrf: ospf=2 spfintervaltype=timer spfinterval=4 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+#    register: data
+#    ignore_errors: false
+
+#  - name: "TEST 18"
+#    assert:
+#      that:
+#        - data.changed == true
+
+  - name: "Configure ospf 2, set llsaointervalflag true "
+    ce_ospf_vrf: ospf=2 lsaointervalflag=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a vpn named vpna"
+    ce_vrf: vrf=vpna state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Delete a vpn named vpnb"
+    ce_vrf: vrf=vpnb state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Ensure ospf process does not exist"
+    ce_ospf: process_id=2 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Delete ospf process 2"
+    assert:
+      that:
+        - data | failed

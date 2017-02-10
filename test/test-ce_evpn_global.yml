@@ -1,0 +1,78 @@
+---
+
+- name: cloudengine EVPN global module test
+  hosts: cloudengine
+  vars:
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure EVPN overlay enable is disabled"
+    ce_evpn_global: evpn_overlay_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "Config EVPN overlay enable is enabled"
+    ce_evpn_global: evpn_overlay_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+ 
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true 
+  
+  - name: "Config EVPN overlay enable is enabled again"
+    ce_evpn_global: evpn_overlay_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false 
+       
+  - name: "Config EVPN overlay enable is disabled"
+    ce_evpn_global: evpn_overlay_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Config EVPN overlay enable is disabled again"
+    ce_evpn_global: evpn_overlay_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false 
+        
+  - name: "No input parameters"
+    ce_evpn_global: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "Invalid parameters"
+    ce_evpn_global: evpn_overlay_enable=FALSE host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+       

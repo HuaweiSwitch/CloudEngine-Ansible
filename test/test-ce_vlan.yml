@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine vlan module test
-  hosts: Boardleaf1
+  hosts: cloudengine
   vars:
     
   connection: local
@@ -9,24 +9,19 @@
 
 
   tasks:
-  
-  - name: "Ensure a range of VLANs are not present on the switch"
-    ce_vlan: vlan_range="20-21" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
-    register: data
 
-  - name: "TEST 1"
-    assert:
-      that:
-        - data.changed == true
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure a range of VLANs are not present on the switch"
+    ce_vlan: vlan_range="20-21" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
   
   - name: "Ensure VLAN 50 exists with the name WEB"
     ce_vlan: vlan_id="50" name="WEB" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-
-  - name: "TEST 2"
-    assert:
-      that:
-        - data.changed == true
         
   - name: "Ensure VLAN is NOT on the device"
     ce_vlan: vlan_range="20,21,50" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -40,11 +35,6 @@
   - name: "Ensure vlan boundary value"
     ce_vlan: vlan_range="4060,4063" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-
-  - name: "TEST 4"
-    assert:
-      that:
-        - data.changed == true
 
   - name: "Ensure failure vlan"
     ce_vlan: vlan_id="a" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -86,6 +76,10 @@
       that:
         - data | failed
 
+  - name: "ensure vlan range not exist"
+    ce_vlan: vlan_range="3900-4000" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
   - name: "Delete vlan range"
     ce_vlan: vlan_range="3900-4000" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -94,6 +88,10 @@
     assert:
       that:
         - data.changed == false
+
+  - name: "ensure vlan not exist"
+    ce_vlan: vlan_id="111" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
 
   - name: "Delete vlan"
     ce_vlan: vlan_id="111" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -107,11 +105,6 @@
   - name: "Merge vlan name"
     ce_vlan: vlan_id="111" name="vlan111" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-
-  - name: "TEST 11"
-    assert:
-      that:
-        - data.changed == true
 
   - name: "Merge vlan name"
     ce_vlan: vlan_id="111" name="vlanaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -142,11 +135,6 @@
       that:
         - data | failed
 
-  - name: "Performance of vlan range"
-    ce_vlan: vlan_range="2-4094" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "ensure vlan not exist"
+    ce_vlan: vlan_id="111" state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-
-  - name: "TEST 15"
-    assert:
-      that:
-        - data.changed == true

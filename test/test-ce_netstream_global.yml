@@ -1,0 +1,353 @@
+---
+
+- name: cloudengine netstream global module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_Configure: lines='return,rollback Configureuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Configure an ip netstream record test, match protocol"
+    ce_netstream_template: state=present type=ip record_name=test match=protocol host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Set ip record test"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure an ip netstream record test1, match protocol"
+    ce_netstream_template: state=present type=ip record_name=test1 match=protocol host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Set ip record test1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure an vxlan netstream record test, match protocol"
+    ce_netstream_template: state=present type=vxlan record_name=test match=protocol host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Set vxlan record test"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Set the version of export to v9, type is vxlan"
+    ce_netstream_export: type=vxlan version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Set the version of vxlan"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Set the version of export to v9, type is ipv4"
+    ce_netstream_export: type=ip version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Set the version of ip"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream sampler at global, direction is inbound,interval is 20"
+    ce_netstream_global: type=ip interface=all sampler_interval=20 sampler_direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream sampler, direction is inbound,interval is 20"
+    ce_netstream_global: type=ip interface=all sampler_interval=20 sampler_direction=inbound state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream sampler at interface 10ge1/0/2, direction is inbound,interval is 20"
+    ce_netstream_global: type=ip interface=10ge1/0/2 sampler_interval=20 sampler_direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream sampler at interface 10ge1/0/2, direction is outbound,interval is 30"
+    ce_netstream_global: type=ip interface=10ge1/0/2 sampler_interval=30 sampler_direction=outbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream sampler at interface 10ge1/0/2, direction is inbound,interval is 20"
+    ce_netstream_global: type=ip interface=10ge1/0/2 sampler_interval=20 sampler_direction=inbound state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream sampler at interface 10ge1/0/2, direction is outbound,interval is 30"
+    ce_netstream_global: type=ip interface=10ge1/0/2 sampler_interval=30 sampler_direction=outbound state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream statistic at interface 10ge1/0/2, direction is inbound"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_direction=inbound state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream statistic at interface 10ge1/0/2, direction is outbound"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_direction=outbound state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream flexible statistic at interface 10ge1/0/2, record is test ,type is ip"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_record=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream flexible statistic at interface 10ge1/0/2, record is test1, type is ip"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_record=test1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream flexible statistic at interface 10ge1/0/2, record is test, type is vxlan, the result should be false"
+    ce_netstream_global: type=vxlan interface=10ge1/0/2 statistics_record=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data | failed
+
+  - name: "Delete a netstream statistic at interface 10ge1/0/2, direction is outbound"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_direction=outbound state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a netstream flexible statistic at interface 10ge1/0/2, record is test, type is vxlan"
+    ce_netstream_global: type=vxlan interface=10ge1/0/2 statistics_record=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream statistic at interface 10ge1/0/2, direction is inbound"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_direction=inbound state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream flexible statistic at interface 10ge1/0/2, record is test, type is vxlan"
+    ce_netstream_global: type=vxlan interface=10ge1/0/2 statistics_record=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete a netstream flexible statistic at interface 10ge1/0/2, record is test1, type is ip"
+    ce_netstream_global: type=ip interface=10ge1/0/2 statistics_record=test1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the ip index-switch to 32"
+    ce_netstream_global: type=ip interface=all index_switch=32 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the vxlan index-switch to 32"
+    ce_netstream_global: type=vxlan interface=all index_switch=32 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unset the ip index-switch from 32"
+    ce_netstream_global: type=ip interface=all index_switch=32 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unset the vxlan index-switch from 32"
+    ce_netstream_global: type=vxlan interface=all index_switch=32 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set the ip index-switch to 16"
+    ce_netstream_global: type=ip interface=all index_switch=16 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "set the vxlan index-switch to 16"
+    ce_netstream_global: type=vxlan interface=all index_switch=16 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unset the ip index-switch from 16"
+    ce_netstream_global: type=ip interface=all index_switch=16 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unset the vxlan index-switch from 16"
+    ce_netstream_global: type=vxlan interface=all index_switch=16 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Delete an ip netstream record test, match protocol"
+    ce_netstream_template: state=absent type=ip record_name=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Delete ip record test"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ip netstream record test1, match protocol"
+    ce_netstream_template: state=absent type=ip record_name=test1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Delete ip record test1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an vxlan netstream record test, match protocol"
+    ce_netstream_template: state=absent type=vxlan record_name=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Delete vxlan record test"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unset the version of export from v9, type is vxlan"
+    ce_netstream_export: type=vxlan version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Unset the version of vxlan"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unset the version of export from v9, type is ipv4"
+    ce_netstream_export: type=ip version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Unset the version of ip"
+    assert:
+      that:
+        - data.changed == true

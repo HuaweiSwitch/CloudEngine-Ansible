@@ -1,0 +1,16 @@
+---
+
+- name: cloudengine vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - ce_vrf: vrf=vpna description=test state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_vrf: vrf=vpna state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_vrf: vrf=vpna state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_vrf: vrf=_public_ description=test state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

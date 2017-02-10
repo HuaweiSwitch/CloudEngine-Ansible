@@ -1,10 +1,8 @@
 ---
 
-- hosts: ce78
+- hosts: cloudengine
   gather_facts: no
   vars:
-    username: rootDC
-    password: Admin@123
     process: 10
   
   tasks:  

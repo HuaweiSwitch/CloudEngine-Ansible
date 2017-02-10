@@ -1,0 +1,11 @@
+---
+
+- hosts: cloudengine
+  gather_facts: no
+  tasks:  
+  - ce_netstream_export:  type=ip source_ip=192.8.2.2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_netstream_export:  type=vxlan source_ip=192.8.2.3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_netstream_export:  type=ip host_ip=192.8.2.4 host_port=25 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_netstream_export:  type=vxlan host_ip=192.8.2.5 host_port=26 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_netstream_export:  type=ip version=9 as_option=origin bgp_netxhop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_netstream_export:  type=vxlan version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

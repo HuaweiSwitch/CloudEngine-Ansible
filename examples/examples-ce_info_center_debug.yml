@@ -1,0 +1,15 @@
+---
+
+- name: cloudengine info center debug module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_info_center_debug: state=present debug_time_stamp=date_boot host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_debug: state=absent debug_time_stamp=date_boot host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_debug: state=present module_name=aaa chnl_id=9 debug_enable=true debug_level=alert host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - e_info_center_debug: state=absent module_name=aaa chnl_id=9 debug_enable=true debug_level=alert host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

@@ -1,0 +1,14 @@
+---
+
+- name: cloudengine snmp community module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+  - ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+
+  - ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent

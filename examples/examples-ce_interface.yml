@@ -1,14 +1,20 @@
 ---
 
-- hosts: ce78
+- hosts: cloudengine
   gather_facts: no
   vars:
+    test_intf: 40GE2/0/22
+    clear_cmd: 'interface 40ge2/0/22, clear config this'
   
-  tasks:  
-  - ce_interface: interface="40GE1/0/22"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  tasks:
+  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
 
-  - ce_interface: interface="40GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_interface: interface={{test_intf}}  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_interface: interface={{test_intf}}  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
 
   - ce_interface: interface_type=tunnel state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
   
   - ce_interface: interface_type=40ge admin_state=up host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

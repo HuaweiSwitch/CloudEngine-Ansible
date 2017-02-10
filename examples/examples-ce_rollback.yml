@@ -1,0 +1,16 @@
+---
+
+- hosts: ce128
+  gather_facts: no
+  vars:
+    checkpoint_1: 1000000784
+    checkpoint_2: 1000000783
+    label_1: user1
+    file_name1: a.cfg
+
+  tasks:
+  - ce_rollback: commit_id={{checkpoint_1}} label={{label_1}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_rollback: label={{label_1}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_rollback: last=1 action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_rollback: filename={{file_name1}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_rollback: commit_id={{checkpoint_2}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

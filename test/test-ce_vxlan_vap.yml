@@ -1,0 +1,432 @@
+---
+
+- name: cloudengine vxlan vap module test
+  hosts: ce128
+  vars:
+    l2sub_intf: "10GE2/0/21.1"
+    bd_id: 100
+    vlan_all: "100,101,102"
+    bind_vid: 100
+    ce_vid: 101
+    pe_vid: 102
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure sub-interface not exist"
+    ce_interface: interface={{l2sub_intf}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "ensure vbdif not exist"
+    ce_interface: interface=vbdif{{bd_id}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "ensure bridge domain not exist"
+    ce_vxlan_global: bridge_domain_id={{bd_id}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "ensure sub-interface exist"
+    ce_interface: interface={{l2sub_intf}} l2sub=true state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+  
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "ensure bridge domain exist"
+    ce_vxlan_global: bridge_domain_id={{bd_id}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "ensure vlan exist"
+    ce_vlan: vlan_range={{vlan_all}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "configure a VLAN as a service access point"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure a VLAN as a service access point, again"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "unconfigure a VLAN as a service access point"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "configure a Layer 2 sub-interface as a service access point"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "undo configure a Layer 2 sub-interface as a service access point"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "undo configure a Layer 2 sub-interface as a service access point, again"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "set encapsulation untag"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=untag state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set encapsulation untag, again"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=untag state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "unset encapsulation untag"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=untag state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset encapsulation untag, again"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=untag state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+        
+  - name: "set encapsulation dot1q"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "set encapsulation dot1q with vlan"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "unset encapsulation dot1q with vlan"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "set encapsulation qinq"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "set encapsulation qinq with vlan"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "unset encapsulation qinq with vlan"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "check bridge_domain_id 1"
+    ce_vxlan_vap: bridge_domain_id=abc bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+
+  - name: "check bridge_domain_id 2"
+    ce_vxlan_vap: bridge_domain_id=0 bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+    
+  - name: "check bridge_domain_id 3"
+    ce_vxlan_vap: bridge_domain_id=16777216 bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bind_vlan_id 1"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bind_vlan_id 2"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bind_vlan_id 3"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id=4095 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 1"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 2"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface="10GE3/0/41" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 3"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface="10GE3/0/41.1.1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 4"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface="10GE3/0/41.0" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 5"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface="10GE3/0/41.4097" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check l2_sub_interface 6"
+    ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface="10GE" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check ce_vid 1"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check ce_vid 2" 
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+      
+  - name: "check ce_vid 3"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid=4095 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check pe_vid 1"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check pe_vid 2"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check pe_vid 3"
+    ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid=4095 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "clear vlan"
+    ce_vlan: vlan_range={{vlan_all}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "clear bridge-domain"
+    ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "clear sub-interface"
+    ce_interface: interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

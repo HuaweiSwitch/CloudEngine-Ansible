@@ -1,0 +1,15 @@
+---
+
+- name: cloudengine snmp user module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+
+  - ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent

@@ -1,0 +1,11 @@
+---
+
+- name: cloudengine snmp contact module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_snmp_contact: contact="call Operator at 010-99999999" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_contact: contact="call Operator at 010-99999999" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent

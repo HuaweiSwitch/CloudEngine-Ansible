@@ -1,0 +1,11 @@
+---
+
+- name: cloudengine snmp location module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent

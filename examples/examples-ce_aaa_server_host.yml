@@ -1,12 +1,12 @@
 ---
 
-- name: cloudengine config module test
-  hosts: ce78
+- name: cloudengine aaa host module test
+  hosts: cloudengine
   gather_facts: no
 
 
   tasks:
-  
+
   - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
 
   - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz local_password=wdz
@@ -27,7 +27,7 @@
 
   - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
 
-  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000	
+  - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
 
   - ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent radius_group_name=wdz raduis_server_type=Authentication radius_server_port=2000
 

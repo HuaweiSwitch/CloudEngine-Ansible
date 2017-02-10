@@ -1,0 +1,189 @@
+---
+
+- name: cloudengine snmp community module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure acl 2000 exist"
+    ce_config: lines='acl 2000' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "undo snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp community"
+    ce_snmp_community: community_name=Wdz123@huawei access_right=write acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config snmp community name1"
+    ce_snmp_community: community_name=aaa access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data | failed
+
+  - name: "config snmp community name2"
+    ce_snmp_community: community_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data | failed
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 read_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 read_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 read_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 write_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 write_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 write_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 notify_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp group"
+    ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 notify_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config snmp group1"
+    ce_snmp_community: group_name='' security_level=noAuthNoPriv acl_number=2000 notify_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config snmp group2"
+    ce_snmp_community: group_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa security_level=noAuthNoPriv acl_number=2000 notify_view=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data | failed

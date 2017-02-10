@@ -1,11 +1,9 @@
 ---
 
-- hosts: ce78
+- name: cloudengine config module test
+  hosts: cloudengine
   gather_facts: no
-  vars:
-    username: rootDC
-    password: Admin@123
-  
+
   tasks:
   - ce_config: lines='sysname {{ inventory_hostname }}' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
 

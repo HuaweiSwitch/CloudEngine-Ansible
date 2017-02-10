@@ -1,0 +1,258 @@
+---
+
+- name: cloudengine stp module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "undo stp"
+    ce_config: lines='undo stp disable' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "config stp mode"
+    ce_stp: state=present stp_mode=stp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo stp mode"
+    ce_stp: state=absent stp_mode=stp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config rstp mode"
+    ce_stp: state=present stp_mode=rstp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo rstp mode"
+    ce_stp: state=absent stp_mode=rstp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config mstp mode"
+    ce_stp: state=present stp_mode=mstp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo mstp mode"
+    ce_stp: state=absent stp_mode=mstp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config stp enable"
+    ce_stp: state=present stp_mode=stp stp_enable=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config stp disable"
+    ce_stp: state=present stp_mode=stp stp_enable=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config stp converge"
+    ce_stp: state=present stp_converge=fast host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo stp converge"
+    ce_stp: state=absent stp_converge=fast host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config bpdu protection enable"
+    ce_stp: state=present bpdu_protection=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config bpdu protection disable"
+    ce_stp: state=present bpdu_protection=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config tc protection enable"
+    ce_stp: state=present tc_protection=enable tc_protection_interval=200 tc_protection_threshold=100 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config tc protection disable"
+    ce_stp: state=present tc_protection=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config tc protection enable"
+    ce_stp: state=absent tc_protection_interval=200 tc_protection_threshold=100 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config edged_port bpdu_filter enable"
+    ce_stp: state=present interface=all edged_port=enable bpdu_filter=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config edged_port bpdu_filter disable"
+    ce_stp: state=present interface=all edged_port=disable bpdu_filter=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config edged_port bpdu_filter enable"
+    ce_stp: state=present interface=10GE1/0/34 edged_port=enable bpdu_filter=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config edged_port bpdu_filter disable"
+    ce_stp: state=present interface=10GE1/0/34 edged_port=disable bpdu_filter=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface cost"
+    ce_stp: state=present interface=10GE1/0/34 cost=10000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface cost"
+    ce_stp: state=absent interface=10GE1/0/34 cost=10000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface root_protection"
+    ce_stp: state=present interface=10GE1/0/34 root_protection=enable loop_protection=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface root_protection"
+    ce_stp: state=present interface=10GE1/0/34 root_protection=enable loop_protection=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data | failed
+
+  - name: "config interface root_protection"
+    ce_stp: state=present interface=10GE1/0/34 loop_protection=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data | failed
+
+  - name: "config interface root_protection"
+    ce_stp: state=present interface=10GE1/0/34 root_protection=disable loop_protection=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config tc protection enable"
+    ce_stp: state=present tc_protection=enable tc_protection_interval=200 tc_protection_threshold=1000000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data | failed

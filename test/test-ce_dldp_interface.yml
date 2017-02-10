@@ -1,0 +1,219 @@
+---
+
+- name: cloudengine dldp_interface module test
+  hosts: cloudengine
+  vars:
+    test_intf: 40GE1/0/6
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure global dldp enable=false"
+    ce_dldp: enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "Config global dldp enable=true"
+    ce_dldp: enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "ensure dldp enable is false on interface"
+    ce_dldp_interface: interface={{test_intf}} enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "Config dldp enable=false on interface"
+    ce_dldp_interface: interface={{test_intf}} enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Config dldp enable=true on interface"
+    ce_dldp_interface: interface={{test_intf}} enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+ 
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "Config enable state=true on interface again"
+    ce_dldp_interface: interface={{test_intf}} enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+ 
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false 
+
+  - name: "Config mode_enable=false on a given interface"
+    ce_dldp_interface: interface={{test_intf}} mode_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+  
+  - name: "Config mode_enable=true on a given interface"
+    ce_dldp_interface: interface={{test_intf}} mode_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "Config mode_enable=true on a given interface again"
+    ce_dldp_interface: interface={{test_intf}} mode_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false 
+  
+  - name: "Config local_mac on a given interface"
+    ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-ab state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "Config local_mac on a given interface"
+    ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Config local_mac on a given interface again"
+    ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+       
+  - name: "reset dldp"
+    ce_dldp_interface: interface={{test_intf}} reset=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "reset dldp again"
+    ce_dldp_interface: interface={{test_intf}} reset=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config all params without reset"
+    ce_dldp_interface: interface={{test_intf}} enable=true mode_enable=true local_mac=aa-aa-aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false 
+        
+  - name: "config all params"
+    ce_dldp_interface: interface={{test_intf}} enable=true mode_enable=true local_mac=aa-aa-aa reset=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+   
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "config local_mac=aa-aa-bb and mode_enable=false"
+    ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-bb  mode_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "config enable=false and config other params"
+    ce_dldp_interface: interface={{test_intf}} enable=false local_mac=aa-bb-cc mode_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "invalid interface"
+    ce_dldp_interface: interface=40GE1/0/50 enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid mac_address with invalid char 'g'"
+    ce_dldp_interface: interface={{test_intf}} mode_enable=true local_mac=aa-aa-ag state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+   
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid mac_address with wrong format"
+    ce_dldp_interface: interface={{test_intf}} mode_enable=true local_mac=aa-aa-aa-aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+    
+  - name: "invalid mac_address with wrong length"
+    ce_dldp_interface: interface={{test_intf}} state=present mode_enable=true local_mac=aa11-aa11-aa111 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+ 
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "unconfigure all dldp local mac address on interface"
+    ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-aa state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+ 
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfigure all dldp parameters on interface"
+    ce_dldp_interface: interface={{test_intf}} enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data

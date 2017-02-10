@@ -1,0 +1,51 @@
+---
+
+- hosts: ce128
+  gather_facts: no
+  vars:
+    vbdif_name: Vbdif100
+    evn_source_ip: "7.7.7.7"
+    evn_peer_ip: "8.8.8.8"
+    bd_id: 100
+    
+  
+  tasks:  
+  
+  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_interface: interface={{vbdif_name}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+   
+  - ce_vxlan_arp: evn_bgp=disable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    
+  - ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} evn_reflect_client=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_server=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: evn_bgp=enable evn_server=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+   
+  - ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+   
+  - ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: host_collect_protocol=bgp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+   
+  - ce_vxlan_arp: host_collect_protocol=bgp state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+   
+  - ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_interface: interface={{vbdif_name}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  

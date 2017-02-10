@@ -1,0 +1,19 @@
+---
+
+- name: cloudengine acl module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_acl: state=present acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl: state=delete_acl acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl: state=present acl_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl: state=delete_acl acl_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl: state=present acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_wild=0.0.255.255 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl: state=absent acl_name=wdz rule_name=wdz_rule host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

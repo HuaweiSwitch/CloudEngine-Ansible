@@ -1,0 +1,271 @@
+---
+
+- name: cloudengine info center log module test
+  hosts: cloudengine
+  vars:
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure log time stamp date_second"
+    ce_info_center_log: log_time_stamp=date_second state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+  
+  - name: "set log time stamp date_boot"
+    ce_info_center_log: log_time_stamp=date_boot state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set log time stamp date_tenthsecond"
+    ce_info_center_log: log_time_stamp=date_tenthsecond state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set log time stamp shortdate_second"
+    ce_info_center_log: log_time_stamp=shortdate_second state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set log time stamp formatdate_millisecond"
+    ce_info_center_log: log_time_stamp=formatdate_millisecond state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset log time stamp"
+    ce_info_center_log: log_time_stamp=formatdate_millisecond state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "ensure log buffer enable"
+    ce_info_center_log: log_buff_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "set log buffer disable"
+    ce_info_center_log: log_buff_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set log buffer enable"
+    ce_info_center_log: log_buff_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set log buffer size"
+    ce_info_center_log: log_buff_size=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "merge log buffer size"
+    ce_info_center_log: log_buff_size=200 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset log buffer size"
+    ce_info_center_log: log_buff_size=200 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set a rule for outputting logs to a channel for aaa"
+    ce_info_center_log: module_name=aaa channel_id=1 log_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set a rule for outputting logs to a channel for aaa"
+    ce_info_center_log: module_name=aaa channel_id=1 log_enable=true log_level=notification state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset A rule for outputting logs to a channel for aaa"
+    ce_info_center_log: module_name=aaa channel_id=1 log_enable=true log_level=notification state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set a rule for outputting logs to a channel for default"
+    ce_info_center_log: module_name=default channel_id=9 log_enable=true log_level=alert state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "merge a rule for outputting logs to a channel for default"
+    ce_info_center_log: module_name=default channel_id=9 log_enable=false log_level=alert state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset A rule for outputting logs to a channel for default"
+    ce_info_center_log: module_name=default channel_id=9 log_enable=false log_level=alert state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "check log_buff_size 1"
+    ce_info_center_log: log_buff_size=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed  
+
+  - name: "check log_buff_size 2"
+    ce_info_center_log: log_buff_size="-1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check log_buff_size 3"
+    ce_info_center_log: log_buff_size=10241 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check channel_id 1"
+    ce_info_center_log: module_name=aaa channel_id=abc log_enable=true log_level=debugging host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check channel_id 2"
+    ce_info_center_log: module_name=aaa channel_id="-1" log_enable=true log_level=debugging host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check channel_id 3"
+    ce_info_center_log: module_name=aaa channel_id=10 log_enable=true log_level=debugging host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check channel_id 4"
+    ce_info_center_log: channel_id=1 log_enable=true log_level=debugging host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check module_name"
+    ce_info_center_log: module_name=nothismodule channel_id=1 log_enable=true log_level=debugging host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed

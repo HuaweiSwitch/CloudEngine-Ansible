@@ -1,11 +1,9 @@
 ---
 
-- hosts: ce78
+- name: cloudengine command module test
+  hosts: cloudengine
   gather_facts: no
-  vars:
-    username: rootDC
-    password: Admin@123
-  
+
   tasks:
   - ce_command: commands='display device' host={{inventory_hostname}} username={{username}} password={{password}}
 

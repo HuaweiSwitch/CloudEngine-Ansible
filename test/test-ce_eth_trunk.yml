@@ -1,25 +1,31 @@
 ---
 
 - name: cloudengine eth trunk module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
     test_id: 100
-    members_all: 40GE1/0/24,40GE1/0/25,40GE1/0/26
-    member_1: 40GE1/0/24
-    member_2: 40GE1/0/25
-    member_3: 40GE1/0/26
+    members_all: 40GE1/0/4,40GE1/0/5,40GE1/0/6
+    member_1: 40GE1/0/4
+    member_2: 40GE1/0/5
+    member_3: 40GE1/0/6
   connection: local
   gather_facts: no
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Ensure trunk 100 does not exist"
-    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
   - name: "Ensure trunk 100 is exist"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -29,7 +35,7 @@
         - data.changed == true
 
   - name: "set mode manual"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="manual" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="manual" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -39,7 +45,7 @@
         - data.changed == false
         
   - name: "set mode lacp-dynamic"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="lacp-dynamic" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="lacp-dynamic" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -49,7 +55,7 @@
         - data.changed == true
         
   - name: "set mode lacp-static"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="lacp-static" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="lacp-static" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -59,7 +65,7 @@
         - data.changed == true
         
   - name: "set mode manual"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="manual" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" mode="manual" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -69,7 +75,7 @@
         - data.changed == true
         
   - name: "set min_links 1, default is 1"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" min_links="1" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" min_links="1" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -79,7 +85,7 @@
         - data.changed == false
         
   - name: "set min_links 2, default is 1"
-    ce_eth_trunk: trunk_id={{test_id}} state="present"  min_links="2" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present"  min_links="2" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -89,7 +95,7 @@
         - data.changed == true
         
   - name: "add member1"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -99,7 +105,7 @@
         - data.changed == true
         
   - name: "add member2"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_2}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_2}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -109,7 +115,7 @@
         - data.changed == true
         
   - name: "add member all"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{members_all}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{members_all}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -119,7 +125,7 @@
         - data.changed == true
         
   - name: "add member2 again"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_2}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_2}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -129,7 +135,7 @@
         - data.changed == false
         
   - name: "add member member1 force"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} force="true" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} force="true" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -139,7 +145,7 @@
         - data.changed == true
         
   - name: "add member member1 force, again"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} force="true" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{member_1}} force="true" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -149,7 +155,7 @@
         - data.changed == false
         
   - name: "remove all member"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" force="true" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" force="true" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -159,17 +165,12 @@
         - data.changed == true
         
   - name: "set hash type sourceip"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="sourceip" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-ip" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
-    
-  - name: "TEST 15"
-    assert:
-      that:
-        - data.changed == false
         
   - name: "set hash type ip"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="ip" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-dst-ip" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -179,7 +180,7 @@
         - data.changed == true
         
   - name: "set hash type mac"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="mac" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-dst-mac" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -189,7 +190,7 @@
         - data.changed == true
         
   - name: "set hash type enhanced"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="enhanced" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="enhanced" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -199,7 +200,7 @@
         - data.changed == true
         
   - name: "set hash type desip"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="desip" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="dst-ip" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -209,7 +210,7 @@
         - data.changed == true
         
   - name: "set hash type desmac"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="desmac" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="dst-mac" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -219,7 +220,7 @@
         - data.changed == true
         
   - name: "set hash type sourceip"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="sourceip" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-ip" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -229,7 +230,7 @@
         - data.changed == true
         
   - name: "set hash type sourcemac"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="sourcemac" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-mac" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -239,7 +240,7 @@
         - data.changed == true
         
   - name: "set hash type sourcemac, again"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="sourcemac" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" hash_type="src-mac" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
@@ -249,12 +250,12 @@
         - data.changed == false
         
   - name: "ensured add member all"
-    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{members_all}} force="true" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="present" members={{members_all}} force="true" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
     
   - name: "remove member_1"
-    ce_eth_trunk: trunk_id={{test_id}} state="absent" members={{member_1}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="absent" members={{member_1}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
         
@@ -264,7 +265,7 @@
         - data.changed == true
         
   - name: "remove member_2"
-    ce_eth_trunk: trunk_id={{test_id}} state="absent" members={{member_2}} host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="absent" members={{member_2}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
         
@@ -274,7 +275,7 @@
         - data.changed == true
         
   - name: "delete trunk"
-    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
         
@@ -284,7 +285,7 @@
         - data.changed == true
         
   - name: "check trunk id 1"
-    ce_eth_trunk: trunk_id=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -295,7 +296,7 @@
         - data | failed
 
   - name: "check trunk id 2"
-    ce_eth_trunk: trunk_id="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id="  " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -306,7 +307,7 @@
         - data | failed
         
   - name: "check trunk id 3"
-    ce_eth_trunk: trunk_id=12abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=12abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -317,7 +318,7 @@
         - data | failed
         
   - name: "check trunk id 4"
-    ce_eth_trunk: trunk_id="-1" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id="-1" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -328,7 +329,7 @@
         - data | failed
         
   - name: "check trunk id 5"
-    ce_eth_trunk: trunk_id=10000 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=10000 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -339,7 +340,7 @@
         - data | failed
         
   - name: "check min_links 1"
-    ce_eth_trunk: trunk_id={{test_id}} min_links="abc" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} min_links="abc" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -350,7 +351,7 @@
         - data | failed
         
   - name: "check min_links 2"
-    ce_eth_trunk: trunk_id={{test_id}} min_links="12abc" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} min_links="12abc" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -361,7 +362,7 @@
         - data | failed
         
   - name: "check min_links 3"
-    ce_eth_trunk: trunk_id={{test_id}} min_links="   " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} min_links="   " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -372,7 +373,7 @@
         - data | failed
         
   - name: "check min_links 4"
-    ce_eth_trunk: trunk_id={{test_id}} min_links="9999999" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} min_links="9999999" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -383,7 +384,7 @@
         - data | failed
         
   - name: "check min_links 5"
-    ce_eth_trunk: trunk_id={{test_id}} min_links="0" state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} min_links="0" state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
         
@@ -394,17 +395,17 @@
         - data | failed
         
   - name: "delete trunk again, ensure trunk does not exist"
-    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id={{test_id}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
        
   - name: "ensure trunk 0 dose exist"
-    ce_eth_trunk: trunk_id=0 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=0 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
        
   - name: "create trunk 0"
-    ce_eth_trunk: trunk_id=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
         
@@ -414,7 +415,7 @@
         - data.changed == true
         
   - name: "delete trunk 0"
-    ce_eth_trunk: trunk_id=0 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_eth_trunk: trunk_id=0 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
         
@@ -422,5 +423,3 @@
     assert:
       that:
         - data.changed == true
-        
-        

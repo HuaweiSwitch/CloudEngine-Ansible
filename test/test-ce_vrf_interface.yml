@@ -1,0 +1,110 @@
+---
+
+- name: cloudengine vrf_interface module test
+  hosts: cloudengine
+  vars:
+    test_intf: 40GE1/0/5
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure that interface is layer3"
+    ce_interface: interface={{test_intf}} mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "Create a VPN instance jss"
+    ce_config:  lines="ip vpn-instance jss" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure a VPN instance on the interface"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=jss host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configure a VPN instance on the interface again"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=jss host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Create a VPN instance js"
+    ce_config:  lines="ip vpn-instance js" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Configure a different VPN instance on the interface"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=js host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigure a VPN instance on the interface"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=js state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigure a VPN instance on the interface again"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=js state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: True
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "invalid VPN instance 1"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=hhhhds host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "invalid VPN instance 2"
+    ce_vrf_interface: vpn_interface={{test_intf}} vrf=_public_ host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "invalid interface"
+    ce_vrf_interface: vpn_interface=40GEF1/0/1 vrf=js host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed

@@ -1,9 +1,9 @@
 ---
 
 - name: cloudengine ip interface module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
-    test_intf: 40GE1/0/24
+    test_intf: 40GE1/0/2
     test_vlan: 100
     test_vlanif: vlanif100
     test_tunnel: tunnel100
@@ -12,6 +12,12 @@
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Ensure layer3 interface"
     ce_interface: interface={{test_intf}} mode=layer3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -382,6 +388,48 @@
     ce_vlan: vlan_id={{test_vlan}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
-    
 
-    
+  - name: "Ensure layer3 interface"
+    ce_interface: interface={{test_intf}} mode=layer3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "set ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set sub ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=40.40.40.40 mask=24 ipv4_type=sub state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unset sub ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=40.40.40.40 mask=24 ipv4_type=sub state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unset ipv4 address"
+    ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true

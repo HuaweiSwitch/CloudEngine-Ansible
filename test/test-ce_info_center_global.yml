@@ -1,0 +1,473 @@
+---
+
+- name: cloudengine info center global module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "info-center enable"
+    ce_info_center_global: info_center_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center disbale"
+    ce_info_center_global: info_center_enable=false state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center statistic-suppress enable"
+    ce_info_center_global: suppress_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center statistic-suppress disable"
+    ce_info_center_global: suppress_enable=false state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center syslog packet-priority 1"
+    ce_info_center_global: packet_priority=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center statistic-suppress disable"
+    ce_info_center_global: packet_priority=1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "check packet_priority a"
+    ce_info_center_global: packet_priority=a state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed 
+
+  - name: "info-center statistic-suppress 0"
+    ce_info_center_global: packet_priority=0 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center channel 1 name monitor"
+    ce_info_center_global: channel_id=1 channel_cfg_name=monitor state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center channel 1 name aa"
+    ce_info_center_global: channel_id=1 channel_cfg_name=aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center channel 1 "
+    ce_info_center_global: channel_id=1 channel_cfg_name=aa state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center channel 2 "
+    ce_info_center_global: channel_id=2 channel_cfg_name=aa state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center logfile size 10 "
+    ce_info_center_global: logfile_max_num=10 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center max-logfile-number filenumbers"
+    ce_info_center_global: logfile_max_size=16 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "check size 1 "
+    ce_info_center_global: logfile_max_num=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "check logfile_max_size 1 "
+    ce_info_center_global: logfile_max_size=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "undo info-center logfile size 10 "
+    ce_info_center_global: logfile_max_num=10 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center max-logfile-number 16"
+    ce_info_center_global: logfile_max_size=16 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center max-logfile-number 16"
+    ce_info_center_global: logfile_max_size=16 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center console channel 0"
+    ce_info_center_global: channel_out_direct=console channel_id=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center console channel 3"
+    ce_info_center_global: channel_out_direct=console channel_id=3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center console"
+    ce_info_center_global: channel_out_direct=console channel_id=3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center filter-id bymodule-alias aa 11"
+    ce_info_center_global: filter_feature_name=aa filter_log_name=11 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "info-center filter-id bymodule-alias snmp snmp_ipunlock"
+    ce_info_center_global: filter_feature_name=SNMP filter_log_name=SNMP_IPLOCK state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center filter-id bymodule-alias snmp snmp_ipunlock"
+    ce_info_center_global: filter_feature_name=SNMP filter_log_name=SNMP_IPLOCK state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center filter-id bymodule-alias snmp snmp_i"
+    ce_info_center_global: filter_feature_name=SNMP filter_log_name=SNMP_I state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "info-center loghost 1.2.1.2"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=true vrf_name=_public_ state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center loghost 1.2.1.2"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=true vrf_name=_public_ state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center loghost 1.2.1.2"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=true vrf_name=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "info-center loghost 1.2.1.2 vpn-instance abc"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=false vrf_name=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center loghost 1.2.1.2 vpn-instance abc channel 1"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=false vrf_name=abc channel_id=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center loghost 1.2.1.2 vpn-instance abc channel snmpagent"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.2 is_default_vpn=false vrf_name=abc channel_name=snmpagent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "check ipv6 address, info-center loghost ipv6 1:1:1:2"
+    ce_info_center_global: ip_type=ipv6 server_ip=1:1:1:2 is_default_vpn=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "check ipv4 address, info-center loghost ipv4 1:1::3:1"
+    ce_info_center_global: ip_type=ipv4 server_ip=1:1::3:1 is_default_vpn=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "info-center loghost domain aaa channel 1 transport tcp facility local4 port 100 level alert local-time"
+    ce_info_center_global: server_domain=aaa is_default_vpn=true channel_id=1 transport_mode=tcp facility=local4 server_port=100 level=alert timestamp=localtime state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center loghost domain aaa vpn-instance aa channel 1 transport tcp ssl-policy gmc facility local4 port 100 level alert utc"
+    ce_info_center_global: server_domain=aaa vrf_name=aaa channel_id=1 transport_mode=tcp facility=local4 ssl_policy_name=gmc server_port=100 level=alert timestamp=UTC state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center loghost domain aaa vpn-instance aa "
+    ce_info_center_global: server_domain=aaa vrf_name=aaa state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center loghost domain aaa"
+    ce_info_center_global: server_domain=aaa is_default_vpn=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center loghost loghost ipv6 1:1::3:1"
+    ce_info_center_global: ip_type=ipv6 server_ip=1:1::3:1 is_default_vpn=true channel_id=1 transport_mode=tcp facility=local3 server_port=100 level=alert timestamp=localtime state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center loghost ipv6 1:1::3:1"
+    ce_info_center_global: ip_type=ipv6 server_ip=1:1::3:1 is_default_vpn=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center enable"
+    ce_info_center_global: info_center_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 41"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "info-center statistic-suppress enable"
+    ce_info_center_global: suppress_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 42"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center statistic-suppress enable"
+    ce_info_center_global: server_domain=aaa is_default_vpn=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 43"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "info-center ipv4 vpn-instance aa"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.3 is_default_vpn=false vrf_name=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 44"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo info-center ipv4 vpn-instance aa"
+    ce_info_center_global: ip_type=ipv4 server_ip=1.2.1.3 is_default_vpn=false vrf_name=abc state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 45"
+    assert:
+      that:
+        - data.changed == true

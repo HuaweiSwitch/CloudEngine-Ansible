@@ -1,0 +1,19 @@
+---
+
+- name: cloudengine acl advance module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_acl_advance: state=present acl_name=3200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_advance: state=delete_acl acl_name=3200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_advance: state=present acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit protocol=tcp source_ip=10.10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}}
+
+  - ce_acl_advance: state=absent acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_advance: state=present acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit protocol=tcp dest_ip=10.10.10.10 dest_mask=24 dest_port_op=range dest_port_begin=3600 dest_port_end=3700 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_advance: state=absent acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

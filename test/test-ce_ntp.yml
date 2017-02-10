@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine ntp module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
     source_int: vlanif4002
     ipv4_addr: "192.8.5.6"
@@ -11,6 +11,12 @@
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "config ntp server"
     ce_ntp: server={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -40,7 +46,12 @@
     assert:
       that:
         - data.changed == true
-    
+
+  - name: "ensure source-interface vlanif4002 exist"
+    ce_config: lines='vlan 4002, quit, interface vlanif 4002' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
   - name: "config ntp server and specify source-interface"
     ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -226,3 +237,29 @@
       that:
         - data.changed == false
         - data | failed
+  
+  - name: "config ntp server by abbreviated ipv6"
+    ce_ntp: server='2::3' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config ntp server by abbreviated ipv6 again"
+    ce_ntp: server='2::3' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+  
+  - name: "unconfig server ip"
+    ce_ntp: server='2::3' state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+  

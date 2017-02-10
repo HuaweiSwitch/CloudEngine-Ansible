@@ -1,25 +1,23 @@
 ---
 
-- hosts: ce78
+- hosts: cloudengine
   gather_facts: no
   vars:
-    test_intf: 40GE1/0/22
-  
-  tasks:  
-  - ce_mtu: interface={{test_intf}} state=present mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    test_intf: 40GE2/0/22
+    clear_cmd: 'interface 40ge2/0/22, clear config this'
+    setup_cmd: 'interface 40ge2/0/22, undo portswitch'
 
+  tasks:
+
+  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_config: lines={{setup_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_mtu: interface={{test_intf}} state=present mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
   - ce_mtu: interface={{test_intf}} state=present mtu=9216 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
   - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_mtu: interface={{test_intf}} state=present jbfMax=8888 jbfMin=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_mtu: interface={{test_intf}} state=present jbfMax=8887 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
+  - ce_mtu: interface={{test_intf}} state=present jumbo_max=8888 jumbo_min=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_mtu: interface={{test_intf}} state=present jumbo_max=8887 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
   - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_mtu: interface={{test_intf}} state=present jbfMax=8888 jbfMin=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_mtu: interface={{test_intf}} state=present jbfMax=8887 jbfMin=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
+  - ce_mtu: interface={{test_intf}} state=present jumbo_max=8888 jumbo_min=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_mtu: interface={{test_intf}} state=present jumbo_max=8887 jumbo_min=7777 mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
   - ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

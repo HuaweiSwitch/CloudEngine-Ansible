@@ -1,9 +1,14 @@
 ---
 
-- hosts: ce78
+- name: cloudengine aaa server module test
+  hosts: cloudengine
   gather_facts: no
-  
+
   tasks:
   - ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
 
   - ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 group_name=wdz
+
+  - ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+
+  - ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group

@@ -1,11 +1,17 @@
 ---
 
 - name: cloudengine static route module test
-  hosts: Boardleaf1
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Config an ipv4 static route 2.2.2.0/24 10GE1/0/1 3.3.3.1"
     ce_static_route: prefix=2.2.2.2 mask=24 next_hop=3.3.3.1 nhp_interface=10GE1/0/1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -44,7 +50,7 @@
   - name: "TEST 4"
     assert:
       that:
-        - data.changed == true
+        - data.changed == false
 
   - name: "Config an ipv4 static route 2.2.2.0/24 10GE1/0/1 0.0.0.0"
     ce_static_route: prefix=2.2.2.2 mask=24 next_hop=0.0.0.0 nhp_interface=10GE1/0/1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -64,7 +70,7 @@
   - name: "TEST 6"
     assert:
       that:
-        - data | failed
+        - data.changed == true
 
   - name: "Config an ipv4 static route 2.2.2.0/24 2.2.2.1 preference 1 tag 1 description test "
     ce_static_route: prefix=2.2.2.2 mask=24 next_hop=2.2.2.1 tag=1 description=test pref=1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -86,8 +92,8 @@
       that:
         - data.changed == false
 
-  - name: "Delete an ipv4 static route 2.2.2.0/24 2.2.2.1 preference 1 tag 1 description test "
-    ce_static_route: prefix=2.2.2.2 mask=24 next_hop=2.2.2.1 tag=1 description=test pref=1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config an ipv4 static route 2.2.2.0/24 2.2.2.1 preference 1 tag 2 description test "
+    ce_static_route: prefix=2.2.2.2 mask=24 next_hop=2.2.2.1 tag=2 description=test pref=1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -96,22 +102,72 @@
       that:
         - data.changed == true
 
-  - name: "Config an ipv4 static route 2.2.2.0/24 2.2.2.1 preference 1 tag 1 description test "
-    ce_static_route: prefix=2.2.2.2 mask=24 next_hop=2.2.2.1 tag=1 description=test pref=1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Delete an ipv4 static route 2.2.2.0/24 2.2.2.1 "
+    ce_static_route: prefix=2.2.2.2 mask=24 next_hop=2.2.2.1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
   - name: "TEST 10"
     assert:
       that:
-        - data.changed == false
+        - data.changed == true
+
+  - name: "Delete an ipv4 static route 2.2.2.0/24 10GE1/0/1 0.0.0.0"
+    ce_static_route: prefix=2.2.2.2 mask=24 nhp_interface=10GE1/0/1 next_hop=0.0.0.0 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ipv4 static route 0.0.0.0 10GE1/0/1 3.3.3.1"
+    ce_static_route: prefix=2.2.2.2 mask=0 nhp_interface=10GE1/0/1 next_hop=3.3.3.1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ipv4 static route 2.2.2.0/24 10GE1/0/1 3.3.3.1"
+    ce_static_route: prefix=2.2.2.2 mask=24 nhp_interface=10GE1/0/1 next_hop=3.3.3.1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ipv4 static route 2.2.2.2/32 10GE1/0/1 3.3.3.1"
+    ce_static_route: prefix=2.2.2.2 mask=32 nhp_interface=10GE1/0/1 next_hop=3.3.3.1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ipv4 static route 2.2.2.2/24 2.2.2.2"
+    ce_static_route: prefix=2.2.2.2 mask=24  next_hop=2.2.2.2 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
 
   - name: "Config an ipv4 static route 2.2.2.0/24 2.2.2.2 preference 255 tag 1 description test"
     ce_static_route: prefix=2.2.2::2 mask=24 next_hop=2.2.2.2 tag=1 description=test pref=255 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
-  - name: "TEST 11"
+  - name: "TEST 16"
     assert:
       that:
         - data | failed
@@ -121,7 +177,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 12"
+  - name: "TEST 17"
     assert:
       that:
         - data | failed
@@ -131,7 +187,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 13"
+  - name: "TEST 18"
     assert:
       that:
         - data | failed
@@ -139,9 +195,9 @@
   - name: "Config an ipv4 static route 0.0.0.0 10GE1/0/1 3.3.3.1"
     ce_static_route: prefix=2.2.2.2 mask=0 next_hop=3.3.3.1 nhp_interface=10GE1/0/1 aftype=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-    ignore_errors: false
+    ignore_errors: true
 
-  - name: "TEST 14"
+  - name: "TEST 19"
     assert:
       that:
         - data | failed
@@ -151,7 +207,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 15"
+  - name: "TEST 20"
     assert:
       that:
         - data.changed == true
@@ -161,7 +217,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 16"
+  - name: "TEST 21"
     assert:
       that:
         - data.changed == true
@@ -171,7 +227,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 17"
+  - name: "TEST 22"
     assert:
       that:
         - data.changed == true
@@ -181,7 +237,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 18"
+  - name: "TEST 23"
     assert:
       that:
         - data.changed == true
@@ -191,7 +247,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 19"
+  - name: "TEST 24"
     assert:
       that:
         - data.changed == true
@@ -201,7 +257,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 20"
+  - name: "TEST 25"
     assert:
       that:
         - data.changed == true
@@ -211,37 +267,77 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 21"
+  - name: "TEST 26"
     assert:
       that:
         - data | failed
 
   - name: "Config an ipv6 static route 0::0:0:0:0 10GE1/0/1 1::1:1:1:1"
+    ce_static_route: prefix=2zz1::db8:800:200c.cccb mask=0 next_hop=1::1:1:1:1 nhp_interface=10GE1/0/1 aftype=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete an ipv6 static route 0::0:0:0:0 10GE1/0/1 1::1:1:1:1"
     ce_static_route: prefix=2zz1::db8:800:200c.cccb mask=0 next_hop=1::1:1:1:1 nhp_interface=10GE1/0/1 aftype=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
-  - name: "TEST 22"
+  - name: "TEST 28"
     assert:
       that:
-        - data | failed
+        - data.changed == true
 
   - name: "Config an ipv6 static route 2zz1::db8:800:200c:cccb/128 10GE1/0/1 1::1:1:1:1"
     ce_static_route: prefix=2zz1::db8:800:200c:cccb mask=128 next_hop=1::1:1:1:2 nhp_interface=10GE1/0/1 aftype=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-    ignore_errors: false
+    ignore_errors: true
 
-  - name: "TEST 23"
+  - name: "TEST 28"
     assert:
       that:
-        - data.changed == true
+        - data | failed
 
   - name: "Delete an ipv6 static route 2zz1::db8:800:200c:cccb/128 10GE1/0/1 1::1:1:1:1"
     ce_static_route: prefix=2zz1::db8:800:200c:cccb mask=128 next_hop=1::1:1:1:2 nhp_interface=10GE1/0/1 aftype=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
-  - name: "TEST 24"
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Config an ipv4 static route 2.2.2.2/32 10GE1/0/1"
+    ce_static_route: prefix=2.2.2.2 mask=32 nhp_interface=10GE1/0/1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
     assert:
       that:
         - data.changed == true
+
+  - name: "Delete an ipv4 static route 2.2.2.2/32 10GE1/0/1"
+    ce_static_route: prefix=2.2.2.2 mask=32 nhp_interface=10GE1/0/1 aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Config an ipv4 static route 2.2.2.2/32"
+    ce_static_route: prefix=2.2.2.2 mask=32 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data | failed

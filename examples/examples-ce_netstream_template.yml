@@ -1,0 +1,15 @@
+---
+
+- name: cloudengine netstream template module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_netstream_template: state=present type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_netstream_template: state=absent type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_netstream_template: state=present type=ip record_name=wdz match=tos collect_counter=bytes collect_interface=input description=wdz_netstream host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_netstream_template: state=absent type=ip record_name=wdz match=tos collect_counter=bytes collect_interface=input description=wdz_netstream host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

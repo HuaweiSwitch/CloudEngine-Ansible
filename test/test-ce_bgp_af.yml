@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine bgp af module test
-  hosts: Boardleaf1
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
@@ -10,8 +10,22 @@
 
 # normal argument test
 
-  - name: "enable bgp address family"
-    ce_bgp_af: vrf_name=js af_type=ipv4uni state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure vpn js exist"
+    ce_config: lines='ip vpn-instance js,route-distinguisher 22:1' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "disable bgp"
+    ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "enable bgp"
+    ce_bgp: as_number=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 1"
@@ -19,11 +33,21 @@
       that:
         - data.changed == true
 
+  - name: "enable bgp address family"
+    ce_bgp_af: vrf_name=js af_type=ipv4uni state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data | failed
+
   - name: "disable bgp af"
     ce_bgp_af: vrf_name=js af_type=ipv4uni state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 2"
+  - name: "TEST 3"
     assert:
       that:
         - data.changed == true
@@ -32,7 +56,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 3"
+  - name: "TEST 4"
     assert:
       that:
         - data.changed == true
@@ -41,7 +65,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 4"
+  - name: "TEST 5"
     assert:
       that:
         - data.changed == true
@@ -50,7 +74,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=1.1.1.1 mask_len=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 5"
+  - name: "TEST 6"
     assert:
       that:
         - data.changed == true
@@ -59,7 +83,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=1.1.1.1 mask_len=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 6"
+  - name: "TEST 7"
     assert:
       that:
         - data.changed == true
@@ -68,7 +92,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni max_load_ibgp_num=32 max_load_ebgp_num=32 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 7"
+  - name: "TEST 8"
     assert:
       that:
         - data.changed == true
@@ -78,7 +102,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 8"
+  - name: "TEST 9"
     assert:
       that:
         - data | failed
@@ -88,7 +112,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 9"
+  - name: "TEST 10"
     assert:
       that:
         - data.changed == true
@@ -98,7 +122,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 10"
+  - name: "TEST 11"
     assert:
       that:
         - data.changed == true
@@ -108,7 +132,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 11"
+  - name: "TEST 12"
     assert:
       that:
         - data.changed == true
@@ -118,7 +142,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 12"
+  - name: "TEST 13"
     assert:
       that:
         - data.changed == true
@@ -128,7 +152,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 13"
+  - name: "TEST 14"
     assert:
       that:
         - data.changed == true
@@ -138,7 +162,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 14"
+  - name: "TEST 15"
     assert:
       that:
         - data.changed == true
@@ -148,7 +172,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 15"
+  - name: "TEST 16"
     assert:
       that:
         - data.changed == true
@@ -158,7 +182,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 16"
+  - name: "TEST 17"
     assert:
       that:
         - data.changed == true
@@ -168,7 +192,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 17"
+  - name: "TEST 18"
     assert:
       that:
         - data.changed == true
@@ -178,7 +202,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 18"
+  - name: "TEST 19"
     assert:
       that:
         - data.changed == true
@@ -188,7 +212,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 19"
+  - name: "TEST 20"
     assert:
       that:
         - data.changed == true
@@ -198,7 +222,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 20"
+  - name: "TEST 21"
     assert:
       that:
         - data.changed == true
@@ -208,7 +232,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 21"
+  - name: "TEST 22"
     assert:
       that:
         - data.changed == true
@@ -218,43 +242,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 22"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "set the type of next hop dependence"
-    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependTunnel state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
   - name: "TEST 23"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "change the type of next hop dependence"
-    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependIp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 24"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "set the sensitive feature of bgp"
-    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependTunnel state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 25"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "change the type of next hop dependence"
-    ce_bgp_af: vrf_name=js af_type=ipv4uni next_hop_sel_depend_type=dependIp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 26"
     assert:
       that:
         - data.changed == true
@@ -263,16 +251,16 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni ebgp_if_sensitive=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 27"
+  - name: "TEST 28"
     assert:
       that:
-        - data.changed == true
+        - data.changed == false
 
   - name: "disable ebgp sensitive feature"
     ce_bgp_af: vrf_name=js af_type=ipv4uni  ebgp_if_sensitive=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 28"
+  - name: "TEST 29"
     assert:
       that:
         - data.changed == true
@@ -281,7 +269,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni route_sel_delay=3600 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 29"
+  - name: "TEST 30"
     assert:
       that:
         - data.changed == true
@@ -290,7 +278,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni route_sel_delay=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 30"
+  - name: "TEST 31"
     assert:
       that:
         - data.changed == true
@@ -299,7 +287,7 @@
     ce_bgp_af: vrf_name=_public_ af_type=ipv4uni add_path_sel_num=64 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 31"
+  - name: "TEST 32"
     assert:
       that:
         - data.changed == true
@@ -309,7 +297,7 @@
     register: data
     ignore_errors: true
 
-  - name: "TEST 32"
+  - name: "TEST 33"
     assert:
       that:
         - data | failed
@@ -318,7 +306,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni lowest_priority=true originator_prior=true relay_delay_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 33"
+  - name: "TEST 34"
     assert:
       that:
         - data.changed == true
@@ -328,7 +316,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 34"
+  - name: "TEST 35"
     assert:
       that:
         - data.changed == true
@@ -337,7 +325,7 @@
     ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 originator_prior=true relay_delay_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
-  - name: "TEST 35"
+  - name: "TEST 36"
     assert:
       that:
         - data.changed == true
@@ -347,7 +335,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 36"
+  - name: "TEST 37"
     assert:
       that:
         - data.changed == true
@@ -357,7 +345,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 37"
+  - name: "TEST 38"
     assert:
       that:
         - data.changed == true
@@ -367,7 +355,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 38"
+  - name: "TEST 39"
     assert:
       that:
         - data.changed == true
@@ -377,7 +365,7 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 39"
+  - name: "TEST 40"
     assert:
       that:
         - data.changed == true
@@ -387,7 +375,21 @@
     register: data
     ignore_errors: false
 
-  - name: "TEST 40"
+  - name: "TEST 41"
     assert:
       that:
         - data.changed == true
+
+  - name: "undo bgp"
+    ce_bgp: as_number=100 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 42"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "clear config"
+    ce_config: lines='undo ip vpn-instance js' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

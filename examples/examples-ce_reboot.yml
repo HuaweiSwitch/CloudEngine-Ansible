@@ -1,0 +1,10 @@
+---
+
+- hosts: ce78
+  gather_facts: no
+  vars:
+    confirm: true
+    save_config: true
+
+  tasks:
+  - ce_reboot: confirm={{confirm}} save_config={{save_config}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

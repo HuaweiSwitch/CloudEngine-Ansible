@@ -1,17 +1,18 @@
 ---
 
-- hosts: ce78
+- name: cloudengine bgp neighbor module test
+  hosts: cloudengine
   gather_facts: no
-  
+
   tasks:
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500
 
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500
-  
+
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500 tcp_MSS=321
-  
+
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500 tcp_MSS=321
-  
+
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500 connect_mode=listenOnly is_bfd_block=true multiplier=10
-  
+
   - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500 connect_mode=listenOnly is_bfd_block=true multiplier=10

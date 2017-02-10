@@ -1,27 +1,33 @@
 ---
 
 - name: cloudengine switchport module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
-    test_intf: 40GE1/0/23
+    test_intf: 40GE1/0/4
   connection: local
   gather_facts: no
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Ensure a range of VLANs are not present on the switch"
     ce_vlan: vlan_range="2-100" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     
-  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+  - name: "ENSURE 40GE1/0/4 is in its default switchport state"
     ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
   
-  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+  - name: "ENSURE 40GE1/0/4 is in its default switchport state"
     ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
   
-  - name: "ENSURE 40GE1/0/22 is configured for access vlan 20"
+  - name: "ENSURE 40GE1/0/4 is configured for access vlan 20"
     ce_switchport: interface={{test_intf}} mode=access access_vlan=20 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
@@ -30,7 +36,7 @@
       that:
         - data.changed == true
         
-  - name: "ENSURE 40GE1/0/22 only has vlans 5-10 as trunk vlans"
+  - name: "ENSURE 40GE1/0/4 only has vlans 5-10 as trunk vlans"
     ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=5-10 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     
@@ -39,7 +45,7 @@
       that:
         - data.changed == true
     
-  - name: "Ensure 40GE1/0/22 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)"
+  - name: "Ensure 40GE1/0/4 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)"
     ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=2-50 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     
@@ -80,7 +86,7 @@
         - data | failed
         
   - name: "interface is invalid"
-    ce_switchport: interface=abc40GE1/0/22 mode=trunk trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_switchport: interface=abc40GE1/0/4 mode=trunk trunk_vlans=1-5 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
     
@@ -372,7 +378,7 @@
       that:
         - data.changed == true 
         
-  - name: "ENSURE 40GE1/0/22 is in its default switchport state"
+  - name: "ENSURE 40GE1/0/4 is in its default switchport state"
     ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-        
+    ignore_errors: true

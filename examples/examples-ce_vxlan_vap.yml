@@ -1,0 +1,48 @@
+---
+
+- hosts: ce128
+  gather_facts: no
+  vars:
+    l2sub_intf: "10GE3/0/41.1"
+    bd_id: 100
+    vlan_all: "100,101,102"
+    bind_vid: 100
+    ce_vid: 101
+    pe_vid: 102
+    
+  
+  tasks:  
+
+  - ce_interface: interface={{l2sub_intf}} l2sub=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vlan: vlan_range={{vlan_all}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+ 
+  - ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vlan: vlan_range={{vlan_all}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  
+  - ce_interface: interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

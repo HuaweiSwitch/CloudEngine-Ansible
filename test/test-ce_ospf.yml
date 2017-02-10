@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine ospf module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
     process: 100
   connection: local
@@ -9,13 +9,19 @@
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Ensure ospf process does not exist"
-    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
   
   - name: "Ensure ospf process exist"
-    ce_ospf: process_id={{process}} state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -25,7 +31,7 @@
         - data.changed == true
 
   - name: "create area 100"
-    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -35,7 +41,7 @@
         - data.changed == true
         
   - name: "create area 100 again"
-    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -45,7 +51,7 @@
         - data.changed == false
         
   - name: "create area 1.2.3.4"
-    ce_ospf: process_id={{process}} area=1.2.3.4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -55,7 +61,7 @@
         - data.changed == true
         
   - name: "delete area 1.2.3.4"
-    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -65,7 +71,7 @@
         - data.changed == true
         
   - name: "delete area 1.2.3.4 again"
-    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=1.2.3.4 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -75,7 +81,7 @@
         - data.changed == false
         
   - name: "area 100, add network 99.99.1.0 mask=24"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -85,7 +91,7 @@
         - data.changed == true
         
   - name: "area 100, add network 99.99.2.0 mask=24"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -95,7 +101,7 @@
         - data.changed == true
         
   - name: "area 100, add network 99.99.2.0 mask=24, again"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -105,7 +111,7 @@
         - data.changed == false
         
   - name: "area 100, del network 99.99.2.0 mask=24"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.2.0 mask=24 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -115,7 +121,7 @@
         - data.changed == true
         
   - name: "area 100, del network 99.99.1.0 mask=24"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=24 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -125,7 +131,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=none"
-    ce_ospf: process_id={{process}} area=100 auth_mode=none state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=none state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -135,7 +141,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=simple"
-    ce_ospf: process_id={{process}} area=100 auth_mode=simple state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=simple state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -145,7 +151,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=simple, auth_text_simple=abc"
-    ce_ospf: process_id={{process}} area=100 auth_mode=simple auth_text_simple=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=simple auth_text_simple=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -155,7 +161,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=md5"
-    ce_ospf: process_id={{process}} area=100 auth_mode=md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -165,7 +171,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=hmac-sha256"
-    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-sha256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-sha256 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -175,7 +181,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=hmac-md5"
-    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -185,7 +191,7 @@
         - data.changed == true
         
   - name: "area 100, auth_mode=hmac-md5 with key "
-    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 auth_key_id=22 auth_text_md5=aaaa state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=hmac-md5 auth_key_id=22 auth_text_md5=aaaa state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -195,7 +201,7 @@
         - data.changed == true
         
   - name: "set max_load_balance=22 "
-    ce_ospf: process_id={{process}} area=100 max_load_balance=22 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 max_load_balance=22 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -205,7 +211,7 @@
         - data.changed == true
         
   - name: "set max_load_balance=2 "
-    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -215,7 +221,7 @@
         - data.changed == true
         
   - name: "set max_load_balance=2 again"
-    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 max_load_balance=2 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -225,7 +231,7 @@
         - data.changed == false
         
   - name: "add nexthop weight 1"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -235,7 +241,7 @@
         - data.changed == true
         
   - name: "add nexthop weight 2"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -245,7 +251,7 @@
         - data.changed == true
         
   - name: "add nexthop weight 3"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -255,7 +261,7 @@
         - data.changed == true
         
   - name: "add nexthop weight 3 again"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -265,7 +271,7 @@
         - data.changed == false
         
   - name: "del nexthop weight 3"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.4.0 nexthop_weight=4 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -275,7 +281,7 @@
         - data.changed == true
         
   - name: "del nexthop weight 1"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.3.0 nexthop_weight=3 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -285,7 +291,7 @@
         - data.changed == true
         
   - name: "delete process"
-    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -295,7 +301,7 @@
         - data.changed == true
         
   - name: "delete process again"
-    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}}  state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -306,7 +312,7 @@
         
         
   - name: "procee_id check 1"
-    ce_ospf: process_id=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -317,7 +323,7 @@
         - data | failed 
         
   - name: "procee_id check 2"
-    ce_ospf: process_id="   " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id="   " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -328,7 +334,7 @@
         - data | failed 
         
   - name: "procee_id check 3"
-    ce_ospf: process_id=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id=0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -339,7 +345,7 @@
         - data | failed 
         
   - name: "procee_id check 4"
-    ce_ospf: process_id=4294967296 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id=4294967296 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -350,7 +356,7 @@
         - data | failed 
         
   - name: "procee_id check 5"
-    ce_ospf: process_id=4294967295 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id=4294967295 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -360,7 +366,7 @@
         - data.changed == true 
         
   - name: "procee_id check 6"
-    ce_ospf: process_id=4294967295 state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id=4294967295 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -370,7 +376,7 @@
         - data.changed == true 
         
   - name: "area id check 1"
-    ce_ospf: process_id={{process}} area=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -381,7 +387,7 @@
         - data | failed 
         
   - name: "area id check 2"
-    ce_ospf: process_id={{process}} area="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area="  " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -392,7 +398,7 @@
         - data | failed 
         
   - name: "area id check 3"
-    ce_ospf: process_id={{process}} area=4294967296 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=4294967296 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -403,7 +409,7 @@
         - data | failed 
         
   - name: "area id check 4"
-    ce_ospf: process_id={{process}} area=255.255.255.256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=255.255.255.256 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -414,7 +420,7 @@
         - data | failed 
         
   - name: "area id check 5"
-    ce_ospf: process_id={{process}} area=256.255.255.255 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=256.255.255.255 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -425,7 +431,7 @@
         - data | failed 
         
   - name: "area network addr check 1"
-    ce_ospf: process_id={{process}} area=100 addr=abc mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=abc mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -436,7 +442,7 @@
         - data | failed 
         
   - name: "area network addr check 2"
-    ce_ospf: process_id={{process}} area=100 addr="  " mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr="  " mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -447,7 +453,7 @@
         - data | failed 
         
   - name: "area network addr check 3"
-    ce_ospf: process_id={{process}} area=100 addr=1000 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=1000 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -458,7 +464,7 @@
         - data | failed 
         
   - name: "area network addr check 4"
-    ce_ospf: process_id={{process}} area=100 addr=255.256.0.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -469,7 +475,7 @@
         - data | failed 
         
   - name: "area network addr check 5"
-    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -480,7 +486,7 @@
         - data | failed 
         
   - name: "area network addr check 6"
-    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=255.256.0 mask=24 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -491,7 +497,7 @@
         - data | failed 
         
   - name: "area network mask check 1"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0  state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0  state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -502,7 +508,7 @@
         - data | failed 
         
   - name: "area network mask check 2"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -513,7 +519,7 @@
         - data | failed 
         
   - name: "area network mask check 3"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask="  " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -524,7 +530,7 @@
         - data | failed 
         
   - name: "area network mask check 4"
-    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=33 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 addr=99.99.1.0 mask=33 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -535,7 +541,7 @@
         - data | failed 
         
   - name: "area auth, key_id and text_md5 set at same time check"
-    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=2 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=2 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -546,7 +552,7 @@
         - data | failed 
         
   - name: "area auth, key_id check 1"
-    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=0 auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=0 auth_text_md5=abcd state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -557,7 +563,7 @@
         - data | failed 
         
   - name: "area auth, key_id check 2"
-    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=256 auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=256 auth_text_md5=abcd state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -568,7 +574,7 @@
         - data | failed 
         
   - name: "area auth, key_id check 3"
-    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=abc auth_text_md5=abcd state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} area=100 auth_mode=md5 auth_key_id=abc auth_text_md5=abcd state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -579,7 +585,7 @@
         - data | failed 
         
   - name: "max_load_balance check 1"
-    ce_ospf: process_id={{process}} max_load_balance=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} max_load_balance=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -590,7 +596,7 @@
         - data | failed 
         
   - name: "max_load_balance check 2"
-    ce_ospf: process_id={{process}} max_load_balance=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} max_load_balance=0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -601,7 +607,7 @@
         - data | failed 
         
   - name: "max_load_balance check 3"
-    ce_ospf: process_id={{process}} max_load_balance=255 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} max_load_balance=255 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -612,7 +618,7 @@
         - data | failed 
         
   - name: "max_load_balance check 4"
-    ce_ospf: process_id={{process}} max_load_balance="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} max_load_balance="  " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -623,7 +629,7 @@
         - data | failed 
         
   - name: "nexthop_addr check 1"
-    ce_ospf: process_id={{process}} nexthop_addr=abc weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=abc nexthop_weight=10 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -634,7 +640,7 @@
         - data | failed 
         
   - name: "nexthop_addr check 2"
-    ce_ospf: process_id={{process}} nexthop_addr=256.0.0.1 weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=256.0.0.1 nexthop_weight=10 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -645,7 +651,7 @@
         - data | failed 
         
   - name: "nexthop_addr check 3"
-    ce_ospf: process_id={{process}} nexthop_addr=12345 weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=12345 nexthop_weight=10 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -656,7 +662,7 @@
         - data | failed 
         
   - name: "nexthop_addr check 4"
-    ce_ospf: process_id={{process}} nexthop_addr="  " weight=10 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr="  " nexthop_weight=10 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -667,7 +673,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 1"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -678,7 +684,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 2"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=256 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=256 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -689,7 +695,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 3"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight=abc state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -700,7 +706,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 4"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 weight="  " state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight="  " state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -711,7 +717,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 5"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -722,7 +728,7 @@
         - data | failed 
         
   - name: "nexthop_weight check 6"
-    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=254 state="present" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+    ce_ospf: process_id={{process}} nexthop_addr=99.99.1.0 nexthop_weight=254 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -731,8 +737,8 @@
       that:
         - data.changed == true
         
-  - name: "ensure procss delete"
-    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username=huawei password=huaweiDC port={{ansible_ssh_port}}
+  - name: "ensure process delete"
+    ce_ospf: process_id={{process}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
 
@@ -740,4 +746,3 @@
     assert:
       that:
         - data.changed == true
-        

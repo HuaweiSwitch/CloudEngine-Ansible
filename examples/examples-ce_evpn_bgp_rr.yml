@@ -1,0 +1,12 @@
+---
+
+- hosts: cloudengine
+  gather_facts: no
+  vars:
+
+  tasks:
+
+  - ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_evpn_bgp_rr: as_number=20 policy_vpn_target=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=192.8.3.3 reflect_client=true policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

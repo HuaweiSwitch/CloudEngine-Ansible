@@ -1,20 +1,25 @@
 ---
 
 - name: cloudengine interface module test
-  hosts: ce78
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
 
   tasks:
 
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "Ensure an interface is a Layer 3 port and that it has the proper description"
-    ce_interface: interface="40GE1/0/22"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_interface: interface="40GE1/0/3"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
   - name: "Admin down an interface"
-    ce_interface: interface="40GE1/0/22"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_interface: interface="40GE1/0/3"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 2"

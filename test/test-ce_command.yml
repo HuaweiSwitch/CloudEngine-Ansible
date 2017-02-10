@@ -1,11 +1,16 @@
 ---
 
 - name: cloudengine command test
-  hosts: Boardleaf
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
 
   - name: "display device"
     ce_command: commands='display device' host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}}
@@ -54,4 +59,3 @@
     assert:
       that:
         - data.changed == false
-

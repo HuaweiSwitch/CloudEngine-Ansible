@@ -1,14 +1,24 @@
 ---
 
 - name: cloudengine mtu module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
-    test_intf: 40GE1/0/22
+    test_intf: 40GE1/0/1
   connection: local
   gather_facts: no
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure that interface is layer3"
+    ce_interface: interface={{test_intf}} mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
   - name: "Config mtu on interface (routed interface)"
     ce_mtu: interface={{test_intf}} state=present mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -102,7 +112,7 @@
         - data.changed == true 
 
   - name: "Config jumboframe max and min value on interface"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=8888 jbfMin=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=8888 jumbo_min=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     
   - name: "TEST 9"
@@ -111,7 +121,7 @@
         - data.changed == true 
     
   - name: "Config jumboframe max value on interface (routed interface)"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=7777 jbfMin=6666 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=7777 jumbo_min=6666 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
  
   - name: "TEST 10"
@@ -129,7 +139,7 @@
         - data.changed == true 
 
   - name: "interface invalid, TEST not changed"
-    ce_mtu: interface=tunnel0 state=present jbfMax=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface=tunnel0 state=present jumbo_max=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
    
@@ -139,8 +149,8 @@
         - data.changed == false 
         - data | failed
     
-  - name: "jbfMax invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max invalid, TEST not changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
    
@@ -150,8 +160,8 @@
         - data.changed == false 
         - data | failed
 
-  - name: "jbfMax invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max invalid, TEST not changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
    
@@ -161,8 +171,8 @@
         - data.changed == false 
         - data | failed
         
-  - name: "jbfMax invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=45 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max invalid, TEST not changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=45 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
    
@@ -172,8 +182,8 @@
         - data.changed == false 
         - data | failed
         
-  - name: "jbfMax invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=14000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max invalid, TEST not changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=14000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
    
@@ -183,8 +193,8 @@
         - data.changed == false 
         - data | failed
         
-  - name: "jbfMax 12288, TEST changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=12288 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max 12288, TEST changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=12288 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
    
@@ -193,8 +203,8 @@
       that:
         - data.changed == true 
         
-  - name: "jbfMax 1516, TEST changed"
-    ce_mtu: interface={{test_intf}} state=present jbfMax=1518 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "jumbo_max 1536, TEST changed"
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=1536 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: false
    

@@ -1,8 +1,9 @@
 ---
 
-- hosts: ce78
+- name: cloudengine bgp neighbor module test
+  hosts: cloudengine
   gather_facts: no
-  
+
   tasks:
   - ce_bgp_neighbor_af: vrf_name=js af_type=ipv4uni remote_address=192.168.10.10 nexthop_configure=local state=present host={{inventory_hostname}} username={{username}} password={{password}} 
 

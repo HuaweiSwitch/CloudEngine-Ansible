@@ -1,0 +1,623 @@
+---
+
+- name: cloudengine NetStream export module test
+  hosts: cloudengine
+  vars:
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Configures the source address for the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip source_ip=192.8.2.2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the source address for the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip source_ip=192.8.2.2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false 
+
+  - name: "Unconfigures the source address for the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip source_ip=192.8.2.2 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the source address for the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip source_ip=192.8.2.2 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the source IP address for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan source_ip=192.8.2.3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the source IP address for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan source_ip=192.8.2.3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the source IP address for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan source_ip=192.8.2.3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the source IP address for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan source_ip=192.8.2.3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Ensure VPN instance has existed."
+    ce_config: before='ip vpn-instance test' lines='ipv4-family' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+  
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics with VPN instance."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics with VPN instance again."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics with VPN instance."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host_vpn=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics with VPN instance again."
+    ce_netstream_export: type=ip host_ip=192.8.2.4 host_port=25 host_vpn=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics with VPN instance."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics with VPN instance again."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host_vpn=test host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics with VPN instance."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host_vpn=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics with VPN instance again."
+    ce_netstream_export: type=vxlan host_ip=192.8.2.5 host_port=26 host_vpn=test state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version for the exported packets carrying VXLAN flexible flow statistics."
+    ce_netstream_export: type=vxlan version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version for the exported packets carrying VXLAN flexible flow statistics again."
+    ce_netstream_export: type=vxlan version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip version=5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip version=5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics."
+    ce_netstream_export: type=ip version=5 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics again."
+    ce_netstream_export: type=ip version=5 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with as_option."
+    ce_netstream_export: type=ip version=5 as_option=origin host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with as_option again."
+    ce_netstream_export: type=ip version=5 as_option=origin host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with as_option."
+    ce_netstream_export: type=ip version=5 as_option=origin state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with as_option again."
+    ce_netstream_export: type=ip version=5 as_option=origin state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9."
+    ce_netstream_export: type=ip version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 again."
+    ce_netstream_export: type=ip version=9 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9."
+    ce_netstream_export: type=ip version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 again."
+    ce_netstream_export: type=ip version=9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and as_option."
+    ce_netstream_export: type=ip version=9 as_option=origin host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 41"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and as_option again."
+    ce_netstream_export: type=ip version=9 as_option=origin host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 42"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and as_option."
+    ce_netstream_export: type=ip version=9 as_option=origin state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 43"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and as_option again."
+    ce_netstream_export: type=ip version=9 as_option=origin state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 44"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true."
+    ce_netstream_export: type=ip version=9 bgp_nexthop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 45"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true again."
+    ce_netstream_export: type=ip version=9 bgp_nexthop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 46"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true."
+    ce_netstream_export: type=ip version=9 bgp_nexthop=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 47"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true again."
+    ce_netstream_export: type=ip version=9 bgp_nexthop=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 48"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true and as_option."
+    ce_netstream_export: type=ip version=9 as_option=peer bgp_nexthop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 49"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Configures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true and as_option again."
+    ce_netstream_export: type=ip version=9 as_option=peer bgp_nexthop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 50"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true and as_option."
+    ce_netstream_export: type=ip version=9 as_option=peer bgp_nexthop=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 51"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Unconfigures the version number of the exported packets carrying IPv4 flow statistics with version=9 and bgp_nexthop=true and as_option again."
+    ce_netstream_export: type=ip version=9 as_option=peer bgp_nexthop=true state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 52"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "type is empty."
+    ce_netstream_export: type= version=9 as_option=peer bgp_nexthop=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 53"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port 0."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 54"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port 65536."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=65536 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 55"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port -1."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=-1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 56"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "host port boundary value 1."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 57"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo host port boundary value 1."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "host port boundary value 65535."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=65535 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 58"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo host port boundary value 65535."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=65535 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "invalid VPN _public_."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1 host_vpn=_public_ host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 59"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid VPN space."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1 host_vpn=' ' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 59"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid VPN length 32."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1 host_vpn='11111111111111111111111111111111' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 60"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port @#&."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=@#& host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 61"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port abc."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 62"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+
+  - name: "invalid host port 1.1."
+    ce_netstream_export: type=ip host_ip=192.5.5.5 host_port=1.1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 63"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed

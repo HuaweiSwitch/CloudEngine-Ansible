@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine ntp_auth module test
-  hosts: ce78
+  hosts: cloudengine
   vars:
     test_auth_pwd: 11111111111111111111
     test_invalid_auth_pwd: "111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"                      
@@ -12,6 +12,12 @@
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "config ntp authentication key-id"
     ce_ntp_auth: key_id=2526 auth_pwd={{test_auth_pwd}} auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data

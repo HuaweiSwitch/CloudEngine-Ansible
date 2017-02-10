@@ -1,0 +1,105 @@
+---
+
+- name: cloudengine snmp user module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure acl 2000 exist"
+    ce_config: lines='acl 2000' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "undo snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp user"
+    ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present local_user_name=wdz_user local_password=wdz local_service_type=snmp
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo local user"
+    ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config local user"
+    ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo local user"
+    ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "configure local user"
+    ce_aaa_server_host: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent local_user_name=wdz_user local_password=wdz
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true

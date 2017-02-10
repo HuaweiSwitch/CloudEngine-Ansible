@@ -1,12 +1,18 @@
 ---
 
 - name: cloudengine command test
-  hosts: Boardleaf
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "display all"
     ce_facts: host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}} gather_subset=all
     register: data
@@ -44,29 +50,11 @@
       that:
         - data.changed == false
 
-  - name: "display legacy"
-    ce_facts: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} gather_subset=legacy
-    register: data
-
-  - name: "TEST 5"
-    assert:
-      that:
-        - data.changed == false
-
-  - name: "display !legacy"
-    ce_facts: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} gather_subset=!legacy
-    register: data
-
-  - name: "TEST 6"
-    assert:
-      that:
-        - data.changed == false
-
   - name: "display hardware"
     ce_facts: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} gather_subset=hardware
     register: data
 
-  - name: "TEST 7"
+  - name: "TEST 5"
     assert:
       that:
         - data.changed == false
@@ -75,7 +63,7 @@
     ce_facts: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} gather_subset=interfaces
     register: data
 
-  - name: "TEST 8"
+  - name: "TEST 6"
     assert:
       that:
         - data.changed == false

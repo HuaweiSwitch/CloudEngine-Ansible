@@ -1,0 +1,594 @@
+---
+
+- name: cloudengine EVPN bd vni module test
+  hosts: cloudengine
+  vars:
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure EVPN overlay enable is enabled"
+    ce_evpn_global: evpn_overlay_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+ 
+  - name: "Ensure bridge domain has existed"
+    ce_config: lines='bridge-domain 100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Ensure vxlan vni has existed"
+    ce_config: before='bridge-domain 100' lines='vxlan vni 20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "Ensure BD EVPN view exist"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+ 
+  - name: "delete BD EVPN view"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "delete BD EVPN view again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false 
+
+  - name: "create BD EVPN view"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true 
+
+  - name: "create BD EVPN view again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "conifg RD"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true  route_distinguisher=22:22 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config RD again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true  route_distinguisher=22:22 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config vpn target import again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one existed vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:22  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one unexisted vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:24  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config just one unexisted vpn target import again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config vpn target export again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one existed vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:22  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one unexisted vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:24  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config just one unexisted vpn target export again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:24 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25,22:26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25,22:26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one existed vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config just one unexisted vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:27 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config just one unexisted vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:27 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config all existed vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25,22:26,22:27 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config all existed vpn target both and one unexisted vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25,22:26,22:27,22:28 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+  
+  - name: "config all existed vpn target both and one unexisted vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:25,22:26,22:27,22:28 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target import and it is in vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:25,22:26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target import and it is not in vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:29 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config vpn target import and it is not in vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:29 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target export and it is in vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:25,22:26 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target export and it is not in vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:29 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config vpn target export and it is not in vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:29 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config all existed vpn target"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:22,22:23,22:24 vpn_target_export=22:22,22:23,22:24 vpn_target_both=22:25,22:26,22:27,22:29 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config one unexisted vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:30 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config one unexisted vpn target import again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_import=22:30 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config one unexisted vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:30 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config one unexisted vpn target export again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:30 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config one unexisted vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:31 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config one unexisted vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:31 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig an unexisted RD"
+    ce_evpn_bd_vni: bridge_domain_id=100 route_distinguisher=22:23  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig RD"
+    ce_evpn_bd_vni: bridge_domain_id=100 route_distinguisher=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 39"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig RD again"
+    ce_evpn_bd_vni: bridge_domain_id=100 route_distinguisher=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 40"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true route_distinguisher=22:22 vpn_target_import=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "unconfig an unexisted vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_import=22:28 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 41"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig an existed vpn target import"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_import=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 42"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig an existed vpn target import again"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_import=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 43"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_export=22:22,22:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "unconfig an unexisted vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_export=22:28 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 44"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig an existed vpn target export"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_export=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 45"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig an existed vpn target export again"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_export=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 46"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=true vpn_target_both=22:24,22:25 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "unconfig an unexisted vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_both=22:28 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 47"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig an existed vpn target both"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_both=22:24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 48"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig an existed vpn target both again"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_both=22:24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 49"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig all exist vpn target attributes"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_import=22:23 vpn_target_export=22:23 vpn_target_both=22:25 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 50"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig all exist vpn target attributes again"
+    ce_evpn_bd_vni: bridge_domain_id=100 vpn_target_import=22:23 vpn_target_export=22:23 vpn_target_both=22:25 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 51"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfig all EVPN configuration"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 52"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unconfig all EVPN configuration again"
+    ce_evpn_bd_vni: bridge_domain_id=100 evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+
+  - name: "TEST 53"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "specify an unexisted bridge domain"
+    ce_evpn_bd_vni: bridge_domain_id=10001 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 54"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "specify an illegal bridge domain sd"
+    ce_evpn_bd_vni: bridge_domain_id=sd evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 55"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "specify an illegal bridge domain 16777216"
+    ce_evpn_bd_vni: bridge_domain_id=16777216 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 56"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "specify an illegal bridge domain 16777216"
+    ce_evpn_bd_vni: bridge_domain_id=16777216 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 57"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "specify an illegal bridge domain 0"
+    ce_evpn_bd_vni: bridge_domain_id=0 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 58"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "unconfigure vxlan vni in BD view"
+    ce_config: before='bridge-domain 100' lines='undo vxlan vni 20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "unconfig bridge domain"
+    ce_config: lines='undo bridge-domain 100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

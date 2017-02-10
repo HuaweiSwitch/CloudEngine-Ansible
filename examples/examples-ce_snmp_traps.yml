@@ -1,0 +1,19 @@
+---
+
+- name: cloudengine snmp traps module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_snmp_traps: feature_name=all host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_traps: feature_name=all host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+
+  - ce_snmp_traps: interface_type=40GE interface_number=2/0/1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_traps: interface_type=40GE interface_number=2/0/1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+
+  - ce_snmp_traps: port_number=2222 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+
+  - ce_snmp_traps: port_number=2222 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent

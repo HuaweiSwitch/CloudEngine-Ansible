@@ -1,7 +1,7 @@
 ---
 
 - name: cloudengine bgp module test
-  hosts: Boardleaf1
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
@@ -9,6 +9,15 @@
   tasks:
 
 # normal argument test
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "disable bgp"
+    ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
 
   - name: "enable BGP"
     ce_bgp: as_number=4294967295 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
@@ -99,7 +108,7 @@
   - name: "TEST 10"
     assert:
       that:
-        - data.changed == false
+        - data.changed == true
 
   - name: "change as path limit"
     ce_bgp: as_path_limit=300 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -108,7 +117,7 @@
   - name: "TEST 11"
     assert:
       that:
-        - data.changed == false
+        - data.changed == true
 
   - name: "set routerid vpn-instance auto select"
     ce_bgp: bgp_rid_auto_sel=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
@@ -212,7 +221,7 @@
         - data | failed
 
   - name: "set time of bgp router1"
-    ce_bgp: hold_time=1000 keepalive_time=500 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=500 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -222,7 +231,7 @@
         - data | failed
 
   - name: "set time of bgp router2"
-    ce_bgp: hold_time=1000 keepalive_time=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 24"
@@ -231,7 +240,7 @@
         - data.changed == true
 
   - name: "set time of bgp connection retry"
-    ce_bgp: conn_retry_time=1000 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 25"
@@ -240,7 +249,7 @@
         - data.changed == true
 
   - name: "change time of bgp connection retry"
-    ce_bgp: conn_retry_time=65536 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=65536 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -250,32 +259,32 @@
         - data | failed
 
   - name: "delete time of bgp connection retry"
-    ce_bgp: conn_retry_time=1000 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
-    ignore_errors: true
 
   - name: "TEST 27"
     assert:
       that:
-        - data | failed
+        - data.changed == true
 
   - name: "set default address family type"
-    ce_bgp: default_af_type='ipv4uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' default_af_type='ipv4uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 28"
     assert:
       that:
-        - data.changed == true
+        - data.changed == false
 
   - name: "change default address family type"
-    ce_bgp: default_af_type='ipv6uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' default_af_type='ipv6uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
+    ignore_errors: true
 
   - name: "TEST 29"
     assert:
       that:
-        - data.changed == true
+        - data | failed
 
   - name: "disable bgp"
     ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

@@ -1,0 +1,19 @@
+---
+
+- name: cloudengine stp module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_stp: state=present stp_mode=stp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_stp: state=absent stp_mode=stp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_stp: state=present bpdu_protection=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_stp: state=present bpdu_protection=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_stp: state=present interface=all edged_port=enable bpdu_filter=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_stp: state=present interface=all edged_port=disable bpdu_filter=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

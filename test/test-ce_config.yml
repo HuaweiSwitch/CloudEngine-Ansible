@@ -1,13 +1,20 @@
 ---
 
 - name: cloudengine config module test
-  hosts: Boardleaf1
+  hosts: cloudengine
   connection: local
   gather_facts: no
+  vars:
+    test_intf: "interface 10GE1/0/25"
 
 
   tasks:
-  
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
   - name: "configure top level configuration and save it"
     ce_config: lines='sysname boardleaf1' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
@@ -59,7 +66,7 @@
         - data.changed == true
 
   - name: "Multiple configure"
-    ce_config: before='bgp 50,quit' lines='interface 10 2/0/1,p t a v 120' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: before='vlan 120,quit' lines='{{test_intf}},p t a v 120' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
@@ -67,5 +74,109 @@
     assert:
       that:
         - data.changed == false
+  
+  - name: "undo bgp 50"
+    ce_config: lines='undo bgp 50' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
 
+  - name: "config interface"
+    ce_config: parents={{test_intf}} lines='undo portswitch' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
 
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface ip"
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface ip, again replace=block match=strict"
+    ce_config: parents={{test_intf}} lines='undo portswitch' match=strict replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config interface ip, again replace=block match=exact "
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=exact replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config interface ip, again replace=block match=none "
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=exact replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config interface ip, again replace=block match=line "
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=line replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "config interface ip,  save"
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block save=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config interface ip, backup"
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block backup=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+        - data.backup_path
+
+  - name: "config interface ip, config=true"
+    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block config=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "test defaults"
+    ce_config: lines='undo snmp-agent blacklist user-block disable' defaults=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false

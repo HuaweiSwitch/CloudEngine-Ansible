@@ -1,0 +1,83 @@
+---
+
+- name: cloudengine snmp location module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+# normal argument test
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "undo snmp location"
+    ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "config snmp location"
+    ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp location"
+    ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config snmp location1"
+    ce_snmp_location: location="" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data | failed
+
+  - name: "undo snmp location2"
+    ce_snmp_location: location='\"a b\"' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+    ignore_errors: false
+
+  - name: "config snmp location2"
+    ce_snmp_location: location='\"a b\"' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo snmp location2"
+    ce_snmp_location: location='\"a b\"' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "config snmp location3"
+    ce_snmp_location: location='1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data | failed

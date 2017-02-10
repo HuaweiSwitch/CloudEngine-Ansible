@@ -1,0 +1,15 @@
+---
+
+- name: cloudengine acl interface module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_acl_interface: state=present acl_name=2200 interface=40GE2/0/1 direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_interface: state=absent acl_name=2200 interface=40GE2/0/1 direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_interface: state=present acl_name=2200 interface=40GE2/0/1 direction=outbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_acl_interface: state=absent acl_name=2200 interface=40GE2/0/1 direction=outbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

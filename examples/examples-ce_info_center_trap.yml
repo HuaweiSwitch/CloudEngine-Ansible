@@ -1,0 +1,19 @@
+---
+
+- name: cloudengine info center trap module test
+  hosts: cloudengine
+  gather_facts: no
+
+  tasks:
+
+  - ce_info_center_trap: state=present trap_time_stamp=date_millisecond host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_trap: state=absent trap_time_stamp=date_millisecond host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_trap: state=present trap_buff_enable=true trap_buff_size=768 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_trap: state=absent trap_buff_size=768 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_trap: state=present module_name=aaa chnl_id=1 trap_enable=true trap_level=error host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - ce_info_center_trap: state=absent module_name=aaa chnl_id=1 trap_enable=true trap_level=error host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

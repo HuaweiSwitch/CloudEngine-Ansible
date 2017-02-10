@@ -1,11 +1,12 @@
 ---
 
-- hosts: ce78
+- name: cloudengine bgp af module test
+  hosts: cloudengine
   gather_facts: no
-  
+
   tasks:
   - ce_bgp_af: vrf_name=js af_type=ipv4uni state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
 
   - ce_bgp_af: vrf_name=js af_type=ipv4uni import_protocol=ospf import_process_id=123 med=123 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
+
   - ce_bgp_af: vrf_name=js af_type=ipv4uni network_address=1.1.1.1 mask_len=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

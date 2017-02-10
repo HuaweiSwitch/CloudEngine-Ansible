@@ -1,6 +1,6 @@
 ---
-- name: cloudengine command test
-  hosts: ce78
+- name: cloudengine command provider test
+  hosts: cloudengine
   vars:
     cli:
       host: "{{ inventory_hostname }}"

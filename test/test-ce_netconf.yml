@@ -1,11 +1,16 @@
 ---
 
-- name: cloudengine command test
-  hosts: ce78
+- name: cloudengine netconf module test
+  hosts: cloudengine
   connection: local
   gather_facts: no
 
   tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
 
   - name: "get operation"
     ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=get cfg_xml="<filter type=\"subtree\"><vlan xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\"><vlans><vlan><vlanId>10</vlanId><vlanif><ifName></ifName><cfgBand></cfgBand><dampTime></dampTime></vlanif></vlan></vlans></vlan></filter>"
@@ -52,12 +57,3 @@
     assert:
       that:
         - data.changed == true
-
-  - name: "execute-cli operation"
-    ce_netconf: host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}} rpc=execute-cli cfg_xml="<cmd><id>1</id><cmdline>display current-configuration</cmdline></cmd>"
-    register: data
-
-  - name: "TEST 6"
-    assert:
-      that:
-        - data.changed == false

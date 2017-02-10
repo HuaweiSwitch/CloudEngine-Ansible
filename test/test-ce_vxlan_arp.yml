@@ -1,0 +1,363 @@
+---
+
+- name: cloudengine vxlan arp module test
+  hosts: ce128
+  vars:
+    vbdif_name: Vbdif100
+    evn_source_ip: "7.7.7.7"
+    evn_peer_ip: "8.8.8.8"
+    bd_id: 100
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "ensure bridge-domain exist"
+    ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "ensure vbdif exist"
+    ce_interface: interface={{vbdif_name}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "ensure vbdif exist"
+    ce_interface: interface={{vbdif_name}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "ensure evn bgp disable"
+    ce_vxlan_arp: evn_bgp=disable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "set evn bgp enable"
+    ce_vxlan_arp: evn_bgp=enable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+    
+  - name: "set evn bgp disable"
+    ce_vxlan_arp: evn_bgp=disable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set evn bgp source ip address"
+    ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "unset evn bgp source ip address"
+    ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set evn bgp peer ip address"
+    ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set evn bgp peer ip address reflect client"
+    ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} evn_reflect_client=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset evn bgp peer ip address"
+    ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set evn bgp server enable"
+    ce_vxlan_arp: evn_bgp=enable evn_server=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset evn bgp server enable"
+    ce_vxlan_arp: evn_bgp=enable evn_server=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set arp collect host enable"
+    ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset arp collect host enable"
+    ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set host collect protocol bgp"
+    ce_vxlan_arp: host_collect_protocol=bgp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+       
+  - name: "unset host collect protocol bgp"       
+    ce_vxlan_arp: host_collect_protocol=bgp state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "set bridge domain arp suppress enable"  
+    ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "unset bridge domain arp suppress enable"  
+    ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: "check evn_srouce_ip 1"
+    ce_vxlan_arp: evn_bgp=enable evn_source_ip=abc state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check evn_srouce_ip 2"
+    ce_vxlan_arp: evn_bgp=enable evn_source_ip=255.256.1.1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check evn_peer_ip 1"
+    ce_vxlan_arp: evn_bgp=enable evn_peer_ip=abc state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check evn_peer_ip 2"
+    ce_vxlan_arp: evn_bgp=enable evn_peer_ip=1.1.1.256 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check evn_reflect_client"
+    ce_vxlan_arp: evn_bgp=enable evn_reflect_client=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bridge_domain_id 1"
+    ce_vxlan_arp: bridge_domain_id=0 arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bridge_domain_id 2"
+    ce_vxlan_arp: bridge_domain_id=abc arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check bridge_domain_id 3"
+    ce_vxlan_arp: bridge_domain_id=16777216 arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+        
+  - name: "check bridge_domain_id 3"
+    ce_vxlan_arp: bridge_domain_id={{bd_id}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check arp_suppress"
+    ce_vxlan_arp: arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check vbdif_name 1"
+    ce_vxlan_arp: vbdif_name=abc arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check vbdif_name 2"
+    ce_vxlan_arp: vbdif_name=vbdif00 arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed 
+        
+  - name: "check vbdif_name 3"
+    ce_vxlan_arp: vbdif_name=tunnel0 arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "check vbdif_name 3"
+    ce_vxlan_arp: vbdif_name={{vbdif_name}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "check arp_collect_host"
+    ce_vxlan_arp: arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false 
+        - data | failed
+        
+  - name: "clear vbdif"  
+    ce_interface: interface={{vbdif_name}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+    
+  - name: "clear bridge domain"  
+    ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

@@ -1,0 +1,9 @@
+---
+
+- hosts: cloudengine
+  gather_facts: no
+  vars:
+      test_intf: 40GE1/0/22
+  tasks:  
+  - ce_vrf_interface: vpn_interface={{test_intf}} vrf=jss  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_vrf_interface: vpn_interface={{test_intf}} vrf=jss  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
