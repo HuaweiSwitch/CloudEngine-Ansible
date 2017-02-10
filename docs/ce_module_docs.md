@@ -9,8 +9,8 @@
 ### Modules
   * [ce_aaa_server - manages AAA server global configuration](#ce_aaa_server)
   * [ce_aaa_server_host - manages AAA server host configuration](#ce_aaa_server_host)
-  * [ce_acl - manages base acl configuration](#ce_acl)
-  * [ce_acl_advance - manages advance acl configuration](#ce_acl_advance)
+  * [ce_acl - manages base ACL configuration](#ce_acl)
+  * [ce_acl_advance - manages advanced ACL configuration](#ce_acl_advance)
   * [ce_acl_interface - manages applying ACLs to interfaces](#ce_acl_interface)
   * [ce_bgp - manages BGP configuration](#ce_bgp)
   * [ce_bgp_af - manages BGP Address-family configuration](#ce_bgp_af)
@@ -24,46 +24,46 @@
   * [ce_evpn_bd_vni - manages EVPN VXLAN Network Identifier](#ce_evpn_bd_vni)
   * [ce_evpn_bgp - manages BGP EVPN configuration](#ce_evpn_bgp)
   * [ce_evpn_bgp_rr - manages RR for the VXLAN Network](#ce_evpn_bgp_rr)
-  * [ce_evpn_global - manage global configration of EVPN](#ce_evpn_global)
+  * [ce_evpn_global - manages global configuration of EVPN](#ce_evpn_global)
   * [ce_facts - gets facts about CloudEngine switches](#ce_facts)
-  * [ce_file_copy - copy a file to a remote cloudengine device](#ce_file_copy)
+  * [ce_file_copy - copy a file to a remote CloudEngine device](#ce_file_copy)
   * [ce_info_center_global - manages outputting logs](#ce_info_center_global)
-  * [ce_info_center_debug - manages info center debug configuration](#ce_info_center_debug)
-  * [ce_info_center_log - manages log output](#ce_info_center_log)
-  * [ce_info_center_trap - manages info center trap configuration](#ce_info_center_trap)
+  * [ce_info_center_debug - manages information center debug configuration](#ce_info_center_debug)
+  * [ce_info_center_log - manages information center log configuration](#ce_info_center_log)
+  * [ce_info_center_trap - manages information center trap configuration](#ce_info_center_trap)
   * [ce_interface - manages physical attributes of interfaces](#ce_interface)
   * [ce_interface_ospf - manages configuration of an OSPF interface instance](#ce_interface_ospf)
   * [ce_ip_interface - manages L3 attributes for IPv4 and IPv6 interfaces](#ce_ip_interface)
   * [ce_mtu - manages MTU settings on CloudEngine switch](#ce_mtu)
-  * [ce_netconf - run arbitrary netconf command on cloudengine devices](#ce_netconf)
-  * [ce_netstream_aging - manages timeout mode of netstream](#ce_netstream_aging)
-  * [ce_netstream_export - manages netstream export](#ce_netstream_export)
-  * [ce_netstream_global - manages netstream global configuration](#ce_netstream_global)
-  * [ce_netstream_template - manages netstream template configuration](#ce_netstream_template)
+  * [ce_netconf - run arbitrary netconf command on CloudEngine devices](#ce_netconf)
+  * [ce_netstream_aging - manages timeout mode of NetStream](#ce_netstream_aging)
+  * [ce_netstream_export - manages NetStream export](#ce_netstream_export)
+  * [ce_netstream_global - manages NetStream global configuration](#ce_netstream_global)
+  * [ce_netstream_template - manages NetStream template configuration](#ce_netstream_template)
   * [ce_ntp - manages core NTP configuration](#ce_ntp)
-  * [ce_ntp_auth - manages NTP authentication](#ce_ntp_auth)
-  * [ce_ospf - manages configuration of an ospf instance](#ce_ospf)
-  * [ce_ospf_vrf - manages configuration of an ospf vpn instance](#ce_ospf_vrf)
+  * [ce_ntp_auth - manages NTP authentication configuration](#ce_ntp_auth)
+  * [ce_ospf - manages configuration of an OSPF instance](#ce_ospf)
+  * [ce_ospf_vrf - manages configuration of an OSPF VPN instance](#ce_ospf_vrf)
   * [ce_reboot - reboot a network device](#ce_reboot)
   * [ce_rollback - set a checkpoint or rollback to a checkpoint](#ce_rollback)
-  * [ce_sflow - manages sFlow](#ce_sflow)
-  * [ce_snmp_community - manages SNMP Community configuration](#ce_snmp_community)
+  * [ce_sflow - manages sFlow configuration](#ce_sflow)
+  * [ce_snmp_community - manages SNMP community configuration](#ce_snmp_community)
   * [ce_snmp_contact - manages SNMP contact configuration](#ce_snmp_contact)
   * [ce_snmp_location - manages SNMP location configuration](#ce_snmp_location)
   * [ce_snmp_target_host - manages SNMP target host configuration](#ce_snmp_target_host)
   * [ce_snmp_traps - manages SNMP traps configuration](#ce_snmp_traps)
   * [ce_snmp_user - manages SNMP user configuration](#ce_snmp_user)
-  * [ce_static_route - config or delete static route](#ce_static_route)
-  * [ce_stp - manages stp configuration](#ce_stp)
+  * [ce_static_route - manages static route configuration](#ce_static_route)
+  * [ce_stp - manages STP configuration](#ce_stp)
   * [ce_switchport - manages Layer 2 switchport interfaces](#ce_switchport)
   * [ce_vlan - manages VLAN resources and attributes](#ce_vlan)
-  * [ce_vrf - manages vpn instance](#ce_vrf)
-  * [ce_vrf_af - manages vpn instance address family](#ce_vrf_af)
-  * [ce_vrf_interface - manages VPN instance to an interface](#ce_vrf_interface)
-  * [ce_vxlan_arp - manages arp attributes of VXLAN](#ce_vxlan_arp)
-  * [ce_vxlan_gateway - manages Gateway for the VXLAN Network](#ce_vxlan_gateway)
+  * [ce_vrf - manages VPN instance](#ce_vrf)
+  * [ce_vrf_af - manages VPN instance address family](#ce_vrf_af)
+  * [ce_vrf_interface - manages interface specific VPN configuration](#ce_vrf_interface)
+  * [ce_vxlan_arp - manages ARP attributes of VXLAN](#ce_vxlan_arp)
+  * [ce_vxlan_gateway - manages gateway for the VXLAN Network](#ce_vxlan_gateway)
   * [ce_vxlan_global - manages global attributes of VXLAN and bridge domain](#ce_vxlan_global)
-  * [ce_vxlan_tunnel - manages ingress replication list of VXLAN and bridge domain](#ce_vxlan_tunnel)
+  * [ce_vxlan_tunnel - manages VXLAN tunnel configuration](#ce_vxlan_tunnel)
   * [ce_vxlan_vap - manages VXLAN virtual access point](#ce_vxlan_vap)
 
 
@@ -272,14 +272,14 @@ Manages AAA server host configuration
 
 
 ## ce_acl
-Manages base acl configuration
+Manages base ACL configurations
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages base acl configuration
+ Manages base ACL configurations
 
 #### Options
 
@@ -359,14 +359,14 @@ Manages base acl configuration
 
 
 ## ce_acl_advance
-Manages advance acl configuration
+Manages advanced ACL configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages advance acl configuration
+ Manages advanced ACL configuration
 
 #### Options
 
@@ -1150,10 +1150,9 @@ Manages global DLDP configuration
 #### Notes
 
 - The relevant configurations will be deleted if DLDP is disabled using enable=false.
-
-- group_timeout also accepts "never" as an input
-
-- When using auth_mode=none, it will restore the default DLDP authentication mode(By default, DLDP packets are not authenticated).
+- When using auth_mode=none, it will restore the default DLDP authentication mode(By default,DLDP packets are not authenticated.).
+- By default, the working mode of DLDP is enhance, so you are advised to use work_mode=enhance to restore defualt DLDP working mode.
+- The default interval for sending Advertisement packets is 5 seconds, so you are advised to use time_interval=5 to restore defualt DLDP interval.
 
 ---
 
@@ -1225,7 +1224,6 @@ Manages interface specific VRF configuration
 #### Notes
 
 - If C(state=present, enable=false), interface DLDP enable will be turned off and related interface DLDP confuration will be cleared.
-
 - If C(state=absent), only local_mac is supported to configure.
 
 
@@ -1272,7 +1270,6 @@ Manages Eth-Trunk interfaces
 #### Notes
 
 - C(state=absent) removes the Eth-Trunk config and interface if it already exists. If members to be removed are not explicitly passed, all existing members (if any), are removed, and Eth-Trunk removed.
-
 - Members must be a list.
 
 ---
@@ -1499,14 +1496,14 @@ Manages RR for the VXLAN Network
 
 
 ## ce_evpn_global
-Manages global configration of EVPN
+Manages global configuration of EVPN
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages global configration of EVPN
+ Manages global configuration of EVPN
 
 #### Options
 
@@ -1585,14 +1582,14 @@ Gets facts about CloudEngine switches
 
 
 ## ce_file_copy
-Copy a file to a remote cloudengine device
+Copy a file to a remote CloudEngine device
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Copy a file to a remote cloudengine device
+ Copy a file to a remote CloudEngine device
 
 #### Options
 
@@ -1763,14 +1760,14 @@ Manages outputting Logs
 
 
 ## ce_info_center_debug
-Manages info center debug configuration
+Manages information center debug configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages info center debug configuration
+ Manages information center debug configuration
 
 #### Options
 
@@ -1835,14 +1832,14 @@ Manages info center debug configuration
 
 
 ## ce_info_center_log
-Manages log output
+Manages information center log configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages log output
+ Manages information center log configuration
 
 #### Options
 
@@ -2190,6 +2187,7 @@ Manages L3 attributes for IPv4 and IPv6 interfaces
 - Logical interfaces (loopback, vlanif) must be created first.
 - C(mask) must be inserted in decimal format (i.e. 24) for both IPv6 and IPv4.
 - A single interface can have multiple IPv6 configured.
+
 ---
 
 
@@ -2267,14 +2265,14 @@ Manages MTU settings on CloudEngine switch
 
 
 ## ce_netconf
-Run arbitrary netconf command on cloudengine devices
+Run arbitrary netconf command on CloudEngine devices
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Run arbitrary netconf command on cloudengine devices
+ Run arbitrary netconf command on CloudEngine devices
 
 #### Options
 
@@ -2342,14 +2340,14 @@ Run arbitrary netconf command on cloudengine devices
 
 
 ## ce_netstream_aging
-Manages timeout mode of netstream
+Manages timeout mode of NetStream
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages timeout mode of netstream
+ Manages timeout mode of NetStream
 
 #### Options
 
@@ -2446,14 +2444,14 @@ Manages timeout mode of netstream
 
 
 ## ce_netstream_export
-Manages netstream export configuration
+Manages NetStream export configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages netstream export configuration
+ Manages NetStream export configuration
 
 #### Options
 
@@ -2534,14 +2532,14 @@ Manages netstream export configuration
 
 
 ## ce_netstream_global
-Manages netstream global configuration
+Manages NetStream global configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages netstream global configuration
+ Manages NetStream global configuration
 
 #### Options
 
@@ -2596,14 +2594,14 @@ Manages netstream global configuration
 
 
 ## ce_netstream_template
-Manages netstream template configuration
+Manages NetStream template configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages netstream template configuration
+ Manages NetStream template configuration
 
 #### Options
 
@@ -2722,14 +2720,14 @@ Manages core NTP configuration
 
 
 ## ce_ntp_auth
-Manages NTP authentication
+Manages NTP authentication configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages NTP authentication
+ Manages NTP authentication configuration
 
 #### Options
 
@@ -2800,14 +2798,14 @@ Manages NTP authentication
 
 
 ## ce_ospf
-Manages configuration of an ospf instance
+Manages configuration of an OSPF instance
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages configuration of an ospf instance
+ Manages configuration of an OSPF instance
 
 #### Options
 
@@ -2845,14 +2843,14 @@ Manages configuration of an ospf instance
 
 
 ## ce_ospf_vrf
-Manages configuration of an ospf vpn instance
+Manages configuration of an OSPF VPN instance
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages configuration of an ospf vpn instance
+ Manages configuration of an OSPF VPN instance
 
 #### Options
 
@@ -2860,7 +2858,7 @@ Manages configuration of an ospf vpn instance
 | ------------- |-------------| ---------|----------- |--------- |
 | ospf  |   yes  |  | <ul></ul> |  The ID of the ospf process.<br>Valid values are an integer, 1 - 4294967295, the default value is 1.  |
 | route_id  |   no  |    | <ul> </ul> |  Specifies the ospf private route id.<br>Valid values are a string, formatted as an IP address (i.e. "10.1.1.1") the length is 0 - 20.|
-| vrf  |   no  | _public_ | <ul></ul> |  Specifies the vpn instance which use ospf,length is 1 - 31.<br>Valid values are a string.  |
+| vrf  |   no  | _public_ | <ul></ul> |  Specifies the VPN instance which use ospf,length is 1 - 31.<br>Valid values are a string.  |
 | description  |   no  |  | <ul></ul> |  Specifies the description information of ospf process. |
 | bandwidth  |   no  |   | <ul></ul> |  Specifies the reference bandwidth used to assign ospf cost.<br>Valid values are an integer, in Mbps, 1 - 2147483648, the default value is 100. |
 | lsaalflag  |   no  | false | <ul><li>true</li><li>false</li></ul> |  Specifies the mode of timer to calculate interval of arrive LSA.<br>If set the parameter but noe specifies value ,the default will be used.<br>If true use general timer.<br>If false use intelligent timer.|
@@ -2967,14 +2965,14 @@ Set a checkpoint or rollback to a checkpoint
 
 
 ## ce_sflow
-Manages sFlow
+Manages sFlow configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages sFlow
+ Manages sFlow configuration
 
 #### Options
 
@@ -3046,14 +3044,14 @@ Manages sFlow
 
 
 ## ce_snmp_community
-Manages SNMP Community configuration
+Manages SNMP community configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages SNMP Community configuration
+ Manages SNMP community configuration
 
 #### Options
 
@@ -3414,14 +3412,14 @@ Manages SNMP user configuration
 
 
 ## ce_static_route
-Config or delete static route
+Manages static route configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Config or delete static route
+ Manages static route configuration
 
 #### Options
 
@@ -3499,20 +3497,22 @@ Config or delete static route
     password: "{{ pwd }}"
 ```
 #### Notes
+
 - If no vrf is supplied, vrf is set to default.
 - If state=absent, the route will be removed, regardless of the non-required parameters.
+
 ---
 
 
 ## ce_stp
-Manages stp configuration
+Manages STP configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages stp configuration
+ Manages STP configuration
 
 #### Options
 
@@ -3651,6 +3651,7 @@ Manages Layer 2 switchport interfaces
 - When C(state=absent), VLANs can be added/removed from trunk links and the existing access VLAN can be 'unconfigured' to just having VLAN 1 on that interface.
 - When working with trunks VLANs the keywords add/remove are always sent in the `port trunk allow-pass vlan` command. Use verbose mode to see commands sent.
 - When C(state=unconfigured), the interface will result with having a default Layer 2 interface, i.e. vlan 1 in access mode.
+
 ---
 
 
@@ -3706,14 +3707,14 @@ Manages VLAN resources and attributes
 
 
 ## ce_vrf
-Manage vpn instance
+Manage VPN instance
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manage vpn instance
+ Manage VPN instance
 
 #### Options
 
@@ -3746,14 +3747,14 @@ Manage vpn instance
 
 
 ## ce_vrf_af
-Manage vpn instance address family
+Manage VPN instance address family
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manage vpn instance address family
+ Manage VPN instance address family
 
 #### Options
 
@@ -3819,18 +3820,19 @@ Manage vpn instance address family
 #### Notes
 - If no vrf is supplied, the module will return error.
 - If state=absent, the vrf will be removed, regardless of the non-required parameters.
+
 ---
 
 
 ## ce_vrf_interface
-Manage VPN Instance to an Interface
+Manages interface specific VPN configuration.
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manage VPN Instance to an Interface
+ Manages interface specific VPN configuration.
 
 #### Options
 
@@ -3863,19 +3865,21 @@ Manage VPN Instance to an Interface
     password: "{{ pwd }}"
 ```
 #### Notes
+
 - Ensure that a VPN instance has been created and the IPv4 address family has been enabled for the VPN instance.
+
 ---
 
 
 ## ce_vxlan_arp
-Manages arp attributes of VXLAN
+Manages ARP attributes of VXLAN
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages arp attributes of VXLAN
+ Manages ARP attributes of VXLAN
 
 #### Options
 
@@ -3943,14 +3947,14 @@ Manages arp attributes of VXLAN
 
 
 ## ce_vxlan_gateway
-Manages Gateway for the VXLAN Network
+Manages gateway for the VXLAN Network
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages Gateway for the VXLAN Network
+ Manages gateway for the VXLAN Network
 
 #### Options
 
@@ -4049,14 +4053,14 @@ Manages global attributes of VXLAN and bridge domain
 
 
 ## ce_vxlan_tunnel
-Manages ingress replication list of VXLAN and bridge domain
+Manages VXLAN tunnel configuration
 
   * Synopsis
   * Options
   * Examples
 
 #### Synopsis
- Manages ingress replication list of VXLAN and bridge domain
+ Manages VXLAN tunnel configuration
 
 #### Options
 
@@ -4073,11 +4077,21 @@ Manages ingress replication list of VXLAN and bridge domain
 #### Examples
 
 ```
-# Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
+# Make sure nve_name is exist, vni_id and protocol_type is configured on Nve1 interface.
 - ce_vxlan_tunnel:
     nve_name: Nve1
     vni_id: 100
     protocol_type: bgp
+    state: present
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
+    
+# Make sure nve_name is exist, vni_id and peer_list_ip is configured on Nve1 interface.
+- ce_vxlan_tunnel:
+    nve_name: Nve1
+    vni_id: 100
+    peer_list_ip: 1.2.2.2,2.2.2.5,2.5.3.9
     state: present
     username: "{{ un }}"
     password: "{{ pwd }}"
