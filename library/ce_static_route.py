@@ -15,15 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_static_route
-version_added: "2.2"
-short_description: Config or delete static route.
+version_added: "2.3"
+short_description: Manages static route configuration.
 description:
     - Manages the static routes of Huawei CloudEngine switches.
-author: Yang yang (@privateip)
+author: Yang yang (@CloudEngine-Ansible)
+extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, vrf is set to default.
       If state=absent, the route will be removed, regardless of the
@@ -45,14 +49,16 @@ options:
     next_hop:
         description:
             - Next hop address of static route.
-        required: true
+        required: false
+        default: null
     nhp_interface:
         description:
             - Next hop interface full name of static route.
         required: false
+        default: null
     vrf:
         description:
-            - VPN instance.
+            - VPN instance of destination ip address.
         required: false
         default: null
     destvrf:
@@ -77,7 +83,7 @@ options:
         default: null
     state:
         description:
-            - Manage the state of the resource.
+            - Specify desired state of the resource.
         required: false
         choices: ['present','absent']
         default: present
@@ -118,7 +124,7 @@ updates:
     description: command list sent to the device
     returned: always
     type: list
-    sample: ["ip route-static 2.2.2.0 255.255.255.0 3.3.3.1"]
+    sample: ["ip route-static 192.168.20.0 255.255.255.0 3.3.3.3 preference 100 description testing"]
 changed:
     description: check to see if a change was made on the device
     returned: always
@@ -127,7 +133,8 @@ changed:
 '''
 
 
-import re
+import sys
+from xml.etree import ElementTree
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
@@ -234,13 +241,70 @@ CE_NC_DELETE_STATIC_ROUTE = """
 """
 
 
-state_type = ('present', 'absent')
+def build_config_xml(xmlstr):
+    """build config xml"""
 
-valid_version = ('v4', 'v6')
+    return '<config> ' + xmlstr + ' </config>'
 
 
-class CE_StaticRoute(object):
-    """CE_StaticRoute"""
+def is_valid_v4addr(addr):
+    """check if ipv4 addr is valid"""
+    if addr.find('.') != -1:
+        addr_list = addr.split('.')
+        if len(addr_list) != 4:
+            return False
+        for each_num in addr_list:
+            if not each_num.isdigit():
+                return False
+            if int(each_num) > 255:
+                return False
+        return True
+    return False
+
+
+def is_valid_v6addr(addr):
+    """check if ipv6 addr is valid"""
+    if addr.find(':') != -1:
+        addr_list = addr.split(':')
+        if len(addr_list) > 6:
+            return False
+        if addr_list[1] != "":
+            return False
+        return True
+    return False
+
+
+def is_valid_tag(tag):
+    """check if the tag is valid"""
+
+    if not tag.isdigit():
+        return False
+
+    if int(tag) < 1 or int(tag) > 4294967295:
+        return False
+
+    return True
+
+
+def is_valid_preference(pref):
+    """check if the preference is valid"""
+    if pref.isdigit():
+        return int(pref) > 0 and int(pref) < 256
+    else:
+        return False
+
+
+def is_valid_description(description):
+    """check if the description is valid"""
+    if description.find('?') != -1:
+        return False
+    if len(description) < 1 or len(description) > 255:
+        return False
+    return True
+
+
+class StaticRoute(object):
+    """static route module"""
 
     def __init__(self, argument_spec, ):
         self.spec = argument_spec
@@ -254,6 +318,8 @@ class CE_StaticRoute(object):
         self.aftype = self.module.params['aftype']
         self.next_hop = self.module.params['next_hop']
         self.nhp_interface = self.module.params['nhp_interface']
+        if self.nhp_interface is None:
+            self.nhp_interface = "Invalid0"
         self.tag = self.module.params['tag']
         self.description = self.module.params['description']
         self.state = self.module.params['state']
@@ -261,7 +327,11 @@ class CE_StaticRoute(object):
 
         # vpn instance info
         self.vrf = self.module.params['vrf']
+        if self.vrf is None:
+            self.vrf = "_public_"
         self.destvrf = self.module.params['destvrf']
+        if self.destvrf is None:
+            self.destvrf = "_public_"
 
         # host info
         self.host = self.module.params['host']
@@ -277,17 +347,18 @@ class CE_StaticRoute(object):
         self.existing = dict()
         self.end_state = dict()
 
+        self.static_routes_info = dict()
         # init netconf connect
         self.init_netconf()
 
     def init_module(self):
-        """init_module"""
+        """init module"""
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
-        """init_netconf"""
+        """init netconf"""
 
         if not HAS_NCCLIENT:
             raise Exception("the ncclient library is required")
@@ -297,19 +368,14 @@ class CE_StaticRoute(object):
                                    username=self.username,
                                    password=self.module.params['password'])
         if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
+            self.module.fail_json(msg='Error: Netconf init failed')
 
     def check_response(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
+        """check if response message is already succeed."""
 
         xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def build_config_xml(self, xmlstr):
-        """build_config_xml"""
-
-        return '<config> ' + xmlstr + ' </config>'
 
     def convert_len_to_mask(self, masklen):
         """convert mask length to ip address mask, i.e. 24 to 255.255.255.0"""
@@ -334,61 +400,6 @@ class CE_StaticRoute(object):
             mask_int[3] = '255'
 
         return '.'.join(mask_int)
-
-    def is_valid_v4addr(self, addr):
-        """check is ipv4 addr is valid"""
-        if addr.find('.') != -1:
-            addr_list = addr.split('.')
-            if len(addr_list) != 4:
-                return False
-            for each_num in addr_list:
-                if not each_num.isdigit():
-                    return False
-                if int(each_num) > 255:
-                    return False
-            return True
-        return False
-
-    def is_valid_v6addr(self, addr):
-        """check is ipv6 addr is valid"""
-        if addr.find(':') != -1:
-            addr_list = addr.split(':')
-            if len(addr_list) > 6:
-                return False
-            if addr_list[1] != "":
-                return False
-            return True
-        return False
-
-    def is_valid_version(self, version):
-        """is_valid_version"""
-        return version in valid_version
-
-    def is_valid_tag(self, tag):
-        """is_valid_tag"""
-
-        if not tag.isdigit():
-            return False
-
-        if int(tag) < 1 or int(tag) > 4294967295:
-            return False
-
-        return True
-
-    def is_valid_preference(self, pref):
-        """is_valid_preference"""
-        if pref.isdigit():
-            return int(pref) > 0 and int(pref) < 256
-        else:
-            return False
-
-    def is_valid_description(self, description):
-        """is_valid_description"""
-        if description.find('?') != -1:
-            return False
-        if len(description) < 1 or len(description) > 255:
-            return False
-        return True
 
     def convert_ip_prefix(self):
         """convert prefix to real value i.e. 2.2.2.2/24 to 2.2.2.0/24"""
@@ -448,8 +459,7 @@ class CE_StaticRoute(object):
                           1] = int(addr_list[length - ip_len - 1], 16) & (0 << j)
 
         if self.aftype == "v4":
-            self.prefix = '%s.%s.%s.%s' % (addr_list[0], addr_list[
-                                           1], addr_list[2], addr_list[3])
+            self.prefix = '%s.%s.%s.%s' % (addr_list[0], addr_list[1], addr_list[2], addr_list[3])
             return True
         else:
             ipv6_addr_str = ""
@@ -459,64 +469,73 @@ class CE_StaticRoute(object):
             return True
 
     def set_update_cmd(self):
-        """ set update command"""
+        """set update command"""
         if not self.changed:
             return
         if self.aftype == "v4":
             maskstr = self.convert_len_to_mask(self.mask)
         else:
             maskstr = self.mask
+        if self.next_hop is None:
+            next_hop = ''
+        else:
+            next_hop = self.next_hop
+        if self.vrf == "_public_":
+            vrf = ''
+        else:
+            vrf = self.vrf
+        if self.destvrf == "_public_":
+            destvrf = ''
+        else:
+            destvrf = self.destvrf
+        if self.nhp_interface == "Invalid0":
+            nhp_interface = ''
+        else:
+            nhp_interface = self.nhp_interface
         if self.state == "present":
-            if self.vrf:
-                if self.destvrf:
-                    self.updates_cmd.append('ip route-static vpn-instance %s %s vpn-instance %s %s %s'
-                                            % (self.vrf, self.prefix, maskstr, self.destvrf, self.next_hop))
+            if self.vrf != "_public_":
+                if self.destvrf != "_public_":
+                    self.updates_cmd.append('ip route-static vpn-instance %s %s %s vpn-instance %s %s'
+                                            % (vrf, self.prefix, maskstr, destvrf, next_hop))
                 else:
-                    if self.nhp_interface:
-                        self.updates_cmd.append('ip route-static vpn-instance %s %s %s %s %s'
-                                                % (self.vrf, self.prefix, maskstr, self.nhp_interface, self.next_hop))
-                    else:
-                        self.updates_cmd.append('ip route-static vpn-instance %s %s %s %s'
-                                                % (self.vrf, self.prefix, maskstr, self.next_hop))
-            elif self.destvrf:
-                self.updates_cmd.append('ip route-static %s vpn-instance %s %s %s'
-                                        % (self.prefix, maskstr, self.destvrf, self.next_hop))
+                    self.updates_cmd.append('ip route-static vpn-instance %s %s %s %s %s'
+                                            % (vrf, self.prefix, maskstr, nhp_interface, next_hop))
+            elif self.destvrf != "_public_":
+                self.updates_cmd.append('ip route-static %s %s vpn-instance %s %s'
+                                        % (self.prefix, maskstr, self.destvrf, next_hop))
             else:
-                if self.nhp_interface:
-                    self.updates_cmd.append('ip route-static %s %s %s %s'
-                                            % (self.prefix, maskstr, self.nhp_interface, self.next_hop))
-                else:
-                    self.updates_cmd.append('ip route-static %s %s %s'
-                                            % (self.prefix, maskstr, self.next_hop))
-
+                self.updates_cmd.append('ip route-static %s %s %s %s'
+                                        % (self.prefix, maskstr, nhp_interface, next_hop))
             if self.pref:
-                self.updates_cmd.append(' preference %s' % (self.prefix))
+                self.updates_cmd.append(' preference %s' % (self.pref))
             if self.tag:
-                self.updates_cmd.append(' tag %s' % (self.prefix))
+                self.updates_cmd.append(' tag %s' % (self.tag))
             if self.description:
-                self.updates_cmd.append(' description %s' % (self.prefix))
+                self.updates_cmd.append(' description %s' % (self.description))
 
         if self.state == "absent":
-            if self.vrf:
-                if self.destvrf:
-                    self.updates_cmd.append('undo ip route-static vpn-instance %s %s vpn-instance %s %s %s'
-                                            % (self.vrf, self.prefix, maskstr, self.destvrf, self.next_hop))
+            if self.vrf != "_public_":
+                if self.destvrf != "_public_":
+                    self.updates_cmd.append('undo ip route-static vpn-instance %s %s %s vpn-instance %s %s'
+                                            % (vrf, self.prefix, maskstr, destvrf, next_hop))
                 else:
-                    self.updates_cmd.append('undo ip route-static vpn-instance %s %s %s %s'
-                                            % (self.vrf, self.prefix, maskstr, self.next_hop))
-            elif self.destvrf:
-                self.updates_cmd.append('undo ip route-static %s vpn-instance %s %s %s'
+                    self.updates_cmd.append('undo ip route-static vpn-instance %s %s %s %s %s'
+                                            % (vrf, self.prefix, maskstr, nhp_interface, next_hop))
+            elif self.destvrf != "_public_":
+                self.updates_cmd.append('undo ip route-static %s %s vpn-instance %s %s'
                                         % (self.prefix, maskstr, self.destvrf, self.next_hop))
             else:
-                self.updates_cmd.append('undo ip route-static %s %s %s'
-                                        % (self.prefix, maskstr, self.next_hop))
+                self.updates_cmd.append('undo ip route-static %s %s %s %s'
+                                        % (self.prefix, maskstr, nhp_interface, next_hop))
 
     def operate_static_route(self, version, prefix, mask, nhp_interface, next_hop, vrf, destvrf, state):
-        """ operate ipv4 static route"""
+        """operate ipv4 static route"""
 
         description_xml = """\n"""
         preference_xml = """\n"""
         tag_xml = """\n"""
+        if next_hop is None:
+            next_hop = '0.0.0.0'
         if nhp_interface is None:
             nhp_interface = "Invalid0"
 
@@ -538,125 +557,112 @@ class CE_StaticRoute(object):
 
         if state == "present":
             configxmlstr = CE_NC_SET_STATIC_ROUTE % (
-                vpn_instance, version, prefix, mask, nhp_interface, dest_vpn_instance, next_hop, description_xml, preference_xml, tag_xml)
+                vpn_instance, version, prefix, mask, nhp_interface,
+                dest_vpn_instance, next_hop, description_xml, preference_xml, tag_xml)
         else:
             configxmlstr = CE_NC_DELETE_STATIC_ROUTE % (
                 vpn_instance, version, prefix, mask, nhp_interface, dest_vpn_instance, next_hop)
 
-        conf_str = self.build_config_xml(configxmlstr)
+        conf_str = build_config_xml(configxmlstr)
 
         try:
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "OPERATE_STATIC_ROUTE")
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-    def get_static_route(self, version, prefix, mask, nhp_interface, next_hop, vrf, destvrf, state):
-        """ operate ipv4 static route"""
+    def get_static_route(self, state):
+        """get ipv4 static route"""
 
-        if nhp_interface is None:
-            nhp_interface = "Invalid0"
-
-        if vrf is None:
-            vpn_instance = "_public_"
-        else:
-            vpn_instance = vrf
-
-        if destvrf is None:
-            dest_vpn_instance = "_public_"
-        else:
-            dest_vpn_instance = destvrf
+        self.static_routes_info["sroute"] = list()
 
         if state == 'absent':
             getxmlstr = CE_NC_GET_STATIC_ROUTE_ABSENT
-            xmlstr_new_1 = (vpn_instance.lower(), version, 'base', prefix,
-                            mask, dest_vpn_instance.lower(), next_hop, nhp_interface.lower())
         else:
             getxmlstr = CE_NC_GET_STATIC_ROUTE
-            xmlstr_new_1 = (vpn_instance.lower(), version, 'base', prefix,
-                            mask, dest_vpn_instance.lower(), next_hop, self.pref, self.tag, self.description, nhp_interface.lower())
 
         try:
             get_obj = self.netconf.get_config(filter=getxmlstr)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-        if state == 'absent':
-            re_find_1 = re.findall(
-                r'.*<vrfname>(.*)</vrfname>.*\s.*<aftype>(.*)</aftype>.*\s'
-                r'.*<topologyname>(.*)</topologyname>.*\s.*<prefix>(.*)</prefix>.*\s'
-                r'.*<masklength>(.*)</masklength>.*\s.*<destvrfname>(.*)</destvrfname>.*\s'
-                r'.*<nexthop>(.*)</nexthop>.*\s.*<ifname>(.*)</ifname>.*', get_obj.xml.lower())
-        else:
-            re_find_1 = re.findall(
-                r'.*<vrfname>(.*)</vrfname>.*\s.*<aftype>(.*)</aftype>.*\s'
-                r'.*<topologyname>(.*)</topologyname>.*\s.*<prefix>(.*)</prefix>.*\s'
-                r'.*<masklength>(.*)</masklength>.*\s.*<destvrfname>(.*)</destvrfname>.*\s'
-                r'.*<nexthop>(.*)</nexthop>.*\s.*<preference>(.*)</preference>.*\s'
-                r'.*<tag>(.*)</tag>.*\s.*<description>(.*)</description>.*\s'
-                r'.*<ifname>(.*)</ifname>.*', get_obj.xml.lower())
+        if 'data/' in get_obj.xml:
+            return
+        xml_str = get_obj.xml.replace('\r', '').replace('\n', '').\
+            replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
+            replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
+        root = ElementTree.fromstring(xml_str)
+        static_routes = root.findall(
+            "data/staticrt/staticrtbase/srRoutes/srRoute")
 
-        if re_find_1 is None:
-            return state == "present"
-
-        if xmlstr_new_1 in re_find_1:
-            if state == "present":
-                return False
-            else:
-                return True
-        else:
-            return state == "present"
+        if static_routes:
+            for static_route in static_routes:
+                static_info = dict()
+                for static_ele in static_route:
+                    if static_ele.tag in ["vrfName", "afType", "topologyName",
+                                          "prefix", "maskLength", "destVrfName",
+                                          "nexthop", "ifName", "preference", "description"]:
+                        static_info[
+                            static_ele.tag] = static_ele.text
+                    if static_ele.tag == "tag":
+                        if static_ele.text is not None:
+                            static_info["tag"] = static_ele.text
+                        else:
+                            static_info["tag"] = "None"
+                self.static_routes_info["sroute"].append(static_info)
 
     def check_params(self):
-        """Check all input params"""
+        """check all input params"""
         # prefix, mask, aftype, next_hop, state, check
-        if not self.prefix or not self.mask or not self.aftype or not self.next_hop or not self.state:
+        if not self.prefix or not self.mask or not self.aftype or not self.state:
             self.module.fail_json(
-                msg='Error: Prefix or mask or address family type or next_hop or state must be set.')
-        # ipv4 prefix and mask check
+                msg='Error: Prefix or mask or address family type or state must be set.')
+        if not self.next_hop and not self.nhp_interface:
+            self.module.fail_json(
+                msg='Error: Next hop or next hop interface must be set.')
+        # check prefix and mask
         if not self.mask.isdigit():
-            self.module.fail_json(msg='Error: mask is invalid.')
+            self.module.fail_json(msg='Error: Mask is invalid.')
+        # ipv4 check
         if self.aftype == "v4":
             if int(self.mask) > 32 or int(self.mask) < 0:
                 self.module.fail_json(
-                    msg='Error: ipv4 mask must be an integer between 1 and 32.')
+                    msg='Error: Ipv4 mask must be an integer between 1 and 32.')
             # next_hop check
             if self.next_hop:
-                if not self.is_valid_v4addr(self.next_hop):
+                if not is_valid_v4addr(self.next_hop):
                     self.module.fail_json(
                         msg='Error: The %s is not a valid address' % self.next_hop)
-        # ipv6 mask check
+        # ipv6 check
         if self.aftype == "v6":
             if int(self.mask) > 128 or int(self.mask) < 0:
                 self.module.fail_json(
-                    msg='Error: ipv6 mask must be an integer between 1 and 128.')
+                    msg='Error: Ipv6 mask must be an integer between 1 and 128.')
             if self.next_hop:
-                if not self.is_valid_v6addr(self.next_hop):
+                if not is_valid_v6addr(self.next_hop):
                     self.module.fail_json(
                         msg='Error: The %s is not a valid address' % self.next_hop)
-        # address family check
-        if not self.is_valid_version(self.aftype):
-            self.module.fail_json(
-                msg='Error: The %s  can should be present or absent' % self.state)
+
         # description check
         if self.description:
-            if not self.is_valid_description(self.description):
+            if not is_valid_description(self.description):
                 self.module.fail_json(
-                    msg='Error: Dsecription length should be 1 ~ 35,and can not contain "?".')
+                    msg='Error: Dsecription length should be 1 - 35,and can not contain "?".')
         # tag check
         if self.tag:
-            if not self.is_valid_tag(self.tag):
+            if not is_valid_tag(self.tag):
                 self.module.fail_json(
-                    msg='Error: Tag should be integer 1 ~ 4294967295.')
+                    msg='Error: Tag should be integer 1 - 4294967295.')
         # preference check
         if self.pref:
-            if not self.is_valid_preference(self.pref):
+            if not is_valid_preference(self.pref):
                 self.module.fail_json(
-                    msg='Error: Preference should be integer 1 ~ 255.')
-        if self.nhp_interface:
-            if self.destvrf:
-                self.module.fail_json(
-                    msg='Error: Dest vrf dose no support next hop is interface.')
+                    msg='Error: Preference should be integer 1 - 255.')
+        if self.nhp_interface != "Invalid0" and self.destvrf != "_public_":
+            self.module.fail_json(
+                msg='Error: Destination vrf dose no support next hop is interface.')
         # convert prefix
         if not self.convert_ip_prefix():
             self.module.fail_json(
@@ -674,6 +680,29 @@ class CE_StaticRoute(object):
         self.operate_static_route(version, self.prefix, self.mask, self.nhp_interface,
                                   self.next_hop, self.vrf, self.destvrf, self.state)
 
+    def is_prefix_exist(self, static_route, version):
+        """is prefix mask nex_thop exist"""
+        if static_route is None:
+            return False
+        if self.next_hop and self.nhp_interface:
+            return bool(static_route["prefix"].lower() == self.prefix.lower()
+                        and static_route["maskLength"] == self.mask
+                        and static_route["afType"] == version
+                        and static_route["ifName"].lower() == self.nhp_interface.lower()
+                        and static_route["nexthop"].lower() == self.next_hop.lower())
+
+        if self.next_hop and not self.nhp_interface:
+            return bool(static_route["prefix"].lower() == self.prefix.lower()
+                        and static_route["maskLength"] == self.mask
+                        and static_route["afType"] == version
+                        and static_route["nexthop"].lower() == self.next_hop.lower())
+
+        if not self.next_hop and self.nhp_interface:
+            return bool(static_route["prefix"].lower() == self.prefix.lower()
+                        and static_route["maskLength"] == self.mask
+                        and static_route["afType"] == version
+                        and static_route["ifName"].lower() == self.nhp_interface.lower())
+
     def get_ip_static_route(self):
         """get ip static route"""
 
@@ -681,92 +710,89 @@ class CE_StaticRoute(object):
             version = "ipv4unicast"
         else:
             version = "ipv6unicast"
-        change = self.get_static_route(version, self.prefix, self.mask, self.nhp_interface,
-                                       self.next_hop, self.vrf, self.destvrf, self.state)
+        change = False
+        self.get_static_route(self.state)
+        if self.state == 'present':
+            for static_route in self.static_routes_info["sroute"]:
+                if self.is_prefix_exist(static_route, version):
+                    if self.vrf:
+                        if static_route["vrfName"] != self.vrf:
+                            change = True
+                    if self.tag:
+                        if static_route["tag"] != self.tag:
+                            change = True
+                    if self.destvrf:
+                        if static_route["destVrfName"] != self.destvrf:
+                            change = True
+                    if self.description:
+                        if static_route["description"] != self.description:
+                            change = True
+                    if self.pref:
+                        if static_route["preference"] != self.pref:
+                            change = True
+                    if self.nhp_interface:
+                        if static_route["ifName"].lower() != self.nhp_interface.lower():
+                            change = True
+                    if self.next_hop:
+                        if static_route["nexthop"].lower() != self.next_hop.lower():
+                            change = True
+                    return change
+                else:
+                    continue
+            change = True
+        else:
+            for static_route in self.static_routes_info["sroute"]:
+                if static_route["nexthop"] and self.next_hop:
+                    if static_route["prefix"].lower() == self.prefix.lower() \
+                            and static_route["maskLength"] == self.mask \
+                            and static_route["nexthop"].lower() == self.next_hop.lower() \
+                            and static_route["afType"] == version:
+                        change = True
+                        return change
+                if static_route["ifName"] and self.nhp_interface:
+                    if static_route["prefix"].lower() == self.prefix.lower() \
+                            and static_route["maskLength"] == self.mask \
+                            and static_route["ifName"].lower() == self.nhp_interface.lower() \
+                            and static_route["afType"] == version:
+                        change = True
+                        return change
+                else:
+                    continue
+            change = False
         return change
 
     def get_proposed(self):
-        """get_proposed"""
+        """get proposed information"""
 
         self.proposed['prefix'] = self.prefix
         self.proposed['mask'] = self.mask
-        self.proposed['aftype'] = self.aftype
+        self.proposed['afType'] = self.aftype
         self.proposed['next_hop'] = self.next_hop
-        if self.nhp_interface:
-            self.proposed['nhp_interface'] = self.nhp_interface
-        else:
-            self.proposed['nhp_interface'] = "Invalid0"
-        if self.vrf:
-            self.proposed['vrf'] = self.vrf
-        if self.destvrf:
-            self.proposed['destvrf'] = self.destvrf
+        self.proposed['ifName'] = self.nhp_interface
+        self.proposed['vrfName'] = self.vrf
+        self.proposed['destVrfName'] = self.destvrf
         if self.tag:
             self.proposed['tag'] = self.tag
         if self.description:
             self.proposed['description'] = self.description
-        if self.pref:
-            self.proposed['pref'] = self.pref
+        if self.pref is None:
+            self.proposed['preference'] = 60
+        else:
+            self.proposed['preference'] = self.pref
         self.proposed['state'] = self.state
 
     def get_existing(self):
-        """get_existing"""
+        """get existing information"""
 
-        change = None
         change = self.get_ip_static_route()
-        if change:
-            self.existing['prefix'] = self.prefix
-            self.existing['mask'] = self.mask
-            self.existing['aftype'] = self.aftype
-            self.existing['next_hop'] = self.next_hop
-            if self.nhp_interface:
-                self.proposed['nhp_interface'] = self.nhp_interface
-            else:
-                self.proposed['nhp_interface'] = "Invalid0"
-            if self.vrf:
-                self.existing['vrf'] = self.vrf
-            if self.destvrf:
-                self.existing['destvrf'] = self.destvrf
-            if self.tag:
-                self.existing['tag'] = self.tag
-            if self.description:
-                self.existing['description'] = self.description
-            if self.pref:
-                self.existing['pref'] = self.pref
-            self.changed = True
-        else:
-            self.existing = dict()
-            self.changed = False
+        self.existing['sroute'] = self.static_routes_info["sroute"]
+        self.changed = bool(change)
 
     def get_end_state(self):
-        """get_end_state"""
+        """get end state information"""
 
-        if self.aftype == "v4":
-            version = "ipv4unicast"
-        else:
-            version = "ipv6unicast"
-        change_ok = self.get_static_route(version, self.prefix, self.mask, self.nhp_interface,
-                                          self.next_hop, self.vrf, self.destvrf, self.state)
-        if self.state == "present" and not change_ok:
-            self.end_state["prefix"] = self.prefix
-            self.end_state["mask"] = self.mask
-            self.end_state["aftype"] = self.aftype
-            self.end_state["next_hop"] = self.next_hop
-            if self.nhp_interface:
-                self.proposed['nhp_interface'] = self.nhp_interface
-            else:
-                self.proposed['nhp_interface'] = "Invalid0"
-            if self.vrf:
-                self.end_state["vrf"] = self.vrf
-            if self.destvrf:
-                self.end_state["destvrf"] = self.destvrf
-            if self.tag:
-                self.end_state["tag"] = self.tag
-            if self.description:
-                self.end_state["description"] = self.description
-            if self.pref:
-                self.end_state["pref"] = self.pref
-        if self.state == "absent" and not change_ok:
-            self.end_state = dict()
+        self.get_static_route(self.state)
+        self.end_state['sroute'] = self.static_routes_info["sroute"]
 
     def work(self):
         """worker"""
@@ -796,7 +822,7 @@ def main():
         prefix=dict(required=True, type='str'),
         mask=dict(required=True, type='str'),
         aftype=dict(choices=['v4', 'v6'], required=True),
-        next_hop=dict(required=True, type='str'),
+        next_hop=dict(required=False, type='str'),
         nhp_interface=dict(required=False, type='str'),
         vrf=dict(required=False, type='str'),
         destvrf=dict(required=False, type='str'),
@@ -807,7 +833,7 @@ def main():
                    default='present', required=False),
     )
 
-    interface = CE_StaticRoute(argument_spec)
+    interface = StaticRoute(argument_spec)
     interface.work()
 
 

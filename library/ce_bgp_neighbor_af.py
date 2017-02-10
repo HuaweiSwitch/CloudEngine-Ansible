@@ -16,318 +16,375 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
-
 module: ce_bgp_af
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages BGP neighbor Address-family configuration.
 description:
-    - Manages BGP neighbor Address-family configurations on cloudengine switches.
+    - Manages BGP neighbor Address-family configurations on CloudEngine switches.
 extends_documentation_fragment: cloudengine
 author:
-    - wangdezhuang (@privateip)
-notes:
-    - The server_type parameter is always required.
+    - wangdezhuang (@CloudEngine-Ansible)
 options:
-    state:
-        description:
-            - Manage the state of the resource.
-        required: true
-        default: present
-        choices: ['present','absent']
-        version_added: "2.2"
     vrf_name:
         description:
-            - vpn instance name.
-        default: _public_
-        version_added: "2.2"
+            - Name of a BGP instance. The name is a case-sensitive string of characters.
+              The BGP instance can be used only after the corresponding VPN instance is created.
+        required: true
     af_type:
         description:
-            - address-family type.
+            - Address family type of a BGP instance.
         required: true
-        default: ipv4uni
         choices: ['ipv4uni', 'ipv4multi', 'ipv4vpn', 'ipv6uni', 'ipv6vpn', 'evpn']
-        version_added: "2.2"
     remote_address:
         description:
-            - remote as address.
+            - IPv4 or IPv6 peer connection address.
         required: true
-        default: none
-        version_added: "2.2"
     advertise_irb:
         description:
-            - advertise IRB route.
-        default: none
+            - If the value is true, advertised IRB routes are distinguished.
+              If the value is false, advertised IRB routes are not distinguished.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     advertise_arp:
         description:
-            - advertise ARP route.
-        default: none
+            - If the value is true, advertised ARP routes are distinguished.
+              If the value is false, advertised ARP routes are not distinguished.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     advertise_remote_nexthop:
         description:
-            - advertise remote nexthop.
-        default: none
+            - If the value is true, the remote next-hop attribute is advertised to peers.
+              If the value is false, the remote next-hop attribute is not advertised to any peers.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     advertise_community:
         description:
-            - advertise community.
-        default: none
+            - If the value is true, the community attribute is advertised to peers.
+              If the value is false, the community attribute is not advertised to peers.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     advertise_ext_community:
         description:
-            - advertise extended community.
-        default: none
+            - If the value is true, the extended community attribute is advertised to peers.
+              If the value is false, the extended community attribute is not advertised to peers.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     discard_ext_community:
         description:
-            - discard extended community.
-        default: none
+            - If the value is true, the extended community attribute in the peer route information is discarded.
+              If the value is false, the extended community attribute in the peer route information is not discarded.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     allow_as_loop_enable:
         description:
-            - allow as loop enable.
-        default: none
+            - If the value is true, repetitive local AS numbers are allowed.
+              If the value is false, repetitive local AS numbers are not allowed.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     allow_as_loop_limit:
         description:
-            - allow as loop limit.
-        default: none
-        version_added: "2.2"
+            - Set the maximum number of repetitive local AS number.
+              The value is an integer ranging from 1 to 10.
+        required: false
+        default: null
     keep_all_routes:
         description:
-            - keep all routes info between as.
-        default: none
+            - If the value is true, the system stores all route update messages received from all peers (groups)
+              after BGP connection setup.
+              If the value is false, the system stores only BGP update messages that are received from peers
+              and pass the configured import policy.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     nexthop_configure:
         description:
-            - nexthop configure.
-        default: none
+            - null, The next hop is not changed.
+              local, The next hop is changed to the local IP address.
+              invariable, Prevent the device from changing the next hop of each imported IGP route
+              when advertising it to its BGP peers.
+        required: false
+        default: null
         choices: ['null', 'local', 'invariable']
-        version_added: "2.2"
     preferred_value:
         description:
-            - preferred value for as.
-        default: none
-        version_added: "2.2"
+            - Assign a preferred value for the routes learned from a specified peer.
+              The value is an integer ranging from 0 to 65535.
+        required: false
+        default: null
     public_as_only:
         description:
-            - public or private as number.
-        default: none
+            - If the value is true, sent BGP update messages carry only the public AS number but do not carry
+              private AS numbers.
+              If the value is false, sent BGP update messages can carry private AS numbers.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     public_as_only_force:
         description:
-            - force use public as number.
-        default: none
+            - If the value is true, sent BGP update messages carry only the public AS number but do not carry
+              private AS numbers.
+              If the value is false, sent BGP update messages can carry private AS numbers.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     public_as_only_limited:
         description:
             - limited use public as number.
-        default: none
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     public_as_only_replace:
         description:
             - private as replaced by public as number.
-        default: none
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     public_as_only_skip_peer_as:
         description:
             - public as only skip peer as.
-        default: none
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     route_limit:
         description:
-            - route limited revice from peer.
-        default: none
-        version_added: "2.2"
+            - Configure the maximum number of routes that can be accepted from a peer.
+              The value is an integer ranging from 1 to 4294967295.
+        required: false
+        default: null
     route_limit_percent:
         description:
-            - the percent of route to alarm.
-        default: none
-        version_added: "2.2"
+            - Specify the percentage of routes when a router starts to generate an alarm.
+              The value is an integer ranging from 1 to 100.
+        required: false
+        default: null
     route_limit_type:
         description:
-            - route limit type.
-        default: none
+            - noparameter, After the number of received routes exceeds the threshold and the timeout
+              timer expires,no action.
+              alertOnly, An alarm is generated and no additional routes will be accepted if the maximum
+              number of routes allowed have been received.
+              idleForever, The connection that is interrupted is not automatically re-established if the
+              maximum number of routes allowed have been received.
+              idleTimeout, After the number of received routes exceeds the threshold and the timeout timer
+              expires, the connection that is interrupted is automatically re-established.
+        required: false
+        default: null
         choices: ['noparameter', 'alertOnly', 'idleForever', 'idleTimeout']
-        version_added: "2.2"
     route_limit_idle_timeout:
         description:
-            - route limit idle timeout.
-        default: none
-        version_added: "2.2"
+            - Specify the value of the idle-timeout timer to automatically reestablish the connections after
+              they are cut off when the number of routes exceeds the set threshold.
+              The value is an integer ranging from 1 to 1200.
+        required: false
+        default: null
     rt_updt_interval:
         description:
-            - route update interval.
-        default: none
-        version_added: "2.2"
+            - Specify the minimum interval at which Update packets are sent. The value is an integer, in seconds.
+              The value is an integer ranging from 0 to 600.
+        required: false
+        default: null
     redirect_ip:
         description:
             - redirect ip.
-        default: none
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     redirect_ip_vaildation:
         description:
             - redirect ip vaildation.
-        default: none
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     reflect_client:
         description:
-            - reflect client.
-        default: none
+            - If the value is true, the local device functions as the route reflector and a peer functions
+              as a client of the route reflector.
+              If the value is false, the route reflector and client functions are not configured.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     substitute_as_enable:
         description:
-            - substitute as enable.
-        default: none
+            - If the value is true, the function to replace a specified peer's AS number in the AS-Path attribute with
+              the local AS number is enabled.
+              If the value is false, the function to replace a specified peer's AS number in the AS-Path attribute with
+              the local AS number is disabled
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     import_rt_policy_name:
         description:
-            - import route policy name.
-        default: none
-        version_added: "2.2"
+            - Specify the filtering policy applied to the routes learned from a peer.
+              The value is a string of 1 to 40 characters.
+        required: false
+        default: null
     export_rt_policy_name:
         description:
-            - export route policy name.
-        default: none
-        version_added: "2.2"
+            - Specify the filtering policy applied to the routes to be advertised to a peer.
+              The value is a string of 1 to 40 characters.
+        required: false
+        default: null
     import_pref_filt_name:
         description:
-            - import pref filter name.
-        default: none
-        version_added: "2.2"
+            - Specify the IPv4 filtering policy applied to the routes received from a specified peer.
+              The value is a string of 1 to 169 characters.
+        required: false
+        default: null
     export_pref_filt_name:
         description:
-            - export pref filter name.
-        default: none
-        version_added: "2.2"
+            - Specify the IPv4 filtering policy applied to the routes to be advertised to a specified peer.
+              The value is a string of 1 to 169 characters.
+        required: false
+        default: null
     import_as_path_filter:
         description:
-            - import as path filter.
-        default: none
-        version_added: "2.2"
+            - Apply an AS_Path-based filtering policy to the routes received from a specified peer.
+              The value is an integer ranging from 1 to 256.
+        required: false
+        default: null
     export_as_path_filter:
         description:
-            - export as path filter.
-        default: none
-        version_added: "2.2"
+            - Apply an AS_Path-based filtering policy to the routes to be advertised to a specified peer.
+              The value is an integer ranging from 1 to 256.
+        required: false
+        default: null
     import_as_path_name_or_num:
         description:
-            - import as path name or num.
-        default: none
-        version_added: "2.2"
+            - A routing strategy based on the AS path list for routing received by a designated peer.
+        required: false
+        default: null
     export_as_path_name_or_num:
         description:
-            - export as path name or num.
-        default: none
-        version_added: "2.2"
+            - Application of a AS path list based filtering policy to the routing of a specified peer.
+        required: false
+        default: null
     import_acl_name_or_num:
         description:
-            - import acl name or num.
-        default: none
-        version_added: "2.2"
+            - Apply an IPv4 ACL-based filtering policy to the routes received from a specified peer.
+              The value is a string of 1 to 32 characters.
+        required: false
+        default: null
     export_acl_name_or_num:
         description:
-            - export acl name or num.
-        default: none
-        version_added: "2.2"
+            - Apply an IPv4 ACL-based filtering policy to the routes to be advertised to a specified peer.
+              The value is a string of 1 to 32 characters.
+        required: false
+        default: null
     ipprefix_orf_enable:
         description:
-            - ipprefix orf enable.
-        default: none
-        version_added: "2.2"
+            - If the value is true, the address prefix-based Outbound Route Filter (ORF) capability is
+              enabled for peers.
+              If the value is false, the address prefix-based Outbound Route Filter (ORF) capability is
+              disabled for peers.
+        required: false
+        default: null
     is_nonstd_ipprefix_mod:
         description:
-            - is nonstd ipprefix mod.
-        default: none
+            - If the value is true, Non-standard capability codes are used during capability negotiation.
+              If the value is false, RFC-defined standard ORF capability codes are used during capability negotiation.
+        required: false
+        default: null
         choices: ['true','false']
-        version_added: "2.2"
     orftype:
         description:
-            - orf type.
-        default: none
-        version_added: "2.2"
+            - ORF Type.
+              The value is an integer ranging from 0 to 65535.
+        required: false
+        default: null
     orf_mode:
         description:
-            - orf mode.
-        default: none
+            - null, Default value.
+              receive, ORF for incoming packets.
+              send, ORF for outgoing packets.
+              both, ORF for incoming and outgoing packets.
+        required: false
+        default: null
         choices: ['null', 'receive', 'send', 'both']
-        version_added: "2.2"
     soostring:
         description:
-            - soostring.
-        default: none
-        version_added: "2.2"
+            - Configure the Site-of-Origin (SoO) extended community attribute.
+              The value is a string of 3 to 21 characters.
+        required: false
+        default: null
     default_rt_adv_enable:
         description:
-            - default route advertise enable.
-        default: none
+            - If the value is true, the function to advertise default routes to peers is enabled.
+              If the value is false, the function to advertise default routes to peers is disabled.
+        required: false
+        default: null
         choices: ['true', 'false']
-        version_added: "2.2"
     default_rt_adv_policy:
         description:
-            - default route advertise policy.
-        default: none
-        version_added: "2.2"
+            - Specify the name of a used policy. The value is a string.
+              The value is a string of 1 to 40 characters.
+        required: false
+        default: null
     default_rt_match_mode:
         description:
-            - default route match mode.
-        default: none
+            - null, Null.
+              matchall, Advertise the default route if all matching conditions are met.
+              matchany, Advertise the default route if any matching condition is met.
+        required: false
+        default: null
         choices: ['null', 'matchall', 'matchany']
-        version_added: "2.2"
     add_path_mode:
         description:
-            - add path mode.
-        default: none
+            - null, Null.
+              receive, Support receiving Add-Path routes.
+              send, Support sending Add-Path routes.
+              both, Support receiving and sending Add-Path routes.
+        required: false
+        default: null
         choices: ['null', 'receive', 'send', 'both']
-        version_added: "2.2"
     adv_add_path_num:
         description:
-            - advertise add path num.
-        default: none
-        version_added: "2.2"
+            - The number of addPath advertise route.
+              The value is an integer ranging from 2 to 64.
+        required: false
+        default: null
     origin_as_valid:
         description:
-            - origin as valid.
-        default: none
+            - If the value is true, Application results of route announcement.
+              If the value is false, Routing application results are not notified.
+        required: false
+        default: null
         choices: ['true', 'false']
-        version_added: "2.2"
     vpls_enable:
         description:
-            - vpls enable.
-        default: none
+            - If the value is true, vpls enable.
+              If the value is false, vpls disable.
+        required: false
+        default: null
         choices: ['true', 'false']
-        version_added: "2.2"
     vpls_ad_disable:
         description:
-            - vpls advertise disable.
-        default: none
+            - If the value is true, enable vpls-ad.
+              If the value is false, disable vpls-ad.
+        required: false
+        default: null
         choices: ['true', 'false']
-        version_added: "2.2"
     update_pkt_standard_compatible:
         description:
-            - update pkt standard compatible.
-        default: none
+            - If the value is true, When the vpnv4 multicast neighbor receives and updates the message,
+              the message has no label.
+              If the value is false, When the vpnv4 multicast neighbor receives and updates the message,
+              the message has label.
+        required: false
+        default: null
         choices: ['true', 'false']
-        version_added: "2.2"
 '''
 
 EXAMPLES = '''
@@ -335,6 +392,17 @@ EXAMPLES = '''
   - name: "config BGP peer Address_Family"
     ce_bgp_neighbor_af:
         state:  present
+        vrf_name:  js
+        af_type:  ipv4uni
+        remote_address:  192.168.10.10
+        nexthop_configure:  null
+        host:  {{inventory_hostname}}
+        username:  {{username}}
+        password:  {{password}}
+# undo BGP peer Address_Family
+  - name: "undo BGP peer Address_Family"
+    ce_bgp_neighbor_af:
+        state:  absent
         vrf_name:  js
         af_type:  ipv4uni
         remote_address:  192.168.10.10
@@ -354,7 +422,7 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"af_type": "ipv4uni", "nexthop_configure": "null",
+    sample: {"af_type": "ipv4uni", "nexthop_configure": "local",
              "remote_address": "192.168.10.10",
              "state": "present", "vrf_name": "js"}
 existing:
@@ -363,7 +431,7 @@ existing:
     type: dict
     sample: {"bgp neighbor af": {"af_type": "ipv4uni", "remote_address": "192.168.10.10",
                                  "vrf_name": "js"},
-             "bgp neighbor af other": {"af_type": "ipv4uni", "nexthop_configure": "local",
+             "bgp neighbor af other": {"af_type": "ipv4uni", "nexthop_configure": "null",
                                   "vrf_name": "js"}}
 end_state:
     description: k/v pairs of aaa params after module execution
@@ -371,31 +439,26 @@ end_state:
     type: dict
     sample: {"bgp neighbor af": {"af_type": "ipv4uni", "remote_address": "192.168.10.10",
                                  "vrf_name": "js"},
-             "bgp neighbor af other": {"af_type": "ipv4uni", "nexthop_configure": "null",
+             "bgp neighbor af other": {"af_type": "ipv4uni", "nexthop_configure": "local",
                                   "vrf_name": "js"}}
-execute_time:
-    description: the module execute time
+updates:
+    description: command sent to the device
     returned: always
-    type: string
-    sample: "0:00:03.380753"
+    type: list
+    sample: ["peer 192.168.10.10 next-hop-local"]
 '''
 
 import re
-import datetime
+import sys
 import socket
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-
-
-SUCCESS = """success"""
-FAILED = """failed"""
 
 
 # get bgp peer af
@@ -503,7 +566,28 @@ CE_DELETE_BGP_PEER_AF = """
 """
 
 
-class ce_bgp_neighbor_af(object):
+def check_ip_addr(**kwargs):
+    """ check_ip_addr, Supports IPv4 and IPv6 """
+
+    ipaddr = kwargs["ipaddr"]
+
+    if not ipaddr or '\x00' in ipaddr:
+        return False
+
+    try:
+        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
+                                 socket.SOCK_STREAM,
+                                 0, socket.AI_NUMERICHOST)
+        return bool(res)
+    except socket.gaierror:
+        err = sys.exc_info()[1]
+        if err.args[0] == socket.EAI_NONAME:
+            return False
+        raise
+    return True
+
+
+class BgpNeighborAf(object):
     """ Manages BGP neighbor Address-family configuration """
 
     def __init__(self, **kwargs):
@@ -519,8 +603,9 @@ class ce_bgp_neighbor_af(object):
 
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -532,32 +617,14 @@ class ce_bgp_neighbor_af(object):
 
         try:
             con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError as err:
-            module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
-    def check_ip_addr(self, **kwargs):
-        """ check_ip_addr, Supports IPv4 and IPv6"""
-
-        ipaddr = kwargs["ipaddr"]
-
-        if not ipaddr or '\x00' in ipaddr:
-            return False
-
-        try:
-            res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                     socket.SOCK_STREAM,
-                                     0, socket.AI_NUMERICHOST)
-            return bool(res)
-        except socket.gaierror as err:
-            if err.args[0] == socket.EAI_NONAME:
-                return False
-            raise
-        return True
-
     def check_bgp_neighbor_af_args(self, **kwargs):
-        """check_bgp_neighbor_af_args"""
+        """ check_bgp_neighbor_af_args """
 
         module = kwargs["module"]
         result = dict()
@@ -567,15 +634,15 @@ class ce_bgp_neighbor_af(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         state = module.params['state']
         af_type = module.params['af_type']
         remote_address = module.params['remote_address']
 
-        if self.check_ip_addr(ipaddr=remote_address) == False:
+        if not check_ip_addr(ipaddr=remote_address):
             module.fail_json(
-                msg='the remote_address %s is invalid.' % remote_address)
+                msg='Error: The remote_address %s is invalid.' % remote_address)
 
         conf_str = CE_GET_BGP_PEER_AF_HEADER % (
             vrf_name, af_type) + CE_GET_BGP_PEER_AF_TAIL
@@ -614,7 +681,7 @@ class ce_bgp_neighbor_af(object):
         return result
 
     def check_bgp_neighbor_af_other(self, **kwargs):
-        """check_bgp_neighbor_af_other"""
+        """ check_bgp_neighbor_af_other """
 
         module = kwargs["module"]
         result = dict()
@@ -1018,7 +1085,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(route_limit_percent) < 1 or int(route_limit_percent) > 100:
                 module.fail_json(
-                    msg='the value of route_limit_percent %s is out of [1 - 100].' % route_limit_percent)
+                    msg='Error: The value of route_limit_percent %s is out of [1 - 100].' % route_limit_percent)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimitPercent></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1066,7 +1133,8 @@ class ce_bgp_neighbor_af(object):
 
             if int(route_limit_idle_timeout) < 1 or int(route_limit_idle_timeout) > 1200:
                 module.fail_json(
-                    msg='the value of route_limit_idle_timeout %s is out of [1 - 1200].' % route_limit_idle_timeout)
+                    msg='Error: The value of route_limit_idle_timeout %s is out of '
+                        '[1 - 1200].' % route_limit_idle_timeout)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimitIdleTimeout></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1092,7 +1160,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(rt_updt_interval) < 0 or int(rt_updt_interval) > 600:
                 module.fail_json(
-                    msg='the value of rt_updt_interval %s is out of [0 - 600].' % rt_updt_interval)
+                    msg='Error: The value of rt_updt_interval %s is out of [0 - 600].' % rt_updt_interval)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<rtUpdtInterval></rtUpdtInterval>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1206,7 +1274,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(import_rt_policy_name) < 1 or len(import_rt_policy_name) > 40:
                 module.fail_json(
-                    msg='the len of import_rt_policy_name %s is out of [1 - 40].' % import_rt_policy_name)
+                    msg='Error: The len of import_rt_policy_name %s is out of [1 - 40].' % import_rt_policy_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importRtPolicyName></importRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1232,7 +1300,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(export_rt_policy_name) < 1 or len(export_rt_policy_name) > 40:
                 module.fail_json(
-                    msg='the len of export_rt_policy_name %s is out of [1 - 40].' % export_rt_policy_name)
+                    msg='Error: The len of export_rt_policy_name %s is out of [1 - 40].' % export_rt_policy_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportRtPolicyName></exportRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1258,7 +1326,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(import_pref_filt_name) < 1 or len(import_pref_filt_name) > 169:
                 module.fail_json(
-                    msg='the len of import_pref_filt_name %s is out of [1 - 169].' % import_pref_filt_name)
+                    msg='Error: The len of import_pref_filt_name %s is out of [1 - 169].' % import_pref_filt_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importPrefFiltName></importPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1284,7 +1352,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(export_pref_filt_name) < 1 or len(export_pref_filt_name) > 169:
                 module.fail_json(
-                    msg='the len of export_pref_filt_name %s is out of [1 - 169].' % export_pref_filt_name)
+                    msg='Error: The len of export_pref_filt_name %s is out of [1 - 169].' % export_pref_filt_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportPrefFiltName></exportPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1310,7 +1378,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(import_as_path_filter) < 1 or int(import_as_path_filter) > 256:
                 module.fail_json(
-                    msg='the value of import_as_path_filter %s is out of [1 - 256].' % import_as_path_filter)
+                    msg='Error: The value of import_as_path_filter %s is out of [1 - 256].' % import_as_path_filter)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAsPathFilter></importAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1336,7 +1404,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(export_as_path_filter) < 1 or int(export_as_path_filter) > 256:
                 module.fail_json(
-                    msg='the value of export_as_path_filter %s is out of [1 - 256].' % export_as_path_filter)
+                    msg='Error: The value of export_as_path_filter %s is out of [1 - 256].' % export_as_path_filter)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAsPathFilter></exportAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1363,7 +1431,8 @@ class ce_bgp_neighbor_af(object):
 
             if len(import_as_path_name_or_num) < 1 or len(import_as_path_name_or_num) > 51:
                 module.fail_json(
-                    msg='the len of import_as_path_name_or_num %s is out of [1 - 51].' % import_as_path_name_or_num)
+                    msg='Error: The len of import_as_path_name_or_num %s is out '
+                        'of [1 - 51].' % import_as_path_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAsPathNameOrNum></importAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1390,7 +1459,8 @@ class ce_bgp_neighbor_af(object):
 
             if len(export_as_path_name_or_num) < 1 or len(export_as_path_name_or_num) > 51:
                 module.fail_json(
-                    msg='the len of export_as_path_name_or_num %s is out of [1 - 51].' % export_as_path_name_or_num)
+                    msg='Error: The len of export_as_path_name_or_num %s is out '
+                        'of [1 - 51].' % export_as_path_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAsPathNameOrNum></exportAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1416,7 +1486,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(import_acl_name_or_num) < 1 or len(import_acl_name_or_num) > 32:
                 module.fail_json(
-                    msg='the len of import_acl_name_or_num %s is out of [1 - 32].' % import_acl_name_or_num)
+                    msg='Error: The len of import_acl_name_or_num %s is out of [1 - 32].' % import_acl_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAclNameOrNum></importAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1442,7 +1512,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(export_acl_name_or_num) < 1 or len(export_acl_name_or_num) > 32:
                 module.fail_json(
-                    msg='the len of export_acl_name_or_num %s is out of [1 - 32].' % export_acl_name_or_num)
+                    msg='Error: The len of export_acl_name_or_num %s is out of [1 - 32].' % export_acl_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAclNameOrNum></exportAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1512,7 +1582,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(orftype) < 0 or int(orftype) > 65535:
                 module.fail_json(
-                    msg='the value of orftype %s is out of [0 - 65535].' % orftype)
+                    msg='Error: The value of orftype %s is out of [0 - 65535].' % orftype)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<orftype></orftype>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1560,7 +1630,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(soostring) < 3 or len(soostring) > 21:
                 module.fail_json(
-                    msg='the len of soostring %s is out of [3 - 21].' % soostring)
+                    msg='Error: The len of soostring %s is out of [3 - 21].' % soostring)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<soostring></soostring>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1608,7 +1678,7 @@ class ce_bgp_neighbor_af(object):
 
             if len(default_rt_adv_policy) < 1 or len(default_rt_adv_policy) > 40:
                 module.fail_json(
-                    msg='the len of default_rt_adv_policy %s is out of [1 - 40].' % default_rt_adv_policy)
+                    msg='Error: The len of default_rt_adv_policy %s is out of [1 - 40].' % default_rt_adv_policy)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<defaultRtAdvPolicy></defaultRtAdvPolicy>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1678,7 +1748,7 @@ class ce_bgp_neighbor_af(object):
 
             if int(orftype) < 2 or int(orftype) > 64:
                 module.fail_json(
-                    msg='the value of adv_add_path_num %s is out of [2 - 64].' % adv_add_path_num)
+                    msg='Error: The value of adv_add_path_num %s is out of [2 - 64].' % adv_add_path_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advAddPathNum></advAddPathNum>" + CE_GET_BGP_PEER_AF_TAIL
@@ -1770,7 +1840,8 @@ class ce_bgp_neighbor_af(object):
         if update_pkt_standard_compatible:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<updatePktStandardCompatible></updatePktStandardCompatible>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type) + "<updatePktStandardCompatible></updatePktStandardCompatible>" + \
+                CE_GET_BGP_PEER_AF_TAIL
             con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in con_obj.xml:
@@ -1792,7 +1863,7 @@ class ce_bgp_neighbor_af(object):
         return result
 
     def merge_bgp_peer_af(self, **kwargs):
-        """merge_bgp_peer_af"""
+        """ merge_bgp_peer_af """
 
         module = kwargs["module"]
 
@@ -1806,12 +1877,23 @@ class ce_bgp_neighbor_af(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge bgp peer address family failed.')
+            module.fail_json(msg='Error: Merge bgp peer address family failed.')
 
-        return SUCCESS
+        cmds = []
+        if af_type == "ipv4uni":
+            cmd = "ipv4-family unicast"
+        elif af_type == "ipv4multi":
+            cmd = "ipv4-family multicast"
+        elif af_type == "ipv6uni":
+            cmd = "ipv6-family unicast"
+        cmds.append(cmd)
+        cmd = "peer %s" % remote_address
+        cmds.append(cmd)
+
+        return cmds
 
     def create_bgp_peer_af(self, **kwargs):
-        """create_bgp_peer_af"""
+        """ create_bgp_peer_af """
 
         module = kwargs["module"]
 
@@ -1824,12 +1906,23 @@ class ce_bgp_neighbor_af(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create bgp peer address family failed.')
+            module.fail_json(msg='Error: Create bgp peer address family failed.')
 
-        return SUCCESS
+        cmds = []
+        if af_type == "ipv4uni":
+            cmd = "ipv4-family unicast"
+        elif af_type == "ipv4multi":
+            cmd = "ipv4-family multicast"
+        elif af_type == "ipv6uni":
+            cmd = "ipv6-family unicast"
+        cmds.append(cmd)
+        cmd = "peer %s" % remote_address
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_bgp_peer_af(self, **kwargs):
-        """delete_bgp_peer_af"""
+        """ delete_bgp_peer_af """
 
         module = kwargs["module"]
 
@@ -1842,12 +1935,23 @@ class ce_bgp_neighbor_af(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete bgp peer address family failed.')
+            module.fail_json(msg='Error: Delete bgp peer address family failed.')
 
-        return SUCCESS
+        cmds = []
+        if af_type == "ipv4uni":
+            cmd = "ipv4-family unicast"
+        elif af_type == "ipv4multi":
+            cmd = "ipv4-family multicast"
+        elif af_type == "ipv6uni":
+            cmd = "ipv6-family unicast"
+        cmds.append(cmd)
+        cmd = "undo peer %s" % remote_address
+        cmds.append(cmd)
+
+        return cmds
 
     def merge_bgp_peer_af_other(self, **kwargs):
-        """merge_bgp_peer_af_other"""
+        """ merge_bgp_peer_af_other """
 
         module = kwargs["module"]
 
@@ -1858,90 +1962,209 @@ class ce_bgp_neighbor_af(object):
         conf_str = CE_MERGE_BGP_PEER_AF_HEADER % (
             vrf_name, af_type, remote_address)
 
+        cmds = []
+
         advertise_irb = module.params['advertise_irb']
         if advertise_irb:
             conf_str += "<advertiseIrb>%s</advertiseIrb>" % advertise_irb
+
+            if advertise_irb == "ture":
+                cmd = "peer %s advertise irb" % remote_address
+            else:
+                cmd = "undo peer %s advertise irb" % remote_address
+            cmds.append(cmd)
 
         advertise_arp = module.params['advertise_arp']
         if advertise_arp:
             conf_str += "<advertiseArp>%s</advertiseArp>" % advertise_arp
 
+            if advertise_arp == "ture":
+                cmd = "peer %s advertise arp" % remote_address
+            else:
+                cmd = "undo peer %s advertise arp" % remote_address
+            cmds.append(cmd)
+
         advertise_remote_nexthop = module.params['advertise_remote_nexthop']
         if advertise_remote_nexthop:
             conf_str += "<advertiseRemoteNexthop>%s</advertiseRemoteNexthop>" % advertise_remote_nexthop
+
+            if advertise_remote_nexthop == "true":
+                cmd = "peer %s advertise remote-nexthop" % remote_address
+            else:
+                cmd = "undo peer %s advertise remote-nexthop" % remote_address
+            cmds.append(cmd)
 
         advertise_community = module.params['advertise_community']
         if advertise_community:
             conf_str += "<advertiseCommunity>%s</advertiseCommunity>" % advertise_community
 
+            if advertise_community == "true":
+                cmd = "peer %s advertise-community" % remote_address
+            else:
+                cmd = "undo peer %s advertise-community" % remote_address
+            cmds.append(cmd)
+
         advertise_ext_community = module.params['advertise_ext_community']
         if advertise_ext_community:
             conf_str += "<advertiseExtCommunity>%s</advertiseExtCommunity>" % advertise_ext_community
+
+            if advertise_ext_community == "true":
+                cmd = "peer %s advertise-ext-community" % remote_address
+            else:
+                cmd = "undo peer %s advertise-ext-community" % remote_address
+            cmds.append(cmd)
 
         discard_ext_community = module.params['discard_ext_community']
         if discard_ext_community:
             conf_str += "<discardExtCommunity>%s</discardExtCommunity>" % discard_ext_community
 
+            if discard_ext_community == "true":
+                cmd = "peer %s discard-ext-community" % remote_address
+            else:
+                cmd = "undo peer %s discard-ext-community" % remote_address
+            cmds.append(cmd)
+
         allow_as_loop_enable = module.params['allow_as_loop_enable']
         if allow_as_loop_enable:
             conf_str += "<allowAsLoopEnable>%s</allowAsLoopEnable>" % allow_as_loop_enable
+
+            if allow_as_loop_enable == "true":
+                cmd = "peer %s allow-as-loop" % remote_address
+            else:
+                cmd = "undo peer %s allow-as-loop" % remote_address
+            cmds.append(cmd)
 
         allow_as_loop_limit = module.params['allow_as_loop_limit']
         if allow_as_loop_limit:
             conf_str += "<allowAsLoopLimit>%s</allowAsLoopLimit>" % allow_as_loop_limit
 
+            if allow_as_loop_enable == "true":
+                cmd = "peer %s allow-as-loop %s" % (remote_address, allow_as_loop_limit)
+            else:
+                cmd = "undo peer %s allow-as-loop" % remote_address
+            cmds.append(cmd)
+
         keep_all_routes = module.params['keep_all_routes']
         if keep_all_routes:
             conf_str += "<keepAllRoutes>%s</keepAllRoutes>" % keep_all_routes
+
+            if keep_all_routes == "true":
+                cmd = "peer %s keep-all-routes" % remote_address
+            else:
+                cmd = "undo peer %s keep-all-routes" % remote_address
+            cmds.append(cmd)
 
         nexthop_configure = module.params['nexthop_configure']
         if nexthop_configure:
             conf_str += "<nextHopConfigure>%s</nextHopConfigure>" % nexthop_configure
 
+            if nexthop_configure == "local":
+                cmd = "peer %s next-hop-local" % remote_address
+                cmds.append(cmd)
+            elif nexthop_configure == "invariable":
+                cmd = "peer %s next-hop-invariable" % remote_address
+                cmds.append(cmd)
+
         preferred_value = module.params['preferred_value']
         if preferred_value:
             conf_str += "<preferredValue>%s</preferredValue>" % preferred_value
+
+            cmd = "peer %s preferred-value %s" % (remote_address, preferred_value)
+            cmds.append(cmd)
 
         public_as_only = module.params['public_as_only']
         if public_as_only:
             conf_str += "<publicAsOnly>%s</publicAsOnly>" % public_as_only
 
+            if public_as_only == "true":
+                cmd = "peer %s public-as-only" % remote_address
+            else:
+                cmd = "undo peer %s public-as-only" % remote_address
+            cmds.append(cmd)
+
         public_as_only_force = module.params['public_as_only_force']
         if public_as_only_force:
             conf_str += "<publicAsOnlyForce>%s</publicAsOnlyForce>" % public_as_only_force
+
+            if public_as_only_force == "true":
+                cmd = "peer %s public-as-only force" % remote_address
+            else:
+                cmd = "undo peer %s public-as-only force" % remote_address
+            cmds.append(cmd)
 
         public_as_only_limited = module.params['public_as_only_limited']
         if public_as_only_limited:
             conf_str += "<publicAsOnlyLimited>%s</publicAsOnlyLimited>" % public_as_only_limited
 
+            if public_as_only_limited == "true":
+                cmd = "peer %s public-as-only limited" % remote_address
+            else:
+                cmd = "undo peer %s public-as-only limited" % remote_address
+            cmds.append(cmd)
+
         public_as_only_replace = module.params['public_as_only_replace']
         if public_as_only_replace:
             conf_str += "<publicAsOnlyReplace>%s</publicAsOnlyReplace>" % public_as_only_replace
+
+            if public_as_only_replace == "true":
+                cmd = "peer %s public-as-only force replace" % remote_address
+            else:
+                cmd = "undo peer %s public-as-only force replace" % remote_address
+            cmds.append(cmd)
 
         public_as_only_skip_peer_as = module.params[
             'public_as_only_skip_peer_as']
         if public_as_only_skip_peer_as:
             conf_str += "<publicAsOnlySkipPeerAs>%s</publicAsOnlySkipPeerAs>" % public_as_only_skip_peer_as
 
+            if public_as_only_skip_peer_as == "true":
+                cmd = "peer %s public-as-only force include-peer-as" % remote_address
+            else:
+                cmd = "undo peer %s public-as-only force include-peer-as" % remote_address
+            cmds.append(cmd)
+
         route_limit = module.params['route_limit']
         if route_limit:
             conf_str += "<routeLimit>%s</routeLimit>" % route_limit
+
+            cmd = "peer %s route-limit %s" % (remote_address, route_limit)
+            cmds.append(cmd)
 
         route_limit_percent = module.params['route_limit_percent']
         if route_limit_percent:
             conf_str += "<routeLimitPercent>%s</routeLimitPercent>" % route_limit_percent
 
+            cmd = "peer %s route-limit %s %s" % (remote_address, route_limit, route_limit_percent)
+            cmds.append(cmd)
+
         route_limit_type = module.params['route_limit_type']
         if route_limit_type:
             conf_str += "<routeLimitType>%s</routeLimitType>" % route_limit_type
+
+            if route_limit_type == "alertOnly":
+                cmd = "peer %s route-limit %s %s alert-only" % (remote_address, route_limit, route_limit_percent)
+                cmds.append(cmd)
+            elif route_limit_type == "idleForever":
+                cmd = "peer %s route-limit %s %s idle-forever" % (remote_address, route_limit, route_limit_percent)
+                cmds.append(cmd)
+            elif route_limit_type == "idleTimeout":
+                cmd = "peer %s route-limit %s %s idle-timeout" % (remote_address, route_limit, route_limit_percent)
+                cmds.append(cmd)
 
         route_limit_idle_timeout = module.params['route_limit_idle_timeout']
         if route_limit_idle_timeout:
             conf_str += "<routeLimitIdleTimeout>%s</routeLimitIdleTimeout>" % route_limit_idle_timeout
 
+            cmd = "peer %s route-limit %s %s idle-timeout %s" % (remote_address, route_limit,
+                                                                 route_limit_percent, route_limit_idle_timeout)
+            cmds.append(cmd)
+
         rt_updt_interval = module.params['rt_updt_interval']
         if rt_updt_interval:
             conf_str += "<rtUpdtInterval>%s</rtUpdtInterval>" % rt_updt_interval
+
+            cmd = "peer %s route-update-interval %s" % (remote_address, rt_updt_interval)
+            cmds.append(cmd)
 
         redirect_ip = module.params['redirect_ip']
         if redirect_ip:
@@ -1955,6 +2178,12 @@ class ce_bgp_neighbor_af(object):
         if reflect_client:
             conf_str += "<reflectClient>%s</reflectClient>" % reflect_client
 
+            if reflect_client == "true":
+                cmd = "peer %s reflect-client" % remote_address
+            else:
+                cmd = "undo peer %s reflect-client" % remote_address
+            cmds.append(cmd)
+
         substitute_as_enable = module.params['substitute_as_enable']
         if substitute_as_enable:
             conf_str += "<substituteAsEnable>%s</substituteAsEnable>" % substitute_as_enable
@@ -1963,51 +2192,100 @@ class ce_bgp_neighbor_af(object):
         if import_rt_policy_name:
             conf_str += "<importRtPolicyName>%s</importRtPolicyName>" % import_rt_policy_name
 
+            cmd = "peer %s route-policy %s import" % (remote_address, import_rt_policy_name)
+            cmds.append(cmd)
+
         export_rt_policy_name = module.params['export_rt_policy_name']
         if export_rt_policy_name:
             conf_str += "<exportRtPolicyName>%s</exportRtPolicyName>" % export_rt_policy_name
+
+            cmd = "peer %s route-policy %s export" % (remote_address, export_rt_policy_name)
+            cmds.append(cmd)
 
         import_pref_filt_name = module.params['import_pref_filt_name']
         if import_pref_filt_name:
             conf_str += "<importPrefFiltName>%s</importPrefFiltName>" % import_pref_filt_name
 
+            cmd = "peer %s filter-policy %s import" % (remote_address, import_pref_filt_name)
+            cmds.append(cmd)
+
         export_pref_filt_name = module.params['export_pref_filt_name']
         if export_pref_filt_name:
             conf_str += "<exportPrefFiltName>%s</exportPrefFiltName>" % export_pref_filt_name
+
+            cmd = "peer %s filter-policy %s export" % (remote_address, export_pref_filt_name)
+            cmds.append(cmd)
 
         import_as_path_filter = module.params['import_as_path_filter']
         if import_as_path_filter:
             conf_str += "<importAsPathFilter>%s</importAsPathFilter>" % import_as_path_filter
 
+            cmd = "peer %s as-path-filter %s import" % (remote_address, import_as_path_filter)
+            cmds.append(cmd)
+
         export_as_path_filter = module.params['export_as_path_filter']
         if export_as_path_filter:
             conf_str += "<exportAsPathFilter>%s</exportAsPathFilter>" % export_as_path_filter
+
+            cmd = "peer %s as-path-filter %s export" % (remote_address, export_as_path_filter)
+            cmds.append(cmd)
 
         import_as_path_name_or_num = module.params[
             'import_as_path_name_or_num']
         if import_as_path_name_or_num:
             conf_str += "<importAsPathNameOrNum>%s</importAsPathNameOrNum>" % import_as_path_name_or_num
 
+            cmd = "peer %s as-path-filter %s import" % (remote_address, import_as_path_name_or_num)
+            cmds.append(cmd)
+
         export_as_path_name_or_num = module.params[
             'export_as_path_name_or_num']
         if export_as_path_name_or_num:
             conf_str += "<exportAsPathNameOrNum>%s</exportAsPathNameOrNum>" % export_as_path_name_or_num
 
+            cmd = "peer %s as-path-filter %s export" % (remote_address, export_as_path_name_or_num)
+            cmds.append(cmd)
+
         import_acl_name_or_num = module.params['import_acl_name_or_num']
         if import_acl_name_or_num:
             conf_str += "<importAclNameOrNum>%s</importAclNameOrNum>" % import_acl_name_or_num
+
+            cmd = "peer %s filter-policy %s import" % (remote_address, import_acl_name_or_num)
+            cmds.append(cmd)
 
         export_acl_name_or_num = module.params['export_acl_name_or_num']
         if export_acl_name_or_num:
             conf_str += "<exportAclNameOrNum>%s</exportAclNameOrNum>" % export_acl_name_or_num
 
+            cmd = "peer %s filter-policy %s export" % (remote_address, export_acl_name_or_num)
+            cmds.append(cmd)
+
         ipprefix_orf_enable = module.params['ipprefix_orf_enable']
         if ipprefix_orf_enable:
             conf_str += "<ipprefixOrfEnable>%s</ipprefixOrfEnable>" % ipprefix_orf_enable
 
+            if ipprefix_orf_enable == "true":
+                cmd = "peer %s capability-advertise orf ip-prefix" % remote_address
+            else:
+                cmd = "undo peer %s capability-advertise orf ip-prefix" % remote_address
+            cmds.append(cmd)
+
         is_nonstd_ipprefix_mod = module.params['is_nonstd_ipprefix_mod']
         if is_nonstd_ipprefix_mod:
             conf_str += "<isNonstdIpprefixMod>%s</isNonstdIpprefixMod>" % is_nonstd_ipprefix_mod
+
+            if is_nonstd_ipprefix_mod == "true":
+                if ipprefix_orf_enable == "true":
+                    cmd = "peer %s capability-advertise orf non-standard-compatible" % remote_address
+                else:
+                    cmd = "undo peer %s capability-advertise orf non-standard-compatible" % remote_address
+                cmds.append(cmd)
+            else:
+                if ipprefix_orf_enable == "true":
+                    cmd = "peer %s capability-advertise orf" % remote_address
+                else:
+                    cmd = "undo peer %s capability-advertise orf" % remote_address
+                cmds.append(cmd)
 
         orftype = module.params['orftype']
         if orftype:
@@ -2017,21 +2295,46 @@ class ce_bgp_neighbor_af(object):
         if orf_mode:
             conf_str += "<orfMode>%s</orfMode>" % orf_mode
 
+            if ipprefix_orf_enable == "true":
+                cmd = "peer %s capability-advertise orf ip-prefix %s" % (remote_address, orf_mode)
+            else:
+                cmd = "undo peer %s capability-advertise orf ip-prefix %s" % (remote_address, orf_mode)
+            cmds.append(cmd)
+
         soostring = module.params['soostring']
         if soostring:
             conf_str += "<soostring>%s</soostring>" % soostring
 
+            cmd = "peer %s soo %s" % (remote_address, soostring)
+            cmds.append(cmd)
+
+        cmd = ""
         default_rt_adv_enable = module.params['default_rt_adv_enable']
         if default_rt_adv_enable:
             conf_str += "<defaultRtAdvEnable>%s</defaultRtAdvEnable>" % default_rt_adv_enable
+
+            if default_rt_adv_enable == "true":
+                cmd += "peer %s default-route-advertise" % remote_address
+            else:
+                cmd += "undo peer %s default-route-advertise" % remote_address
 
         default_rt_adv_policy = module.params['default_rt_adv_policy']
         if default_rt_adv_policy:
             conf_str += "<defaultRtAdvPolicy>%s</defaultRtAdvPolicy>" % default_rt_adv_policy
 
+            cmd += " route-policy %s" % default_rt_adv_policy
+
         default_rt_match_mode = module.params['default_rt_match_mode']
         if default_rt_match_mode:
             conf_str += "<defaultRtMatchMode>%s</defaultRtMatchMode>" % default_rt_match_mode
+
+            if default_rt_match_mode == "matchall":
+                cmd += " conditional-route-match-all"
+            elif default_rt_match_mode == "matchany":
+                cmd += " conditional-route-match-any"
+
+        if cmd:
+            cmds.append(cmd)
 
         add_path_mode = module.params['add_path_mode']
         if add_path_mode:
@@ -2063,22 +2366,17 @@ class ce_bgp_neighbor_af(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge bgp peer address family other failed.')
+            module.fail_json(msg='Error: Merge bgp peer address family other failed.')
 
-        return SUCCESS
+        return cmds
 
 
 def main():
     """ main """
 
-    start_time = datetime.datetime.now()
-
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        host=dict(required=True),
-        username=dict(required=True),
-        password=dict(required=True),
-        vrf_name=dict(type='str', default='_public_'),
+        vrf_name=dict(type='str', required=True),
         af_type=dict(choices=['ipv4uni', 'ipv4multi', 'ipv4vpn',
                               'ipv6uni', 'ipv6vpn', 'evpn'], required=True),
         remote_address=dict(type='str', required=True),
@@ -2134,10 +2432,16 @@ def main():
         update_pkt_standard_compatible=dict(choices=['true', 'false']))
 
     if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
+        raise Exception("Error: The ncclient library is required")
 
     module = NetworkModule(argument_spec=argument_spec,
                            supports_check_mode=True)
+
+    changed = False
+    proposed = dict()
+    existing = dict()
+    end_state = dict()
+    updates = []
 
     state = module.params['state']
     host = module.params['host']
@@ -2198,104 +2502,163 @@ def main():
     update_pkt_standard_compatible = module.params[
         'update_pkt_standard_compatible']
 
-    ce_bgp_peer_af_obj = ce_bgp_neighbor_af(
-        host=host, port=port, username=username, password=password)
+    ce_bgp_peer_af_obj = BgpNeighborAf(host=host, port=port, username=username, password=password)
+
+    # get proposed
+    proposed["state"] = state
+    if vrf_name:
+        proposed["vrf_name"] = vrf_name
+    if af_type:
+        proposed["af_type"] = af_type
+    if remote_address:
+        proposed["remote_address"] = remote_address
+    if advertise_irb:
+        proposed["advertise_irb"] = advertise_irb
+    if advertise_arp:
+        proposed["advertise_arp"] = advertise_arp
+    if advertise_remote_nexthop:
+        proposed["advertise_remote_nexthop"] = advertise_remote_nexthop
+    if advertise_community:
+        proposed["advertise_community"] = advertise_community
+    if advertise_ext_community:
+        proposed["advertise_ext_community"] = advertise_ext_community
+    if discard_ext_community:
+        proposed["discard_ext_community"] = discard_ext_community
+    if allow_as_loop_enable:
+        proposed["allow_as_loop_enable"] = allow_as_loop_enable
+    if allow_as_loop_limit:
+        proposed["allow_as_loop_limit"] = allow_as_loop_limit
+    if keep_all_routes:
+        proposed["keep_all_routes"] = keep_all_routes
+    if nexthop_configure:
+        proposed["nexthop_configure"] = nexthop_configure
+    if preferred_value:
+        proposed["preferred_value"] = preferred_value
+    if public_as_only:
+        proposed["public_as_only"] = public_as_only
+    if public_as_only_force:
+        proposed["public_as_only_force"] = public_as_only_force
+    if public_as_only_limited:
+        proposed["public_as_only_limited"] = public_as_only_limited
+    if public_as_only_replace:
+        proposed["public_as_only_replace"] = public_as_only_replace
+    if public_as_only_skip_peer_as:
+        proposed["public_as_only_skip_peer_as"] = public_as_only_skip_peer_as
+    if route_limit:
+        proposed["route_limit"] = route_limit
+    if route_limit_percent:
+        proposed["route_limit_percent"] = route_limit_percent
+    if route_limit_type:
+        proposed["route_limit_type"] = route_limit_type
+    if route_limit_idle_timeout:
+        proposed["route_limit_idle_timeout"] = route_limit_idle_timeout
+    if rt_updt_interval:
+        proposed["rt_updt_interval"] = rt_updt_interval
+    if redirect_ip:
+        proposed["redirect_ip"] = redirect_ip
+    if redirect_ip_vaildation:
+        proposed["redirect_ip_vaildation"] = redirect_ip_vaildation
+    if reflect_client:
+        proposed["reflect_client"] = reflect_client
+    if substitute_as_enable:
+        proposed["substitute_as_enable"] = substitute_as_enable
+    if import_rt_policy_name:
+        proposed["import_rt_policy_name"] = import_rt_policy_name
+    if export_rt_policy_name:
+        proposed["export_rt_policy_name"] = export_rt_policy_name
+    if import_pref_filt_name:
+        proposed["import_pref_filt_name"] = import_pref_filt_name
+    if export_pref_filt_name:
+        proposed["export_pref_filt_name"] = export_pref_filt_name
+    if import_as_path_filter:
+        proposed["import_as_path_filter"] = import_as_path_filter
+    if export_as_path_filter:
+        proposed["export_as_path_filter"] = export_as_path_filter
+    if import_as_path_name_or_num:
+        proposed["import_as_path_name_or_num"] = import_as_path_name_or_num
+    if export_as_path_name_or_num:
+        proposed["export_as_path_name_or_num"] = export_as_path_name_or_num
+    if import_acl_name_or_num:
+        proposed["import_acl_name_or_num"] = import_acl_name_or_num
+    if export_acl_name_or_num:
+        proposed["export_acl_name_or_num"] = export_acl_name_or_num
+    if ipprefix_orf_enable:
+        proposed["ipprefix_orf_enable"] = ipprefix_orf_enable
+    if is_nonstd_ipprefix_mod:
+        proposed["is_nonstd_ipprefix_mod"] = is_nonstd_ipprefix_mod
+    if orftype:
+        proposed["orftype"] = orftype
+    if orf_mode:
+        proposed["orf_mode"] = orf_mode
+    if soostring:
+        proposed["soostring"] = soostring
+    if default_rt_adv_enable:
+        proposed["default_rt_adv_enable"] = default_rt_adv_enable
+    if default_rt_adv_policy:
+        proposed["default_rt_adv_policy"] = default_rt_adv_policy
+    if default_rt_match_mode:
+        proposed["default_rt_match_mode"] = default_rt_match_mode
+    if add_path_mode:
+        proposed["add_path_mode"] = add_path_mode
+    if adv_add_path_num:
+        proposed["adv_add_path_num"] = adv_add_path_num
+    if origin_as_valid:
+        proposed["origin_as_valid"] = origin_as_valid
+    if vpls_enable:
+        proposed["vpls_enable"] = vpls_enable
+    if vpls_ad_disable:
+        proposed["vpls_ad_disable"] = vpls_ad_disable
+    if update_pkt_standard_compatible:
+        proposed["update_pkt_standard_compatible"] = update_pkt_standard_compatible
 
     if not ce_bgp_peer_af_obj:
-        module.fail_json(msg='init module failed.')
+        module.fail_json(msg='Error: Init module failed.')
 
     bgp_peer_af_rst = ce_bgp_peer_af_obj.check_bgp_neighbor_af_args(
         module=module)
     bgp_peer_af_other_rst = ce_bgp_peer_af_obj.check_bgp_neighbor_af_other(
         module=module)
 
-    args = dict(state=state,
-                vrf_name=vrf_name,
-                af_type=af_type,
-                remote_address=remote_address,
-                advertise_irb=advertise_irb,
-                advertise_arp=advertise_arp,
-                advertise_remote_nexthop=advertise_remote_nexthop,
-                advertise_community=advertise_community,
-                advertise_ext_community=advertise_ext_community,
-                discard_ext_community=discard_ext_community,
-                allow_as_loop_enable=allow_as_loop_enable,
-                allow_as_loop_limit=allow_as_loop_limit,
-                keep_all_routes=keep_all_routes,
-                nexthop_configure=nexthop_configure,
-                preferred_value=preferred_value,
-                public_as_only=public_as_only,
-                public_as_only_force=public_as_only_force,
-                public_as_only_limited=public_as_only_limited,
-                public_as_only_replace=public_as_only_replace,
-                public_as_only_skip_peer_as=public_as_only_skip_peer_as,
-                route_limit=route_limit,
-                route_limit_percent=route_limit_percent,
-                route_limit_type=route_limit_type,
-                route_limit_idle_timeout=route_limit_idle_timeout,
-                rt_updt_interval=rt_updt_interval,
-                redirect_ip=redirect_ip,
-                redirect_ip_vaildation=redirect_ip_vaildation,
-                reflect_client=reflect_client,
-                substitute_as_enable=substitute_as_enable,
-                import_rt_policy_name=import_rt_policy_name,
-                export_rt_policy_name=export_rt_policy_name,
-                import_pref_filt_name=import_pref_filt_name,
-                export_pref_filt_name=export_pref_filt_name,
-                import_as_path_filter=import_as_path_filter,
-                export_as_path_filter=export_as_path_filter,
-                import_as_path_name_or_num=import_as_path_name_or_num,
-                export_as_path_name_or_num=export_as_path_name_or_num,
-                import_acl_name_or_num=import_acl_name_or_num,
-                export_acl_name_or_num=export_acl_name_or_num,
-                ipprefix_orf_enable=ipprefix_orf_enable,
-                is_nonstd_ipprefix_mod=is_nonstd_ipprefix_mod,
-                orftype=orftype,
-                orf_mode=orf_mode,
-                soostring=soostring,
-                default_rt_adv_enable=default_rt_adv_enable,
-                default_rt_adv_policy=default_rt_adv_policy,
-                default_rt_match_mode=default_rt_match_mode,
-                add_path_mode=add_path_mode,
-                adv_add_path_num=adv_add_path_num,
-                origin_as_valid=origin_as_valid,
-                vpls_enable=vpls_enable,
-                vpls_ad_disable=vpls_ad_disable,
-                update_pkt_standard_compatible=update_pkt_standard_compatible)
-
-    changed = False
-    proposed = dict((k, v) for k, v in args.iteritems() if v is not None)
-    existing = dict()
-    end_state = dict()
-
     # state exist bgp peer address family config
-    exist_tmp = dict(
-        (k, v) for k, v in bgp_peer_af_rst.iteritems() if k is not "need_cfg")
+    exist_tmp = dict()
+    for item in bgp_peer_af_rst:
+        if item != "need_cfg":
+            exist_tmp[item] = bgp_peer_af_rst[item]
     if exist_tmp:
         existing["bgp neighbor af"] = exist_tmp
     # state exist bgp peer address family other config
-    exist_tmp = dict(
-        (k, v) for k, v in bgp_peer_af_other_rst.iteritems() if k is not "need_cfg")
+    exist_tmp = dict()
+    for item in bgp_peer_af_other_rst:
+        if item != "need_cfg":
+            exist_tmp[item] = bgp_peer_af_other_rst[item]
     if exist_tmp:
         existing["bgp neighbor af other"] = exist_tmp
 
     if state == "present":
         if bgp_peer_af_rst["need_cfg"]:
             if "remote_address" in bgp_peer_af_rst.keys():
-                ce_bgp_peer_af_obj.merge_bgp_peer_af(module=module)
+                cmd = ce_bgp_peer_af_obj.merge_bgp_peer_af(module=module)
                 changed = True
+                for item in cmd:
+                    updates.append(item)
             else:
-                ce_bgp_peer_af_obj.create_bgp_peer_af(module=module)
+                cmd = ce_bgp_peer_af_obj.create_bgp_peer_af(module=module)
                 changed = True
+                for item in cmd:
+                    updates.append(item)
 
         if bgp_peer_af_other_rst["need_cfg"]:
-            ce_bgp_peer_af_obj.merge_bgp_peer_af_other(module=module)
+            cmd = ce_bgp_peer_af_obj.merge_bgp_peer_af_other(module=module)
             changed = True
+            for item in cmd:
+                updates.append(item)
 
     else:
         if bgp_peer_af_rst["need_cfg"]:
-            ce_bgp_peer_af_obj.delete_bgp_peer_af(module=module)
+            cmd = ce_bgp_peer_af_obj.delete_bgp_peer_af(module=module)
             changed = True
+            for item in cmd:
+                updates.append(item)
 
         if bgp_peer_af_other_rst["need_cfg"]:
             pass
@@ -2303,15 +2666,19 @@ def main():
     # state end bgp peer address family config
     bgp_peer_af_rst = ce_bgp_peer_af_obj.check_bgp_neighbor_af_args(
         module=module)
-    end_tmp = dict(
-        (k, v) for k, v in bgp_peer_af_rst.iteritems() if k is not "need_cfg")
+    end_tmp = dict()
+    for item in bgp_peer_af_rst:
+        if item != "need_cfg":
+            end_tmp[item] = bgp_peer_af_rst[item]
     if end_tmp:
         end_state["bgp neighbor af"] = end_tmp
     # state end bgp peer address family other config
     bgp_peer_af_other_rst = ce_bgp_peer_af_obj.check_bgp_neighbor_af_other(
         module=module)
-    end_tmp = dict(
-        (k, v) for k, v in bgp_peer_af_other_rst.iteritems() if k is not "need_cfg")
+    end_tmp = dict()
+    for item in bgp_peer_af_other_rst:
+        if item != "need_cfg":
+            end_tmp[item] = bgp_peer_af_other_rst[item]
     if end_tmp:
         end_state["bgp neighbor af other"] = end_tmp
 
@@ -2320,9 +2687,7 @@ def main():
     results['existing'] = existing
     results['changed'] = changed
     results['end_state'] = end_state
-
-    end_time = datetime.datetime.now()
-    results['execute_time'] = str(end_time - start_time)
+    results['updates'] = updates
 
     module.exit_json(**results)
 

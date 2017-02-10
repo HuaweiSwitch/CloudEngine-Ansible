@@ -16,16 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_mtu
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages MTU settings on CloudEngine switch.
 description:
     - Manages MTU settings on CloudEngine switch.
-extends_documentation_fragment: CloudEngine
-author:
-    - Pan Qijun (@jedelman8)
+extends_documentation_fragment: cloudengine
+author: QijunPan (@CloudEngine-Ansible)
 notes:
     - Either C(sysmtu) param is required or C(interface) AND C(mtu) params are req'd.
     - C(state=absent) unconfigures a given MTU if that value is currently present.
@@ -38,21 +41,22 @@ options:
     mtu:
         description:
             - MTU for a specific interface.
+              The value is an integer ranging from 46 to 9600, in bytes.
         required: false
         default: null
-        choices:[46:9600]
     jumbo_max:
         description:
             - Maximum frame size. The default value is 9216.
+              The value is an integer and expressed in bytes. The value range is 1536 to 12224 for the CE12800
+              and 1536 to 12288 for ToR switches.
         required: false
         default: null
-        choices:[1536:12288]
     jumbo_min:
         description:
             - Non-jumbo frame size threshod. The default value is 1518.
+              The value is an integer that ranges from 1518 to jumbo_max, in bytes.
         required: false
         default: null
-        choices:[1518:jbfMax]
     state:
         description:
             - Specify desired state of the resource.
@@ -133,21 +137,22 @@ changed:
     sample: true
 '''
 
-
+import sys
 import re
-import datetime
 import copy
-from ansible.module_utils.network import NetworkModule
+from ansible.module_utils.network import NetworkModule, NetworkError
+from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.netcli import FailedConditionsError, FailedConditionalError
+from ansible.module_utils.basic import get_exception
 from ansible.module_utils.cloudengine import get_netconf
 from ansible.module_utils.netcli import CommandRunner
+from ansible.module_utils.netcli import AddCommandError
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -174,25 +179,99 @@ CE_NC_XML_MERGE_INTF_MTU = """
   </ifm>
 """
 
+def is_interface_support_setjumboframe(interface):
+    """is interface support set jumboframe"""
 
-class CE_MTU(object):
-    """ CE_MTU"""
+    if interface is None:
+        return False
+    support_flag = False
+    if interface.upper().startswith('GE'):
+        support_flag = True
+    elif interface.upper().startswith('10GE'):
+        support_flag = True
+    elif interface.upper().startswith('25GE'):
+        support_flag = True
+    elif interface.upper().startswith('4X10GE'):
+        support_flag = True
+    elif interface.upper().startswith('40GE'):
+        support_flag = True
+    elif interface.upper().startswith('100GE'):
+        support_flag = True
+    else:
+        support_flag = False
+    return support_flag
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
+
+    if interface is None:
+        return None
+
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-Port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def build_config_xml(xmlstr):
+    """ build_config_xml"""
+
+    return '<config> ' + xmlstr + ' </config>'
+
+class Mtu(object):
+    """set mtu"""
+
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.nc = None
+        self.netconf = None
         self.init_module()
 
         # interface info
         self.interface = self.module.params['interface']
         self.mtu = self.module.params['mtu']
         self.state = self.module.params['state']
-        self.jbfMax = self.module.params['jumbo_max'] or None
-        self.jbfMin = self.module.params['jumbo_min'] or None
-        self.jbfConfig = list()
+        self.jbf_max = self.module.params['jumbo_max'] or None
+        self.jbf_min = self.module.params['jumbo_min'] or None
+        self.jbf_config = list()
+        self.jbf_cli = ""
 
         # host info
         self.host = self.module.params['host']
@@ -222,9 +301,9 @@ class CE_MTU(object):
         """ init_netconf"""
 
         if HAS_NCCLIENT:
-            self.nc = get_netconf(host=self.host, port=self.port,
-                                  username=self.username,
-                                  password=self.module.params['password'])
+            self.netconf = get_netconf(host=self.host, port=self.port,
+                                       username=self.username,
+                                       password=self.module.params['password'])
         else:
             self.module.fail_json(
                 msg='Error: No ncclient package, please install it.')
@@ -236,19 +315,15 @@ class CE_MTU(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def build_config_xml(self, xmlstr):
-        """ build_config_xml"""
-
-        return '<config> ' + xmlstr + ' </config>'
-
     def get_interface_dict(self, ifname):
         """ get one interface attributes dict."""
         intf_info = dict()
         conf_str = CE_NC_GET_INTF % ifname
         try:
-            con_obj = self.nc.get_config(filter=conf_str)
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+            con_obj = self.netconf.get_config(filter=conf_str)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         if "<data/>" in con_obj.xml:
             return intf_info
@@ -265,85 +340,26 @@ class CE_MTU(object):
 
         return intf_info
 
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
-
-    def is_portswitch_enalbe(self, iftype):
-        """"[undo] portswitch"""
-
-        type_list = ['ge', '10ge', '25ge',
-                     '4x10ge', '40ge', '100ge', 'eth-trunk']
-        if iftype in type_list:
-            return True
-        else:
-            return False
-
-    def prase_jumboframe_para(self, configStr):
-        """ prase_jumboframe_para"""
+    def prase_jumboframe_para(self, config_str):
+        """prase_jumboframe_para"""
 
         interface_cli = "interface %s" % self.interface
-        if configStr.find(interface_cli) == -1:
+        if config_str.find(interface_cli) == -1:
             self.module.fail_json(
-                    msg='Interface does not exist.')
-        npos1 = configStr.index(interface_cli)
+                msg='Error: Interface does not exist.')
+        npos1 = config_str.index(interface_cli)
 
-        npos2 = configStr.index('#', npos1)
-        configStrTmp = configStr[npos1:npos2]
+        npos2 = config_str.index('#', npos1)
+        config_str_tmp = config_str[npos1:npos2]
         try:
-            npos3 = configStrTmp.index('jumboframe enable')
+            npos3 = config_str_tmp.index('jumboframe enable')
         except ValueError:
             # return default vale
             return [9216, 1518]
-        npos4 = configStrTmp.index('\n', npos3)
+        npos4 = config_str_tmp.index('\n', npos3)
 
-        configStrTmp = configStrTmp[npos3:npos4]
-        return re.findall(r'([0-9]+)', configStrTmp)
+        config_str_tmp = config_str_tmp[npos3:npos4]
+        return re.findall(r'([0-9]+)', config_str_tmp)
 
     def excute_command(self, commands):
         """ excute_command"""
@@ -353,26 +369,22 @@ class CE_MTU(object):
             try:
                 runner.add_command(**cmd)
             except AddCommandError:
-                exc = get_exception()
                 self.module.fail_json(
                     msg='duplicate command detected: %s' % cmd)
-        runner.retries = self.module.params['retries']
-        runner.interval = self.module.params['interval']
-        runner.match = self.module.params['match']
 
         try:
             runner.run()
         except FailedConditionsError:
             exc = get_exception()
             self.module.fail_json(
-                msg=str(exc), failed_conditions=exc.failed_conditions)
+                msg=get_cli_exception(exc), failed_conditions=exc.failed_conditions)
         except FailedConditionalError:
             exc = get_exception()
             self.module.fail_json(
-                msg=str(exc), failed_conditional=exc.failed_conditional)
+                msg=get_cli_exception(exc), failed_conditional=exc.failed_conditional)
         except NetworkError:
-            exc = get_exception()
-            self.module.fail_json(msg=str(exc), **exc.kwargs)
+            err = get_cli_exception()
+            self.module.fail_json(msg=err)
 
         for cmd in commands:
             try:
@@ -386,48 +398,50 @@ class CE_MTU(object):
         """ get_jumboframe_config"""
 
         commands = list()
-        cmd = {'output': None, 'command': 'display current-configuration'}
+        cmd = {'output': None,
+               'command': 'display current-configuration interface %s' % self.interface}
         commands.append(cmd)
         output = self.excute_command(commands)
+        output = output.replace('*', '')
         return self.prase_jumboframe_para(output)
 
     def set_jumboframe(self):
         """ set_jumboframe"""
 
         if self.state == "present":
-            if not self.jbfMax or not self.jbfMin:
+            if not self.jbf_max and not self.jbf_min:
                 return
 
-            jbfValue = self.get_jumboframe_config()
-            self.jbfConfig = copy.deepcopy(jbfValue)
-            if len(jbfValue) == 1:
-                jbfValue.append("1518")
-                self.jbfConfig.append("1518")
-            if not self.jbfMax:
+            jbf_value = self.get_jumboframe_config()
+            self.jbf_config = copy.deepcopy(jbf_value)
+            if len(jbf_value) == 1:
+                jbf_value.append("1518")
+                self.jbf_config.append("1518")
+            if not self.jbf_max:
                 return
 
-            if (len(jbfValue) > 2) or (len(jbfValue) == 0):
+            if (len(jbf_value) > 2) or (len(jbf_value) == 0):
                 self.module.fail_json(
                     msg='Error: Get jubmoframe config value num error.')
-            if (self.jbfMin is None):
-                if (jbfValue[0] == self.jbfMax):
+            if self.jbf_min is None:
+                if jbf_value[0] == self.jbf_max:
                     return
             else:
-                if (jbfValue[0] == self.jbfMax) \
-                        and (jbfValue[1] == self.jbfMin):
+                if (jbf_value[0] == self.jbf_max) \
+                        and (jbf_value[1] == self.jbf_min):
                     return
-            if (jbfValue[0] != self.jbfMax):
-                jbfValue[0] = self.jbfMax
-            if (jbfValue[1] != self.jbfMin) and (self.jbfMin is not None):
-                jbfValue[1] = self.jbfMin
+            if jbf_value[0] != self.jbf_max:
+                jbf_value[0] = self.jbf_max
+            if (jbf_value[1] != self.jbf_min) and (self.jbf_min is not None):
+                jbf_value[1] = self.jbf_min
             else:
-                jbfValue.pop(1)
+                jbf_value.pop(1)
         else:
-            jbfValue = self.get_jumboframe_config()
-            self.jbfConfig = copy.deepcopy(jbfValue)
-            if (jbfValue == [9216, 1518]):
+            jbf_value = self.get_jumboframe_config()
+            self.jbf_config = copy.deepcopy(jbf_value)
+            if (jbf_value == [9216, 1518]):
                 return
-            jbfValue = [9216, 1518]
+            jbf_value = [9216, 1518]
 
         # excute commands
         commands = list()
@@ -438,11 +452,11 @@ class CE_MTU(object):
         cmd2['command'] = "interface %s" % self.interface
         commands.append(cmd2)
 
-        if len(jbfValue) == 2:
+        if len(jbf_value) == 2:
             self.jbf_cli = "jumboframe enable %s %s" % (
-                jbfValue[0], jbfValue[1])
+                jbf_value[0], jbf_value[1])
         else:
-            self.jbf_cli = "jumboframe enable %s" % (jbfValue[0])
+            self.jbf_cli = "jumboframe enable %s" % (jbf_value[0])
         cmd3 = {'output': None, 'command': ''}
         cmd3['command'] = self.jbf_cli
         commands.append(cmd3)
@@ -454,11 +468,11 @@ class CE_MTU(object):
 
         self.changed = True
         if self.state == "present":
-            if self.jbfMin:
+            if self.jbf_min:
                 self.updates_cmd.append(
-                    "jumboframe enable %s %s" % (self.jbfMax, self.jbfMin))
+                    "jumboframe enable %s %s" % (self.jbf_max, self.jbf_min))
             else:
-                self.updates_cmd.append("jumboframe enable %s" % (self.jbfMax))
+                self.updates_cmd.append("jumboframe enable %s" % (self.jbf_max))
         else:
             self.updates_cmd.append("undo jumboframe enable")
 
@@ -484,41 +498,22 @@ class CE_MTU(object):
         if not change:
             return
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = build_config_xml(xmlstr)
 
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_INTF_MTU")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
-
-    def IsInterfaceSupportSetJumboframe(self, interface):
-        if interface is None:
-            return False
-        support_flag = False
-        if interface.upper().startswith('GE'):
-            support_flag = True
-        elif interface.upper().startswith('10GE'):
-            support_flag = True
-        elif interface.upper().startswith('25GE'):
-            support_flag = True
-        elif interface.upper().startswith('4X10GE'):
-            support_flag = True
-        elif interface.upper().startswith('40GE'):
-            support_flag = True
-        elif interface.upper().startswith('100GE'):
-            support_flag = True
-        else:
-            support_flag = False
-        return support_flag
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def check_params(self):
         """Check all input params"""
 
         # interface type check
         if self.interface:
-            self.intf_type = self.get_interface_type(self.interface)
+            self.intf_type = get_interface_type(self.interface)
             if not self.intf_type:
                 self.module.fail_json(
                     msg='Error: Interface name of %s '
@@ -542,39 +537,39 @@ class CE_MTU(object):
             self.module.fail_json(msg='Error: interface does not exists.')
 
         # check interface
-        if self.intf_info['isL2SwitchPort'] == 'true':
+        if self.mtu and self.intf_info['isL2SwitchPort'] == 'true':
             self.module.fail_json(msg='Error: L2Switch Port can not set mtu.')
 
         # check interface can set jumbo frame
         if self.state == 'present':
-            if self.jbfMax:
-                if not self.IsInterfaceSupportSetJumboframe(self.interface):
+            if self.jbf_max:
+                if not is_interface_support_setjumboframe(self.interface):
                     self.module.fail_json(
                         msg='Error: Interface %s does not support jumboframe set.' % self.interface)
-                if not self.jbfMax.isdigit():
-                    self.module.fail_json(msg='Error: Max jumboframe is not digit.')
-                if (int(self.jbfMax) > 12288) or (int(self.jbfMax) < 1536):
+                if not self.jbf_max.isdigit():
+                    self.module.fail_json(
+                        msg='Error: Max jumboframe is not digit.')
+                if (int(self.jbf_max) > 12288) or (int(self.jbf_max) < 1536):
                     self.module.fail_json(
                         msg='Error: Max jumboframe is between 1536 to 12288.')
 
-            if self.jbfMin:
-                if not self.jbfMin.isdigit():
+            if self.jbf_min:
+                if not self.jbf_min.isdigit():
                     self.module.fail_json(
                         msg='Error: Min jumboframe is not digit.')
-                if not self.jbfMax:
+                if not self.jbf_max:
                     self.module.fail_json(
                         msg='Error: please specify max jumboframe value.')
-                if (int(self.jbfMin) > self.jbfMax) or (int(self.jbfMin) < 1518):
+                if (int(self.jbf_min) > self.jbf_max) or (int(self.jbf_min) < 1518):
                     self.module.fail_json(
                         msg='Error: Min jumboframe is between '
                             '1518 to jumboframe max value.')
 
-            if self.jbfMin is not None:
-                if self.jbfMax is None:
+            if self.jbf_min is not None:
+                if self.jbf_max is None:
                     self.module.fail_json(
                         msg='Error: please input MAX jumboframe '
                             'value.')
-
 
     def get_proposed(self):
         """ get_proposed"""
@@ -586,13 +581,13 @@ class CE_MTU(object):
         if self.state == 'present':
             if self.mtu:
                 self.proposed["mtu"] = self.mtu
-            if self.jbfMax:
-                if self.jbfMin:
+            if self.jbf_max:
+                if self.jbf_min:
                     self.proposed["jumboframe"] = "jumboframe enable %s %s" % (
-                        self.jbfMax, self.jbfMin)
+                        self.jbf_max, self.jbf_min)
                 else:
                     self.proposed[
-                        "jumboframe"] = "jumboframe enable %s %s" % (self.jbfMax, 1518)
+                        "jumboframe"] = "jumboframe enable %s %s" % (self.jbf_max, 1518)
 
     def get_existing(self):
         """ get_existing"""
@@ -605,11 +600,11 @@ class CE_MTU(object):
             if not self.existing["interface"]:
                 self.existing["interface"] = self.interface
 
-            if len(self.jbfConfig) != 2:
+            if len(self.jbf_config) != 2:
                 return
 
             self.existing["jumboframe"] = "jumboframe enable %s %s" % (
-                self.jbfConfig[0], self.jbfConfig[1])
+                self.jbf_config[0], self.jbf_config[1])
 
     def get_end_state(self):
         """ get_end_state"""
@@ -626,17 +621,17 @@ class CE_MTU(object):
             if self.state == 'absent':
                 self.end_state["jumboframe"] = "jumboframe enable %s %s" % (
                     9216, 1518)
-            elif not self.jbfMax and not self.jbfMin:
-                if len(self.jbfConfig) != 2:
+            elif not self.jbf_max and not self.jbf_min:
+                if len(self.jbf_config) != 2:
                     return
                 self.end_state["jumboframe"] = "jumboframe enable %s %s" % (
-                    self.jbfConfig[0], self.jbfConfig[1])
-            elif self.jbfMin:
+                    self.jbf_config[0], self.jbf_config[1])
+            elif self.jbf_min:
                 self.end_state["jumboframe"] = "jumboframe enable %s %s" % (
-                    self.jbfMax, self.jbfMin)
+                    self.jbf_max, self.jbf_min)
             else:
                 self.end_state[
-                    "jumboframe"] = "jumboframe enable %s %s" % (self.jbfMax, 1518)
+                    "jumboframe"] = "jumboframe enable %s %s" % (self.jbf_max, 1518)
 
     def work(self):
         """worker"""
@@ -658,9 +653,6 @@ class CE_MTU(object):
         else:
             self.results['updates'] = list()
 
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
-
         self.module.exit_json(**self.results)
 
 
@@ -674,14 +666,9 @@ def main():
                    default='present', required=False),
         jumbo_max=dict(type='str'),
         jumbo_min=dict(type='str'),
-        commands=dict(type='list', required=False),
-        wait_for=dict(type='list', aliases=['waitfor']),
-        match=dict(default='all', choices=['any', 'all']),
-        retries=dict(default=10, type='int'),
-        interval=dict(default=1, type='int'),
     )
 
-    interface = CE_MTU(argument_spec)
+    interface = Mtu(argument_spec)
     interface.work()
 
 if __name__ == '__main__':

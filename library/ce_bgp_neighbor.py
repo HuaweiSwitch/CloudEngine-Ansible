@@ -16,219 +16,219 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
-
 module: ce_bgp_neighbor
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages BGP peer configuration.
 description:
-    - Manages BGP peer configurations on cloudengine switches.
+    - Manages BGP peer configurations on CloudEngine switches.
 extends_documentation_fragment: cloudengine
 author:
-    - wangdezhuang (@privateip)
-notes:
-    - The server_type parameter is always required.
+    - wangdezhuang (@CloudEngine-Ansible)
 options:
     state:
         description:
-            - Manage the state of the resource.
-        required: true
+            - Specify desired state of the resource.
+        required: false
         default: present
         choices: ['present','absent']
-        version_added: "2.2"
     vrf_name:
         description:
-            - vrf name.
+            - Name of a BGP instance. The name is a case-sensitive string of characters.
+              The BGP instance can be used only after the corresponding VPN instance is created.
         required: true
-        default: _public_
-        version_added: "2.2"
     peer_addr:
         description:
-            - peer adress.
+            - Connection address of a peer, which can be an IPv4 or IPv6 address.
         required: true
-        default: None
-        version_added: "2.2"
     remote_as:
         description:
-            - remote as.
+            - AS number of a peer.
+              The value is a string of 1 to 11 characters.
         required: true
-        default: None
-        version_added: "2.2"
     description:
         description:
-            - description.
+            - Description of a peer, which can be letters or digits.
+              The value is a string of 1 to 80 characters.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     fake_as:
         description:
-            - fake as.
+            - Fake AS number that is specified for a local peer.
+              The value is a string of 1 to 11 characters.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     dual_as:
         description:
-            - remote as can use fake as or real as.
+            - If the value is true, the EBGP peer can use either a fake AS number or the actual AS number.
+              If the value is false, the EBGP peer can only use a fake AS number.
         required: false
         choices: ['true','false']
-        default: None
-        version_added: "2.2"
+        default: null
     conventional:
         description:
-            - enable Eextended router function.
+            - If the value is true, the router has all extended capabilities.
+              If the value is false, the router does not have all extended capabilities.
         required: false
         choices: ['true','false']
-        default: None
-        version_added: "2.2"
+        default: null
     route_refresh:
         description:
-            - route refresh.
+            - If the value is true, BGP is enabled to advertise REFRESH packets.
+              If the value is false, the route refresh function is enabled.
         required: false
         choices: ['true','false']
-        default: None
-        version_added: "2.2"
+        default: null
     is_ignore:
         description:
-            - stop session between peers.
+            - If the value is true, the session with a specified peer is torn down and all related
+              routing entries are cleared.
+              If the value is false, the session with a specified peer is retained
         required: false
         choices: ['true','false']
-        default: None
-        version_added: "2.2"
+        default: null
     local_if_name:
         description:
-            - loacl interface name.
+            - Name of a source interface that sends BGP packets.
+              The value is a string of 1 to 63 characters.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     ebgp_max_hop:
         description:
-            - ebgp max hop.
+            - Maximum number of hops in an indirect EBGP connection.
+              The value is an ranging from 1 to 255.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     valid_ttl_hops:
         description:
-            - valid ttl hops.
+            - Enable GTSM on a peer or peer group.
+              The valid-TTL-Value parameter is used to specify the number of TTL hops to be detected.
+              The value is an integer ranging from 1 to 255.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     connect_mode:
         description:
-            - connect mode.
+            - The value can be Connect-only, Listen-only, or Both.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     is_log_change:
         description:
-            - is log change.
+            - If the value is true, BGP is enabled to record peer session status and event information.
+              If the value is false, BGP is disabled from recording peer session status and event information.
         required: false
         choices: ['true','false']
-        default: None
-        version_added: "2.2"
+        default: null
     pswd_type:
         description:
-            - password type.
+            - Enable BGP peers to establish a TCP connection and perform the Message Digest 5 (MD5)
+              authentication for BGP messages.
         required: false
         choices: ['null','cipher','simple']
-        default: None
-        version_added: "2.2"
+        default: null
     pswd_cipher_text:
         description:
-            - password cipher text.
+            - The character string in a password identifies the contents of the password, spaces not supported.
+              The value is a string of 1 to 255 characters.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     keep_alive_time:
         description:
-            - keep alive time.
+            - Specify the Keepalive time of a peer or peer group.
+              The value is an integer ranging from 0 to 21845. The default value is 60.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     hold_time:
         description:
-            - hold time.
+            - Specify the Hold time of a peer or peer group.
+              The value is 0 or an integer ranging from 3 to 65535.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     min_hold_time:
         description:
-            - min hold time.
+            - Specify the Min hold time of a peer or peer group.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     key_chain_name:
         description:
-            - key chain name.
+            - Specify the Keychain authentication name used when BGP peers establish a TCP connection.
+              The value is a string of 1 to 47 case-insensitive characters.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     conn_retry_time:
         description:
-            - connection retry time.
+            - ConnectRetry interval.
+              The value is an integer ranging from 1 to 65535.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     tcp_MSS:
         description:
-            - tcp MSS.
+            - Maximum TCP MSS value used for TCP connection establishment for a peer.
+              The value is an integer ranging from 176 to 4096.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     mpls_local_ifnet_disable:
         description:
-            - mpls local ifnet disable.
+            - If the value is true, peer create MPLS Local IFNET disable.
+              If the value is false, peer create MPLS Local IFNET enable.
         required: false
-        default: None
-        version_added: "2.2"
+        choices: ['true','false']
+        default: null
     prepend_global_as:
         description:
-            - prepend global as.
+            - Add the global AS number to the Update packets to be advertised.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     prepend_fake_as:
         description:
-            - prepend fake as.
+            - Add the Fake AS number to received Update packets.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     is_bfd_block:
         description:
-            - is bfd block.
+            - If the value is true, peers are enabled to inherit the BFD function from the peer group.
+              If the value is false, peers are disabled to inherit the BFD function from the peer group.
         required: false
-        default: None
-        version_added: "2.2"
+        choices: ['true','false']
+        default: null
     multiplier:
         description:
-            - multiplier.
+            - Specify the detection multiplier. The default value is 3.
+              The value is an integer ranging from 3 to 50.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     is_bfd_enable:
         description:
-            - is bfd enable.
+            - If the value is true, BFD is enabled.
+              If the value is false, BFD is disabled.
         required: false
-        default: None
-        version_added: "2.2"
+        choices: ['true','false']
+        default: null
     rx_interval:
         description:
-            - rx interval.
+            - Specify the minimum interval at which BFD packets are received.
+              The value is an integer ranging from 50 to 1000, in milliseconds.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     tx_interval:
         description:
-            - tx interval.
+            - Specify the minimum interval at which BFD packets are sent.
+              The value is an integer ranging from 50 to 1000, in milliseconds.
         required: false
-        default: None
-        version_added: "2.2"
+        default: null
     is_single_hop:
         description:
-            - is single hop.
+            - If the value is true, the system is enabled to preferentially use the single-hop mode for
+              BFD session setup between IBGP peers.
+              If the value is false, the system is disabled from preferentially using the single-hop
+              mode for BFD session setup between IBGP peers.
         required: false
-        default: None
-        version_added: "2.2"
+        choices: ['true','false']
+        default: null
 '''
 
 EXAMPLES = '''
@@ -261,7 +261,7 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"peer_addr": "192.168.10.10", "remote_as": "500", "state": "present"}
+    sample: {"peer_addr": "192.168.10.10", "remote_as": "500", "state": "present", "vrf_name": "js"}
 existing:
     description:
         - k/v pairs of existing aaa server
@@ -272,29 +272,25 @@ end_state:
     returned: always
     type: dict
     sample: {"bgp peer": [["192.168.10.10", "500"]]}
-execute_time:
-    description: the module execute time
+updates:
+    description: command sent to the device
     returned: always
-    type: string
-    sample: "0:00:03.380753"
+    type: list
+    sample: ["peer 192.168.10.10 as-number 500"]
 '''
 
 import re
-import datetime
+import sys
 import socket
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
 
-
-SUCCESS = """success"""
-FAILED = """failed"""
 
 # get bgp peer
 CE_GET_BGP_PEER_HEADER = """
@@ -458,7 +454,28 @@ CE_DELETE_PEER_BFD_TAIL = """
 """
 
 
-class ce_bgp_neighbor(object):
+def check_ip_addr(**kwargs):
+    """ check_ip_addr, Supports IPv4 and IPv6 """
+
+    ipaddr = kwargs["ipaddr"]
+
+    if not ipaddr or '\x00' in ipaddr:
+        return False
+
+    try:
+        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
+                                 socket.SOCK_STREAM,
+                                 0, socket.AI_NUMERICHOST)
+        return bool(res)
+    except socket.gaierror:
+        err = sys.exc_info()[1]
+        if err.args[0] == socket.EAI_NONAME:
+            return False
+        raise
+    return True
+
+
+class BgpNeighbor(object):
     """ Manages BGP peer configuration """
 
     def __init__(self, **kwargs):
@@ -474,8 +491,9 @@ class ce_bgp_neighbor(object):
 
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -487,32 +505,14 @@ class ce_bgp_neighbor(object):
 
         try:
             con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError as err:
-            module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
-    def check_ip_addr(self, **kwargs):
-        """ check_ip_addr, Supports IPv4 and IPv6"""
-
-        ipaddr = kwargs["ipaddr"]
-
-        if not ipaddr or '\x00' in ipaddr:
-            return False
-
-        try:
-            res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                     socket.SOCK_STREAM,
-                                     0, socket.AI_NUMERICHOST)
-            return bool(res)
-        except socket.gaierror as err:
-            if err.args[0] == socket.EAI_NONAME:
-                return False
-            raise
-        return True
-
     def check_bgp_peer_args(self, **kwargs):
-        """check_bgp_peer_args"""
+        """ check_bgp_peer_args """
 
         module = kwargs["module"]
         result = dict()
@@ -522,13 +522,13 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         peer_addr = module.params['peer_addr']
         if peer_addr:
-            if not self.check_ip_addr(ipaddr=peer_addr):
+            if not check_ip_addr(ipaddr=peer_addr):
                 module.fail_json(
-                    msg='the peer_addr %s is invalid.' % peer_addr)
+                    msg='Error: The peer_addr %s is invalid.' % peer_addr)
 
             need_cfg = True
 
@@ -536,7 +536,7 @@ class ce_bgp_neighbor(object):
         if remote_as:
             if len(remote_as) > 11 or len(remote_as) < 1:
                 module.fail_json(
-                    msg='the len of remote_as %s is out of [1 - 11].' % remote_as)
+                    msg='Error: The len of remote_as %s is out of [1 - 11].' % remote_as)
 
             need_cfg = True
 
@@ -544,7 +544,7 @@ class ce_bgp_neighbor(object):
         return result
 
     def check_bgp_peer_other_args(self, **kwargs):
-        """check_bgp_peer_other_args"""
+        """ check_bgp_peer_other_args """
 
         module = kwargs["module"]
         result = dict()
@@ -554,13 +554,13 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         description = module.params['description']
         if description:
             if len(description) > 80 or len(description) < 1:
                 module.fail_json(
-                    msg='the len of description %s is out of [1 - 80].' % description)
+                    msg='Error: The len of description %s is out of [1 - 80].' % description)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<description></description>" + CE_GET_BGP_PEER_TAIL
@@ -583,7 +583,7 @@ class ce_bgp_neighbor(object):
         if fake_as:
             if len(fake_as) > 11 or len(fake_as) < 1:
                 module.fail_json(
-                    msg='the len of fake_as %s is out of [1 - 11].' % fake_as)
+                    msg='Error: The len of fake_as %s is out of [1 - 11].' % fake_as)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<fakeAs></fakeAs>" + CE_GET_BGP_PEER_TAIL
@@ -706,7 +706,7 @@ class ce_bgp_neighbor(object):
         if local_if_name:
             if len(local_if_name) > 63 or len(local_if_name) < 1:
                 module.fail_json(
-                    msg='the len of local_if_name %s is out of [1 - 63].' % local_if_name)
+                    msg='Error: The len of local_if_name %s is out of [1 - 63].' % local_if_name)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<localIfName></localIfName>" + CE_GET_BGP_PEER_TAIL
@@ -729,7 +729,7 @@ class ce_bgp_neighbor(object):
         if ebgp_max_hop:
             if int(ebgp_max_hop) > 255 or int(ebgp_max_hop) < 1:
                 module.fail_json(
-                    msg='the value of ebgp_max_hop %s is out of [1 - 255].' % ebgp_max_hop)
+                    msg='Error: The value of ebgp_max_hop %s is out of [1 - 255].' % ebgp_max_hop)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<ebgpMaxHop></ebgpMaxHop>" + CE_GET_BGP_PEER_TAIL
@@ -752,7 +752,7 @@ class ce_bgp_neighbor(object):
         if valid_ttl_hops:
             if int(valid_ttl_hops) > 255 or int(valid_ttl_hops) < 1:
                 module.fail_json(
-                    msg='the value of valid_ttl_hops %s is out of [1 - 255].' % valid_ttl_hops)
+                    msg='Error: The value of valid_ttl_hops %s is out of [1 - 255].' % valid_ttl_hops)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<validTtlHops></validTtlHops>" + CE_GET_BGP_PEER_TAIL
@@ -835,7 +835,7 @@ class ce_bgp_neighbor(object):
         if pswd_cipher_text:
             if len(pswd_cipher_text) > 255 or len(pswd_cipher_text) < 1:
                 module.fail_json(
-                    msg='the len of pswd_cipher_text %s is out of [1 - 255].' % pswd_cipher_text)
+                    msg='Error: The len of pswd_cipher_text %s is out of [1 - 255].' % pswd_cipher_text)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<pswdCipherText></pswdCipherText>" + CE_GET_BGP_PEER_TAIL
@@ -858,7 +858,7 @@ class ce_bgp_neighbor(object):
         if keep_alive_time:
             if int(keep_alive_time) > 21845 or len(keep_alive_time) < 0:
                 module.fail_json(
-                    msg='the len of keep_alive_time %s is out of [0 - 21845].' % keep_alive_time)
+                    msg='Error: The len of keep_alive_time %s is out of [0 - 21845].' % keep_alive_time)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<keepAliveTime></keepAliveTime>" + CE_GET_BGP_PEER_TAIL
@@ -881,7 +881,7 @@ class ce_bgp_neighbor(object):
         if hold_time:
             if int(hold_time) != 0 and (int(hold_time) > 65535 or int(hold_time) < 3):
                 module.fail_json(
-                    msg='the value of hold_time %s is out of [0 or 3 - 65535].' % hold_time)
+                    msg='Error: The value of hold_time %s is out of [0 or 3 - 65535].' % hold_time)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<holdTime></holdTime>" + CE_GET_BGP_PEER_TAIL
@@ -904,7 +904,7 @@ class ce_bgp_neighbor(object):
         if min_hold_time:
             if int(min_hold_time) != 0 and (int(min_hold_time) > 65535 or int(min_hold_time) < 20):
                 module.fail_json(
-                    msg='the value of min_hold_time %s is out of [0 or 20 - 65535].' % min_hold_time)
+                    msg='Error: The value of min_hold_time %s is out of [0 or 20 - 65535].' % min_hold_time)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<minHoldTime></minHoldTime>" + CE_GET_BGP_PEER_TAIL
@@ -927,7 +927,7 @@ class ce_bgp_neighbor(object):
         if key_chain_name:
             if len(key_chain_name) > 47 or len(key_chain_name) < 1:
                 module.fail_json(
-                    msg='the len of key_chain_name %s is out of [1 - 47].' % key_chain_name)
+                    msg='Error: The len of key_chain_name %s is out of [1 - 47].' % key_chain_name)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<keyChainName></keyChainName>" + CE_GET_BGP_PEER_TAIL
@@ -950,7 +950,7 @@ class ce_bgp_neighbor(object):
         if conn_retry_time:
             if int(conn_retry_time) > 65535 or int(conn_retry_time) < 1:
                 module.fail_json(
-                    msg='the value of conn_retry_time %s is out of [1 - 65535].' % conn_retry_time)
+                    msg='Error: The value of conn_retry_time %s is out of [1 - 65535].' % conn_retry_time)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<connRetryTime></connRetryTime>" + CE_GET_BGP_PEER_TAIL
@@ -969,11 +969,11 @@ class ce_bgp_neighbor(object):
                 else:
                     need_cfg = True
 
-        tcp_MSS = module.params['tcp_MSS']
-        if tcp_MSS:
-            if int(tcp_MSS) > 4096 or int(tcp_MSS) < 176:
+        tcp_mss = module.params['tcp_MSS']
+        if tcp_mss:
+            if int(tcp_mss) > 4096 or int(tcp_mss) < 176:
                 module.fail_json(
-                    msg='the value of tcp_MSS %s is out of [176 - 4096].' % tcp_MSS)
+                    msg='Error: The value of tcp_mss %s is out of [176 - 4096].' % tcp_mss)
 
             conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
                 "<tcpMSS></tcpMSS>" + CE_GET_BGP_PEER_TAIL
@@ -987,7 +987,7 @@ class ce_bgp_neighbor(object):
 
                 if re_find:
                     result["tcp_MSS"] = re_find
-                    if re_find[0] != tcp_MSS:
+                    if re_find[0] != tcp_mss:
                         need_cfg = True
                 else:
                     need_cfg = True
@@ -1056,7 +1056,7 @@ class ce_bgp_neighbor(object):
         return result
 
     def check_peer_bfd_merge_args(self, **kwargs):
-        """check_peer_bfd_merge_args"""
+        """ check_peer_bfd_merge_args """
 
         module = kwargs["module"]
         result = dict()
@@ -1071,7 +1071,7 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         peer_addr = module.params['peer_addr']
 
@@ -1099,7 +1099,7 @@ class ce_bgp_neighbor(object):
         if multiplier:
             if int(multiplier) > 50 or int(multiplier) < 3:
                 module.fail_json(
-                    msg='the value of multiplier %s is out of [3 - 50].' % multiplier)
+                    msg='Error: The value of multiplier %s is out of [3 - 50].' % multiplier)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<multiplier></multiplier>" + CE_GET_PEER_BFD_TAIL
@@ -1142,7 +1142,7 @@ class ce_bgp_neighbor(object):
         if rx_interval:
             if int(rx_interval) > 1000 or int(rx_interval) < 50:
                 module.fail_json(
-                    msg='the value of rx_interval %s is out of [50 - 1000].' % rx_interval)
+                    msg='Error: The value of rx_interval %s is out of [50 - 1000].' % rx_interval)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<rxInterval></rxInterval>" + CE_GET_PEER_BFD_TAIL
@@ -1165,7 +1165,7 @@ class ce_bgp_neighbor(object):
         if tx_interval:
             if int(tx_interval) > 1000 or int(tx_interval) < 50:
                 module.fail_json(
-                    msg='the value of tx_interval %s is out of [50 - 1000].' % tx_interval)
+                    msg='Error: The value of tx_interval %s is out of [50 - 1000].' % tx_interval)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<txInterval></txInterval>" + CE_GET_PEER_BFD_TAIL
@@ -1208,7 +1208,7 @@ class ce_bgp_neighbor(object):
         return result
 
     def check_peer_bfd_delete_args(self, **kwargs):
-        """check_peer_bfd_delete_args"""
+        """ check_peer_bfd_delete_args """
 
         module = kwargs["module"]
         result = dict()
@@ -1223,7 +1223,7 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         peer_addr = module.params['peer_addr']
 
@@ -1249,7 +1249,7 @@ class ce_bgp_neighbor(object):
         if multiplier:
             if int(multiplier) > 50 or int(multiplier) < 3:
                 module.fail_json(
-                    msg='the value of multiplier %s is out of [3 - 50].' % multiplier)
+                    msg='Error: The value of multiplier %s is out of [3 - 50].' % multiplier)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<multiplier></multiplier>" + CE_GET_PEER_BFD_TAIL
@@ -1288,7 +1288,7 @@ class ce_bgp_neighbor(object):
         if rx_interval:
             if int(rx_interval) > 1000 or int(rx_interval) < 50:
                 module.fail_json(
-                    msg='the value of rx_interval %s is out of [50 - 1000].' % rx_interval)
+                    msg='Error: The value of rx_interval %s is out of [50 - 1000].' % rx_interval)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<rxInterval></rxInterval>" + CE_GET_PEER_BFD_TAIL
@@ -1309,7 +1309,7 @@ class ce_bgp_neighbor(object):
         if tx_interval:
             if int(tx_interval) > 1000 or int(tx_interval) < 50:
                 module.fail_json(
-                    msg='the value of tx_interval %s is out of [50 - 1000].' % tx_interval)
+                    msg='Error: The value of tx_interval %s is out of [50 - 1000].' % tx_interval)
 
             conf_str = CE_GET_PEER_BFD_HEADER % (
                 vrf_name, peer_addr) + "<txInterval></txInterval>" + CE_GET_PEER_BFD_TAIL
@@ -1348,7 +1348,7 @@ class ce_bgp_neighbor(object):
         return result
 
     def get_bgp_peer(self, **kwargs):
-        """get_bgp_peer"""
+        """ get_bgp_peer """
 
         module = kwargs["module"]
 
@@ -1356,7 +1356,7 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
             "<remoteAs></remoteAs>" + CE_GET_BGP_PEER_TAIL
@@ -1378,7 +1378,7 @@ class ce_bgp_neighbor(object):
                 return result
 
     def get_bgp_del_peer(self, **kwargs):
-        """get_bgp_del_peer"""
+        """ get_bgp_del_peer """
 
         module = kwargs["module"]
 
@@ -1386,7 +1386,7 @@ class ce_bgp_neighbor(object):
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
-                    msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
+                    msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
         conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + CE_GET_BGP_PEER_TAIL
 
@@ -1407,7 +1407,7 @@ class ce_bgp_neighbor(object):
                 return result
 
     def merge_bgp_peer(self, **kwargs):
-        """merge_bgp_peer"""
+        """ merge_bgp_peer """
 
         module = kwargs["module"]
         vrf_name = module.params['vrf_name']
@@ -1420,12 +1420,16 @@ class ce_bgp_neighbor(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge bgp peer failed.')
+            module.fail_json(msg='Error: Merge bgp peer failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "peer %s as-number %s" % (peer_addr, remote_as)
+        cmds.append(cmd)
+
+        return cmds
 
     def create_bgp_peer(self, **kwargs):
-        """create_bgp_peer"""
+        """ create_bgp_peer """
 
         module = kwargs["module"]
 
@@ -1440,12 +1444,16 @@ class ce_bgp_neighbor(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create bgp peer failed.')
+            module.fail_json(msg='Error: Create bgp peer failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "peer %s as-number %s" % (peer_addr, remote_as)
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_bgp_peer(self, **kwargs):
-        """delete_bgp_peer"""
+        """ delete_bgp_peer """
 
         module = kwargs["module"]
         vrf_name = module.params['vrf_name']
@@ -1457,12 +1465,16 @@ class ce_bgp_neighbor(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete bgp peer failed.')
+            module.fail_json(msg='Error: Delete bgp peer failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo peer %s" % peer_addr
+        cmds.append(cmd)
+
+        return cmds
 
     def merge_bgp_peer_other(self, **kwargs):
-        """merge_bgp_peer"""
+        """ merge_bgp_peer """
 
         module = kwargs["module"]
         vrf_name = module.params['vrf_name']
@@ -1470,53 +1482,118 @@ class ce_bgp_neighbor(object):
 
         conf_str = CE_MERGE_BGP_PEER_HEADER % (vrf_name, peer_addr)
 
+        cmds = []
+
         description = module.params['description']
         if description:
             conf_str += "<description>%s</description>" % description
+
+            cmd = "peer %s description %s" % (peer_addr, description)
+            cmds.append(cmd)
 
         fake_as = module.params['fake_as']
         if fake_as:
             conf_str += "<fakeAs>%s</fakeAs>" % fake_as
 
+            cmd = "peer %s local-as %s" % (peer_addr, fake_as)
+            cmds.append(cmd)
+
         dual_as = module.params['dual_as']
         if dual_as:
             conf_str += "<dualAs>%s</dualAs>" % dual_as
+
+            if dual_as == "true":
+                cmd = "peer %s local-as %s dual-as" % (peer_addr, fake_as)
+            else:
+                cmd = "peer %s local-as %s" % (peer_addr, fake_as)
+            cmds.append(cmd)
 
         conventional = module.params['conventional']
         if conventional:
             conf_str += "<conventional>%s</conventional>" % conventional
 
+            if conventional == "true":
+                cmd = "peer %s capability-advertise conventional" % peer_addr
+            else:
+                cmd = "undo peer %s capability-advertise conventional" % peer_addr
+            cmds.append(cmd)
+
         route_refresh = module.params['route_refresh']
         if route_refresh:
             conf_str += "<routeRefresh>%s</routeRefresh>" % route_refresh
+
+            if route_refresh == "true":
+                cmd = "peer %s capability-advertise route-refresh" % peer_addr
+            else:
+                cmd = "undo peer %s capability-advertise route-refresh" % peer_addr
+            cmds.append(cmd)
 
         four_byte_as = module.params['four_byte_as']
         if four_byte_as:
             conf_str += "<fourByteAs>%s</fourByteAs>" % four_byte_as
 
+            if four_byte_as == "true":
+                cmd = "peer %s capability-advertise 4-byte-as" % peer_addr
+            else:
+                cmd = "undo peer %s capability-advertise 4-byte-as" % peer_addr
+            cmds.append(cmd)
+
         is_ignore = module.params['is_ignore']
         if is_ignore:
             conf_str += "<isIgnore>%s</isIgnore>" % is_ignore
+
+            if is_ignore == "true":
+                cmd = "peer %s ignore" % peer_addr
+            else:
+                cmd = "undo peer %s ignore" % peer_addr
+            cmds.append(cmd)
 
         local_if_name = module.params['local_if_name']
         if local_if_name:
             conf_str += "<localIfName>%s</localIfName>" % local_if_name
 
+            cmd = "peer %s connect-interface local_if_name" % peer_addr
+            cmds.append(cmd)
+
         ebgp_max_hop = module.params['ebgp_max_hop']
         if ebgp_max_hop:
             conf_str += "<ebgpMaxHop>%s</ebgpMaxHop>" % ebgp_max_hop
+
+            cmd = "peer %s ebgp-max-hop %s" % (peer_addr, ebgp_max_hop)
+            cmds.append(cmd)
 
         valid_ttl_hops = module.params['valid_ttl_hops']
         if valid_ttl_hops:
             conf_str += "<validTtlHops>%s</validTtlHops>" % valid_ttl_hops
 
+            cmd = "peer %s valid-ttl-hops %s" % (peer_addr, valid_ttl_hops)
+            cmds.append(cmd)
+
         connect_mode = module.params['connect_mode']
         if connect_mode:
             conf_str += "<connectMode>%s</connectMode>" % connect_mode
 
+            if connect_mode == "listenOnly":
+                cmd = "peer %s listen-only" % peer_addr
+                cmds.append(cmd)
+            elif connect_mode == "connectOnly":
+                cmd = "peer %s connect-only" % peer_addr
+                cmds.append(cmd)
+            elif connect_mode == "null":
+                cmd = "peer %s listen-only" % peer_addr
+                cmds.append(cmd)
+                cmd = "peer %s connect-only" % peer_addr
+                cmds.append(cmd)
+
         is_log_change = module.params['is_log_change']
         if is_log_change:
             conf_str += "<isLogChange>%s</isLogChange>" % is_log_change
+
+            if is_log_change == "true":
+                cmd = "peer %s log-change" % peer_addr
+            else:
+                cmd = "undo peer %s log-change" % peer_addr
+            cmds.append(cmd)
 
         pswd_type = module.params['pswd_type']
         if pswd_type:
@@ -1526,29 +1603,56 @@ class ce_bgp_neighbor(object):
         if pswd_cipher_text:
             conf_str += "<pswdCipherText>%s</pswdCipherText>" % pswd_cipher_text
 
+            if pswd_type == "cipher":
+                cmd = "peer %s password cipher %s" % (
+                    peer_addr, pswd_cipher_text)
+            elif pswd_type == "simple":
+                cmd = "peer %s password simple %s" % (
+                    peer_addr, pswd_cipher_text)
+            cmds.append(cmd)
+
         keep_alive_time = module.params['keep_alive_time']
         if keep_alive_time:
             conf_str += "<keepAliveTime>%s</keepAliveTime>" % keep_alive_time
+
+            cmd = "peer %s timer keepalive %s" % (peer_addr, keep_alive_time)
+            cmds.append(cmd)
 
         hold_time = module.params['hold_time']
         if hold_time:
             conf_str += "<holdTime>%s</holdTime>" % hold_time
 
+            cmd = "peer %s timer hold %s" % (peer_addr, hold_time)
+            cmds.append(cmd)
+
         min_hold_time = module.params['min_hold_time']
         if min_hold_time:
             conf_str += "<minHoldTime>%s</minHoldTime>" % min_hold_time
+
+            cmd = "peer %s timer min-holdtime %s" % (peer_addr, min_hold_time)
+            cmds.append(cmd)
 
         key_chain_name = module.params['key_chain_name']
         if key_chain_name:
             conf_str += "<keyChainName>%s</keyChainName>" % key_chain_name
 
+            cmd = "peer %s keychain %s" % (peer_addr, key_chain_name)
+            cmds.append(cmd)
+
         conn_retry_time = module.params['conn_retry_time']
         if conn_retry_time:
             conf_str += "<connRetryTime>%s</connRetryTime>" % conn_retry_time
 
-        tcp_MSS = module.params['tcp_MSS']
-        if tcp_MSS:
-            conf_str += "<tcpMSS>%s</tcpMSS>" % tcp_MSS
+            cmd = "peer %s timer connect-retry %s" % (
+                peer_addr, conn_retry_time)
+            cmds.append(cmd)
+
+        tcp_mss = module.params['tcp_MSS']
+        if tcp_mss:
+            conf_str += "<tcpMSS>%s</tcpMSS>" % tcp_mss
+
+            cmd = "peer %s tcp-mss %s" % (peer_addr, tcp_mss)
+            cmds.append(cmd)
 
         mpls_local_ifnet_disable = module.params['mpls_local_ifnet_disable']
         if mpls_local_ifnet_disable:
@@ -1557,6 +1661,12 @@ class ce_bgp_neighbor(object):
         prepend_global_as = module.params['prepend_global_as']
         if prepend_global_as:
             conf_str += "<prependGlobalAs>%s</prependGlobalAs>" % prepend_global_as
+
+            if prepend_global_as == "true":
+                cmd = "peer %s public-as-only" % peer_addr
+            else:
+                cmd = "undo peer %s public-as-only" % peer_addr
+            cmds.append(cmd)
 
         prepend_fake_as = module.params['prepend_fake_as']
         if prepend_fake_as:
@@ -1567,12 +1677,12 @@ class ce_bgp_neighbor(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge bgp peer other failed.')
+            module.fail_json(msg='Error: Merge bgp peer other failed.')
 
-        return SUCCESS
+        return cmds
 
     def merge_peer_bfd(self, **kwargs):
-        """merge_peer_bfd"""
+        """ merge_peer_bfd """
 
         module = kwargs["module"]
         vrf_name = module.params['vrf_name']
@@ -1580,41 +1690,70 @@ class ce_bgp_neighbor(object):
 
         conf_str = CE_MERGE_PEER_BFD_HEADER % (vrf_name, peer_addr)
 
+        cmds = []
+
         is_bfd_block = module.params['is_bfd_block']
         if is_bfd_block:
             conf_str += "<isBfdBlock>%s</isBfdBlock>" % is_bfd_block
+
+            if is_bfd_block == "true":
+                cmd = "peer %s bfd block" % peer_addr
+            else:
+                cmd = "undo peer %s bfd block" % peer_addr
+            cmds.append(cmd)
 
         multiplier = module.params['multiplier']
         if multiplier:
             conf_str += "<multiplier>%s</multiplier>" % multiplier
 
+            cmd = "peer %s bfd detect-multiplier %s" % (peer_addr, multiplier)
+            cmds.append(cmd)
+
         is_bfd_enable = module.params['is_bfd_enable']
         if is_bfd_enable:
             conf_str += "<isBfdEnable>%s</isBfdEnable>" % is_bfd_enable
+
+            if is_bfd_enable == "true":
+                cmd = "peer %s bfd enable" % peer_addr
+            else:
+                cmd = "undo peer %s bfd enable" % peer_addr
+            cmds.append(cmd)
 
         rx_interval = module.params['rx_interval']
         if rx_interval:
             conf_str += "<rxInterval>%s</rxInterval>" % rx_interval
 
+            cmd = "peer %s bfd min-rx-interval %s" % (peer_addr, rx_interval)
+            cmds.append(cmd)
+
         tx_interval = module.params['tx_interval']
         if tx_interval:
             conf_str += "<txInterval>%s</txInterval>" % tx_interval
 
+            cmd = "peer %s bfd min-tx-interval %s" % (peer_addr, tx_interval)
+            cmds.append(cmd)
+
         is_single_hop = module.params['is_single_hop']
         if is_single_hop:
             conf_str += "<isSingleHop>%s</isSingleHop>" % is_single_hop
+
+            if is_single_hop == "true":
+                cmd = "peer %s bfd enable single-hop-prefer" % peer_addr
+            else:
+                cmd = "undo peer %s bfd enable single-hop-prefer" % peer_addr
+            cmds.append(cmd)
 
         conf_str += CE_MERGE_PEER_BFD_TAIL
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge peer bfd failed.')
+            module.fail_json(msg='Error: Merge peer bfd failed.')
 
-        return SUCCESS
+        return cmds
 
     def delete_peer_bfd(self, **kwargs):
-        """delete_peer_bfd"""
+        """ delete_peer_bfd """
 
         module = kwargs["module"]
         vrf_name = module.params['vrf_name']
@@ -1622,51 +1761,69 @@ class ce_bgp_neighbor(object):
 
         conf_str = CE_DELETE_PEER_BFD_HEADER % (vrf_name, peer_addr)
 
+        cmds = []
+
         is_bfd_block = module.params['is_bfd_block']
         if is_bfd_block:
             conf_str += "<isBfdBlock>%s</isBfdBlock>" % is_bfd_block
+
+            cmd = "undo peer %s bfd block" % peer_addr
+            cmds.append(cmd)
 
         multiplier = module.params['multiplier']
         if multiplier:
             conf_str += "<multiplier>%s</multiplier>" % multiplier
 
+            cmd = "undo peer %s bfd detect-multiplier %s" % (
+                peer_addr, multiplier)
+            cmds.append(cmd)
+
         is_bfd_enable = module.params['is_bfd_enable']
         if is_bfd_enable:
             conf_str += "<isBfdEnable>%s</isBfdEnable>" % is_bfd_enable
+
+            cmd = "undo peer %s bfd enable" % peer_addr
+            cmds.append(cmd)
 
         rx_interval = module.params['rx_interval']
         if rx_interval:
             conf_str += "<rxInterval>%s</rxInterval>" % rx_interval
 
+            cmd = "undo peer %s bfd min-rx-interval %s" % (
+                peer_addr, rx_interval)
+            cmds.append(cmd)
+
         tx_interval = module.params['tx_interval']
         if tx_interval:
             conf_str += "<txInterval>%s</txInterval>" % tx_interval
 
+            cmd = "undo peer %s bfd min-tx-interval %s" % (
+                peer_addr, tx_interval)
+            cmds.append(cmd)
+
         is_single_hop = module.params['is_single_hop']
         if is_single_hop:
             conf_str += "<isSingleHop>%s</isSingleHop>" % is_single_hop
+
+            cmd = "undo peer %s bfd enable single-hop-prefer" % peer_addr
+            cmds.append(cmd)
 
         conf_str += CE_DELETE_PEER_BFD_TAIL
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete peer bfd failed.')
+            module.fail_json(msg='Error: Delete peer bfd failed.')
 
-        return SUCCESS
+        return cmds
 
 
 def main():
     """ main """
 
-    start_time = datetime.datetime.now()
-
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        host=dict(required=True),
-        username=dict(required=True),
-        password=dict(required=True),
-        vrf_name=dict(type='str', default='_public_'),
+        vrf_name=dict(type='str', required=True),
         peer_addr=dict(type='str', required=True),
         remote_as=dict(type='str', required=True),
         description=dict(type='str'),
@@ -1705,6 +1862,12 @@ def main():
     module = NetworkModule(argument_spec=argument_spec,
                            supports_check_mode=True)
 
+    changed = False
+    proposed = dict()
+    existing = dict()
+    end_state = dict()
+    updates = []
+
     state = module.params['state']
     host = module.params['host']
     port = module.params['port']
@@ -1732,7 +1895,7 @@ def main():
     min_hold_time = module.params['min_hold_time']
     key_chain_name = module.params['key_chain_name']
     conn_retry_time = module.params['conn_retry_time']
-    tcp_MSS = module.params['tcp_MSS']
+    tcp_mss = module.params['tcp_MSS']
     mpls_local_ifnet_disable = module.params['mpls_local_ifnet_disable']
     prepend_global_as = module.params['prepend_global_as']
     prepend_fake_as = module.params['prepend_fake_as']
@@ -1743,11 +1906,77 @@ def main():
     tx_interval = module.params['tx_interval']
     is_single_hop = module.params['is_single_hop']
 
-    ce_bgp_peer_obj = ce_bgp_neighbor(
-        host=host, port=port, username=username, password=password)
+    ce_bgp_peer_obj = BgpNeighbor(host=host, port=port, username=username, password=password)
+
+    # get proposed
+    proposed["state"] = state
+    if vrf_name:
+        proposed["vrf_name"] = vrf_name
+    if peer_addr:
+        proposed["peer_addr"] = peer_addr
+    if remote_as:
+        proposed["remote_as"] = remote_as
+    if description:
+        proposed["description"] = description
+    if fake_as:
+        proposed["fake_as"] = fake_as
+    if dual_as:
+        proposed["dual_as"] = dual_as
+    if conventional:
+        proposed["conventional"] = conventional
+    if route_refresh:
+        proposed["route_refresh"] = route_refresh
+    if four_byte_as:
+        proposed["four_byte_as"] = four_byte_as
+    if is_ignore:
+        proposed["is_ignore"] = is_ignore
+    if local_if_name:
+        proposed["local_if_name"] = local_if_name
+    if ebgp_max_hop:
+        proposed["ebgp_max_hop"] = ebgp_max_hop
+    if valid_ttl_hops:
+        proposed["valid_ttl_hops"] = valid_ttl_hops
+    if connect_mode:
+        proposed["connect_mode"] = connect_mode
+    if is_log_change:
+        proposed["is_log_change"] = is_log_change
+    if pswd_type:
+        proposed["pswd_type"] = pswd_type
+    if pswd_cipher_text:
+        proposed["pswd_cipher_text"] = pswd_cipher_text
+    if keep_alive_time:
+        proposed["keep_alive_time"] = keep_alive_time
+    if hold_time:
+        proposed["hold_time"] = hold_time
+    if min_hold_time:
+        proposed["min_hold_time"] = min_hold_time
+    if key_chain_name:
+        proposed["key_chain_name"] = key_chain_name
+    if conn_retry_time:
+        proposed["conn_retry_time"] = conn_retry_time
+    if tcp_mss:
+        proposed["tcp_MSS"] = tcp_mss
+    if mpls_local_ifnet_disable:
+        proposed["mpls_local_ifnet_disable"] = mpls_local_ifnet_disable
+    if prepend_global_as:
+        proposed["prepend_global_as"] = prepend_global_as
+    if prepend_fake_as:
+        proposed["prepend_fake_as"] = prepend_fake_as
+    if is_bfd_block:
+        proposed["is_bfd_block"] = is_bfd_block
+    if multiplier:
+        proposed["multiplier"] = multiplier
+    if is_bfd_enable:
+        proposed["is_bfd_enable"] = is_bfd_enable
+    if rx_interval:
+        proposed["rx_interval"] = rx_interval
+    if tx_interval:
+        proposed["tx_interval"] = tx_interval
+    if is_single_hop:
+        proposed["is_single_hop"] = is_single_hop
 
     if not ce_bgp_peer_obj:
-        module.fail_json(msg='init module failed.')
+        module.fail_json(msg='Error: Init module failed.')
 
     need_bgp_peer_enable = ce_bgp_peer_obj.check_bgp_peer_args(module=module)
     need_bgp_peer_other_rst = ce_bgp_peer_obj.check_bgp_peer_other_args(
@@ -1756,45 +1985,6 @@ def main():
         module=module)
     need_peer_bfd_del_rst = ce_bgp_peer_obj.check_peer_bfd_delete_args(
         module=module)
-
-    args = dict(state=state,
-                vrf_name=vrf_name,
-                peer_addr=peer_addr,
-                remote_as=remote_as,
-                description=description,
-                fake_as=fake_as,
-                dual_as=dual_as,
-                conventional=conventional,
-                route_refresh=route_refresh,
-                four_byte_as=four_byte_as,
-                is_ignore=is_ignore,
-                local_if_name=local_if_name,
-                ebgp_max_hop=ebgp_max_hop,
-                valid_ttl_hops=valid_ttl_hops,
-                connect_mode=connect_mode,
-                is_log_change=is_log_change,
-                pswd_type=pswd_type,
-                pswd_cipher_text=pswd_cipher_text,
-                keep_alive_time=keep_alive_time,
-                hold_time=hold_time,
-                min_hold_time=min_hold_time,
-                key_chain_name=key_chain_name,
-                conn_retry_time=conn_retry_time,
-                tcp_MSS=tcp_MSS,
-                mpls_local_ifnet_disable=mpls_local_ifnet_disable,
-                prepend_global_as=prepend_global_as,
-                prepend_fake_as=prepend_fake_as,
-                is_bfd_block=is_bfd_block,
-                multiplier=multiplier,
-                is_bfd_enable=is_bfd_enable,
-                rx_interval=rx_interval,
-                tx_interval=tx_interval,
-                is_single_hop=is_single_hop)
-
-    changed = False
-    proposed = dict((k, v) for k, v in args.iteritems() if v is not None)
-    existing = dict()
-    end_state = dict()
 
     # bgp peer config
     if need_bgp_peer_enable["need_cfg"]:
@@ -1809,21 +1999,22 @@ def main():
                 bgp_peer_new = (peer_addr, remote_as)
 
                 if len(bgp_peer_exist) == 0:
-                    ce_bgp_peer_obj.create_bgp_peer(module=module)
+                    cmd = ce_bgp_peer_obj.create_bgp_peer(module=module)
                     changed = True
+                    for item in cmd:
+                        updates.append(item)
 
                 elif bgp_peer_new in bgp_peer_exist:
                     pass
 
                 else:
-                    ce_bgp_peer_obj.merge_bgp_peer(module=module)
+                    cmd = ce_bgp_peer_obj.merge_bgp_peer(module=module)
                     changed = True
+                    for item in cmd:
+                        updates.append(item)
 
                 bgp_peer_end = ce_bgp_peer_obj.get_bgp_peer(module=module)
                 end_state["bgp peer"] = bgp_peer_end
-
-            else:
-                pass
 
         else:
 
@@ -1836,54 +2027,67 @@ def main():
                 pass
 
             elif bgp_peer_new in bgp_peer_exist:
-                ce_bgp_peer_obj.delete_bgp_peer(module=module)
+                cmd = ce_bgp_peer_obj.delete_bgp_peer(module=module)
                 changed = True
-
-            else:
-                pass
+                for item in cmd:
+                    updates.append(item)
 
             bgp_peer_end = ce_bgp_peer_obj.get_bgp_del_peer(module=module)
             end_state["bgp peer"] = bgp_peer_end
 
     # bgp peer other args
-    exist_tmp = dict(
-        (k, v) for k, v in need_bgp_peer_other_rst.iteritems() if k is not "need_cfg")
+    exist_tmp = dict()
+    for item in need_bgp_peer_other_rst:
+        if item != "need_cfg":
+            exist_tmp[item] = need_bgp_peer_other_rst[item]
     if exist_tmp:
         existing["bgp peer other"] = exist_tmp
 
     if need_bgp_peer_other_rst["need_cfg"]:
 
         if state == "present":
-            ce_bgp_peer_obj.merge_bgp_peer_other(module=module)
+            cmd = ce_bgp_peer_obj.merge_bgp_peer_other(module=module)
             changed = True
+            for item in cmd:
+                updates.append(item)
 
     need_bgp_peer_other_rst = ce_bgp_peer_obj.check_bgp_peer_other_args(
         module=module)
-    end_tmp = dict(
-        (k, v) for k, v in need_bgp_peer_other_rst.iteritems() if k is not "need_cfg")
+    end_tmp = dict()
+    for item in need_bgp_peer_other_rst:
+        if item != "need_cfg":
+            end_tmp[item] = need_bgp_peer_other_rst[item]
     if end_tmp:
         end_state["bgp peer other"] = end_tmp
 
     # peer bfd args
     if state == "present":
-        exist_tmp = dict(
-            (k, v) for k, v in need_peer_bfd_merge_rst.iteritems() if k is not "need_cfg")
+        exist_tmp = dict()
+        for item in need_peer_bfd_merge_rst:
+            if item != "need_cfg":
+                exist_tmp[item] = need_peer_bfd_merge_rst[item]
         if exist_tmp:
             existing["peer bfd"] = exist_tmp
 
         if need_peer_bfd_merge_rst["need_cfg"]:
-            ce_bgp_peer_obj.merge_peer_bfd(module=module)
+            cmd = ce_bgp_peer_obj.merge_peer_bfd(module=module)
             changed = True
+            for item in cmd:
+                updates.append(item)
 
         need_peer_bfd_merge_rst = ce_bgp_peer_obj.check_peer_bfd_merge_args(
             module=module)
-        end_tmp = dict(
-            (k, v) for k, v in need_peer_bfd_merge_rst.iteritems() if k is not "need_cfg")
+        end_tmp = dict()
+        for item in need_peer_bfd_merge_rst:
+            if item != "need_cfg":
+                end_tmp[item] = need_peer_bfd_merge_rst[item]
         if end_tmp:
             end_state["peer bfd"] = end_tmp
     else:
-        exist_tmp = dict(
-            (k, v) for k, v in need_peer_bfd_del_rst.iteritems() if k is not "need_cfg")
+        exist_tmp = dict()
+        for item in need_peer_bfd_del_rst:
+            if item != "need_cfg":
+                exist_tmp[item] = need_peer_bfd_del_rst[item]
         if exist_tmp:
             existing["peer bfd"] = exist_tmp
 
@@ -1891,8 +2095,10 @@ def main():
 
         need_peer_bfd_del_rst = ce_bgp_peer_obj.check_peer_bfd_delete_args(
             module=module)
-        end_tmp = dict(
-            (k, v) for k, v in need_peer_bfd_del_rst.iteritems() if k is not "need_cfg")
+        end_tmp = dict()
+        for item in need_peer_bfd_del_rst:
+            if item != "need_cfg":
+                end_tmp[item] = need_peer_bfd_del_rst[item]
         if end_tmp:
             end_state["peer bfd"] = end_tmp
 
@@ -1901,9 +2107,7 @@ def main():
     results['existing'] = existing
     results['changed'] = changed
     results['end_state'] = end_state
-
-    end_time = datetime.datetime.now()
-    results['execute_time'] = str(end_time - start_time)
+    results['updates'] = updates
 
     module.exit_json(**results)
 

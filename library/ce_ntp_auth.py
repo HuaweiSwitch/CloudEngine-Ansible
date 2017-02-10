@@ -16,17 +16,21 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 
 module: ce_ntp_auth
-version_added: "2.2"
-short_description: Manages NTP authentication.
+version_added: "2.3"
+short_description: Manages NTP authentication configuration.
 description:
-    - Manages NTP authentication.
-extends_documentation_fragment: CloudEngine
+    - Manages NTP authentication configuration.
+extends_documentation_fragment: cloudengine
 author:
-    - Zhou Zhijin (@privateip)
+    - Zhijin Zhou (@CloudEngine-Ansible)
 notes:
     - If C(state=absent), the module will attempt to remove the given key configuration.
       If a matching key configuration isn't found on the device, the module will fail.
@@ -39,12 +43,12 @@ options:
         required: true
     auth_pwd:
         description:
-            - Plain text with length of 1 to 255, encrypted text with length of 20 to 392
+            - Plain text with length of 1 to 255, encrypted text with length of 20 to 392.
         required: false
         default: null
     auth_mode:
         description:
-            - Specify authentication algorithm md5 or hmac-sha256
+            - Specify authentication algorithm md5 or hmac-sha256.
         required: false
         default: null
         choices: ['hmac-sha256', 'md5']
@@ -65,8 +69,7 @@ options:
         choices: ['true', 'false']
     authentication:
         description:
-            - config ntp authentication enable
-            - unconfig ntp authentication enable
+            - Configure ntp authentication enable or unconfigure ntp authentication enable.
         required: false
         default: null
         choices: ['enable', 'disable']
@@ -135,7 +138,7 @@ proposed:
                 "authentication": "enable",
                 "key_id": "32",
                 "auth_pwd": "1111",
-                "auth_mode": "md5"
+                "auth_mode": "md5",
                 "trusted_key": "true",
                 "state": "present"
             }
@@ -144,7 +147,7 @@ existing:
         - k/v pairs of existing ntp authentication
     type: dict
     sample: {
-                "authentication": "off"
+                "authentication": "off",
                 "authentication-keyid": [
                     {
                         "auth_mode": "md5",
@@ -158,7 +161,7 @@ end_state:
     returned: always
     type: dict
     sample: {
-                "authentication": "off"
+                "authentication": "off",
                 "authentication-keyid": [
                     {
                         "auth_mode": "md5",
@@ -193,12 +196,16 @@ changed:
     sample: true
 '''
 
+import sys
 import re
 import datetime
 import copy
-from ansible.module_utils.network import NetworkModule
+from ansible.module_utils.network import NetworkModule, NetworkError
+from ansible.module_utils.netcli import FailedConditionsError, FailedConditionalError
+from ansible.module_utils.basic import get_exception
 from ansible.module_utils.cloudengine import get_netconf
-from ansible.module_utils.netcli import CommandRunner
+from ansible.module_utils.netcli import CommandRunner, AddCommandError
+from ansible.module_utils.cloudengine import get_cli_exception
 
 HAS_NCCLIENT = False
 try:
@@ -377,13 +384,14 @@ class NtpAuth(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, xml_str):
+    def __netconf_get_config__(self, xml_str):
         """ netconf get config """
 
         try:
             con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -393,15 +401,16 @@ class NtpAuth(object):
         try:
             con_obj = self.netconf.set_config(config=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
     def get_ntp_auth_enable(self):
         """ get ntp authentication enable state"""
         xml_str = CE_NC_GET_NTP_AUTH_ENABLE
-        con_obj = self.netconf_get_config(xml_str)
+        con_obj = self.__netconf_get_config__(xml_str)
 
         # get ntp authentication enable
         auth_en = re.findall(
@@ -417,7 +426,7 @@ class NtpAuth(object):
         ntp_auth_conf = list()
 
         xml_str = CE_NC_GET_ALL_NTP_AUTH_CONFIG
-        con_obj = self.netconf_get_config(xml_str)
+        con_obj = self.__netconf_get_config__(xml_str)
         if "<data/>" in con_obj.xml:
             self.ntp_auth_conf["authentication-keyid"] = "None"
             return ntp_auth_conf
@@ -496,7 +505,7 @@ class NtpAuth(object):
         else:
             if not self.key_id_exist:
                 self.module.fail_json(
-                    msg='The Authentication-keyid does not exist.')
+                    msg='Error: The Authentication-keyid does not exist.')
             self.undo_config_ntp_auth_keyid()
 
         if self.authentication:
@@ -574,33 +583,29 @@ class NtpAuth(object):
             try:
                 runner.add_command(**cmd)
             except AddCommandError:
-                exc = get_exception()
                 self.module.fail_json(
-                    msg='duplicate command detected: %s' % cmd)
-        runner.retries = self.module.params['retries']
-        runner.interval = self.module.params['interval']
-        runner.match = self.module.params['match']
+                    msg='Error: Duplicate command detected: %s' % cmd)
 
         try:
             runner.run()
         except FailedConditionsError:
             exc = get_exception()
             self.module.fail_json(
-                msg=str(exc), failed_conditions=exc.failed_conditions)
+                msg=get_cli_exception(exc), failed_conditions=exc.failed_conditions)
         except FailedConditionalError:
             exc = get_exception()
             self.module.fail_json(
-                msg=str(exc), failed_conditional=exc.failed_conditional)
+                msg=get_cli_exception(exc), failed_conditional=exc.failed_conditional)
         except NetworkError:
             exc = get_exception()
-            self.module.fail_json(msg=str(exc), **exc.kwargs)
+            self.module.fail_json(msg=get_cli_exception(exc))
 
         for cmd in commands:
             try:
                 output = runner.get_command(cmd['command'], cmd.get('output'))
             except ValueError:
                 self.module.fail_json(
-                    msg='command not executed due to check_mode, see warnings')
+                    msg='Error: Command not executed due to check_mode, see warnings.')
         return output
 
     def show_result(self):
@@ -641,11 +646,6 @@ def main():
         trusted_key=dict(choices=['true', 'false'], default='false'),
         authentication=dict(choices=['enable', 'disable']),
         state=dict(choices=['absent', 'present'], default='present'),
-        commands=dict(type='list', required=False),
-        wait_for=dict(type='list', aliases=['waitfor']),
-        match=dict(default='all', choices=['any', 'all']),
-        retries=dict(default=10, type='int'),
-        interval=dict(default=1, type='int'),
     )
 
     ntp_auth_obj = NtpAuth(argument_spec)

@@ -16,31 +16,36 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_ospf
-version_added: "2.2"
-short_description: Manages configuration of an ospf instance.
+version_added: "2.3"
+short_description: Manages configuration of an OSPF instance.
 description:
-    - Manages configuration of an ospf instance.
-author: QijunPan (@privateip)
-extends_documentation_fragment: CloudEngine
+    - Manages configuration of an OSPF instance.
+author: QijunPan (@CloudEngine-Ansible)
+extends_documentation_fragment: cloudengine
 options:
     process_id:
         description:
-            - Name of the ospf process-id.
+            - Specifies a process ID.
+              The value is an integer ranging from 1 to 4294967295.
         required: true
     area:
         description:
-            - Ospf area associated with this ospf process.
+            - Specifies the area ID. The area with the area-id being 0 is a backbone area.
               Valid values are a string, formatted as an IP address
               (i.e. "0.0.0.0") or as an integer between 1 and 4294967295.
         required: false
         default: null
     addr:
         description:
-            - Enable routing on an IP network of ospf area.
-              Valid values are a string, formatted as an IP network number.
+            - Specifies the address of the network segment where the interface resides.
+              The value is in dotted decimal notation.
         required: false
         default: null
     mask:
@@ -50,17 +55,14 @@ options:
         default: null
     auth_mode:
         description:
-            - Algorithm used for authentication among neighboring routers
-              within an area..
+            - Specifies the authentication type.
         required: false
         choices: ['none', 'hmac-sha256', 'md5', 'hmac-md5', 'simple']
         default: null
     auth_text_simple:
         description:
-            - Authentication cipher-text when C(auth_mode=simple).
-              Valid value is a string in the range from 1 to 8, no space and character '?'.
-              If string start with \" and end with\", space can be include.
-              (i.e. '\"abc def\"')
+            - Specifies a password for simple authentication.
+              The value is a string of 1 to 8 characters.
         required: false
         default: null
     auth_key_id:
@@ -71,10 +73,8 @@ options:
         default: null
     auth_text_md5:
         description:
-            - Authentication cipher-text when C(auth_mode) is 'hmac-sha256', 'md5' or 'hmac-md5.
-              Valid value is a string in the range from 1 to 255, no space and character '?'.
-              If string start with \" and end with\", space can be include.
-              (i.e. '\"abc def\"')
+            - Specifies a password for MD5, HMAC-MD5, or HMAC-SHA256 authentication.
+              The value is a string of 1 to 255 case-sensitive characters, spaces not supported.
         required: false
         default: null
     nexthop_addr:
@@ -85,7 +85,9 @@ options:
         default: null
     nexthop_weight:
         description:
-            - Next-hop address's weight, Valid value is an integer in the range from 1 to 254.
+            - Indicates the weight of the next hop.
+              The smaller the value is, the higher the preference of the route is.
+              It is an integer that ranges from 1 to 254.
         required: false
         default: null
     max_load_balance:
@@ -143,7 +145,7 @@ changed:
     sample: true
 '''
 
-import datetime
+import sys
 from xml.etree import ElementTree
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
@@ -154,7 +156,6 @@ try:
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -358,9 +359,7 @@ class OSPF(object):
     Manages configuration of an ospf instance.
     """
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
@@ -400,7 +399,7 @@ class OSPF(object):
         self.init_netconf()
 
     def init_module(self):
-        """" init module """
+        """ init module """
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
@@ -430,8 +429,9 @@ class OSPF(object):
 
         try:
             con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -441,8 +441,9 @@ class OSPF(object):
         try:
             con_obj = self.netconf.set_config(config=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -452,8 +453,9 @@ class OSPF(object):
         try:
             con_obj = self.netconf.execute_action(action=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -827,13 +829,11 @@ class OSPF(object):
     def convert_ip_to_network(self):
         """convert ip to subnet address"""
 
-        i = None
         ip_list = self.addr.split('.')
         mask_list = self.get_wildcard_mask().split('.')
 
-        for ip_list_num in ip_list:
-            ip_list_num = str((int(ip_list_num) & (~int(mask_list[i]))) & 0xff)
-            i += 1
+        for i in range(len(ip_list)):
+            ip_list[i] = str((int(ip_list[i]) & (~int(mask_list[i]))) & 0xff)
 
         self.addr = '.'.join(ip_list)
 
@@ -1013,9 +1013,6 @@ class OSPF(object):
             self.results['updates'] = self.updates_cmd
         else:
             self.results['updates'] = list()
-
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
 
         self.module.exit_json(**self.results)
 

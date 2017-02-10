@@ -16,15 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_vlan
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages VLAN resources and attributes.
 description:
     - Manages VLAN configurations on Huawei CloudEngine switches.
-author: Pan Qijun (@privateip)
-extends_documentation_fragment: CloudEngine
+author: QijunPan (@CloudEngine-Ansible)
+extends_documentation_fragment: cloudengine
 options:
     vlan_id:
         description:
@@ -89,18 +93,18 @@ proposed:
                  vlan_id or vlan_range)
     returned: always
     type: dict or null
-    sample: {"vlan_id":"20", "name": "VLAN_APP", "description"="vlan for app" }
+    sample: {"vlan_id":"20", "name": "VLAN_APP", "description": "vlan for app" }
 existing:
     description: k/v pairs of existing vlan or null when using vlan_range
     returned: always
     type: dict
-    sample: {"vlan_id":"20", "name": "VLAN_APP", "description"="" }
+    sample: {"vlan_id":"20", "name": "VLAN_APP", "description": "" }
 end_state:
     description: k/v pairs of the VLAN after executing module or null
                  when using vlan_range
     returned: always
     type: dict or null
-    sample: {"vlan_id":"20", "name": "VLAN_APP", "description"="vlan for app" }
+    sample: {"vlan_id":"20", "name": "VLAN_APP", "description": "vlan for app" }
 updates:
     description: command string sent to the device
     returned: always
@@ -111,21 +115,18 @@ changed:
     returned: always
     type: boolean
     sample: true
-
 '''
 
 import re
-import datetime
+import sys
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 
 CE_NC_CREATE_VLAN = """
@@ -255,9 +256,7 @@ class Vlan(object):
     """
      Manages VLAN resources and attributes
     """
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
@@ -333,8 +332,9 @@ class Vlan(object):
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "CREATE_VLAN")
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def merge_vlan(self, vlan_id, name, description):
         """Merge vlan."""
@@ -355,8 +355,9 @@ class Vlan(object):
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_VLAN")
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def create_vlan_batch(self, vlan_list):
         """Create vlan batch."""
@@ -373,8 +374,9 @@ class Vlan(object):
             self.updates_cmd.append('vlan batch %s' % (
                 self.vlan_range.replace(',', ' ').replace('-', ' to ')))
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def delete_vlan_batch(self, vlan_list):
         """Delete vlan batch."""
@@ -391,8 +393,9 @@ class Vlan(object):
             self.updates_cmd.append('undo vlan batch %s' % (
                 self.vlan_range.replace(',', ' ').replace('-', ' to ')))
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def undo_config_vlan(self, vlanid):
         """Delete vlan."""
@@ -403,8 +406,9 @@ class Vlan(object):
             self.check_response(con_obj, "DELETE_VLAN")
             self.changed = True
             self.updates_cmd.append('undo vlan %s' % self.vlan_id)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def get_vlan_attr(self, vlan_id):
         """ get vlan attributes."""
@@ -412,8 +416,9 @@ class Vlan(object):
         conf_str = CE_NC_GET_VLAN % vlan_id
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
         xml_str = con_obj.xml
         attr = dict()
         if "<data/>" in xml_str:
@@ -435,8 +440,9 @@ class Vlan(object):
         conf_str = CE_NC_GET_VLANS
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
         xml_str = con_obj.xml
         vlan_list = list()
         if "<data/>" in xml_str:
@@ -452,8 +458,9 @@ class Vlan(object):
         conf_str = CE_NC_GET_VLANS
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
         xml_str = con_obj.xml
         vlan_list = list()
         if "<data/>" in xml_str:
@@ -515,7 +522,7 @@ class Vlan(object):
         vlan_list_len = len(vlanlist)
         for num in range(vlan_list_len):
             tagged_vlans = int(vlanlist[num])
-            if tagged_vlans <= 0 or tagged_vlans >= 4094:
+            if tagged_vlans <= 0 or tagged_vlans > 4094:
                 self.module.fail_json(
                     msg='Error: Vlan id is not in the range from 1 to 4094.')
             j = tagged_vlans / 4
@@ -705,8 +712,6 @@ class Vlan(object):
             self.results['updates'] = self.updates_cmd
         else:
             self.results['updates'] = list()
-        end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(end_time - self.start_time)
 
         self.module.exit_json(**self.results)
 
@@ -721,9 +726,6 @@ def main():
         description=dict(required=False, type='str'),
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
-        host=dict(required=True),
-        username=dict(required=True),
-        password=dict(required=True)
     )
 
     vlancfg = Vlan(argument_spec)

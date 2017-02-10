@@ -16,15 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_switchport
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages Layer 2 switchport interfaces.
-extends_documentation_fragment: CloudEngine
+extends_documentation_fragment: cloudengine
 description:
     - Manages Layer 2 interfaces
-author: Pan Qijun (@privateip)
+author: QijunPan (@CloudEngine-Ansible)
 notes:
     - When C(state=absent), VLANs can be added/removed from trunk links and
       the existing access VLAN can be 'unconfigured' to just having VLAN 1
@@ -42,7 +46,7 @@ options:
         default: null
     mode:
         description:
-            - Mode for the Layer 2 port.
+            - The link type of an interface.
         required: false
         default: null
         choices: ['access','trunk']
@@ -112,6 +116,17 @@ changed:
     type: boolean
     sample: true
 '''
+
+import re
+import sys
+from ansible.module_utils.network import NetworkModule
+from ansible.module_utils.cloudengine import get_netconf
+
+try:
+    from ncclient.operations.rpc import RPCError
+    HAS_NCCLIENT = True
+except ImportError:
+    HAS_NCCLIENT = False
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -223,31 +238,98 @@ CE_NC_SET_DEFAULT_PORT = """
 </config>
 """
 
-import re
-import datetime
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
-    pass
-
 
 SWITCH_PORT_TYPE = ('ge', '10ge', '25ge',
                     '4x10ge', '40ge', '100ge', 'eth-trunk')
 
 
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
+
+    if interface is None:
+        return None
+
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def is_portswitch_enalbe(iftype):
+    """"[undo] portswitch"""
+
+    return bool(iftype in SWITCH_PORT_TYPE)
+
+def vlan_bitmap_undo(bitmap):
+    """convert vlan bitmap to undo bitmap"""
+
+    vlan_bit = ['F'] * 1024
+
+    if not bitmap or len(bitmap) == 0:
+        return ''.join(vlan_bit)
+
+    bit_len = len(bitmap)
+    for num in range(bit_len):
+        undo = (~int(bitmap[num], 16)) & 0xF
+        vlan_bit[num] = hex(undo)[2]
+
+    return ''.join(vlan_bit)
+
+def is_vlan_bitmap_empty(bitmap):
+    """check vlan bitmap empty"""
+
+    if not bitmap or len(bitmap) == 0:
+        return True
+
+    bit_len = len(bitmap)
+    for num in range(bit_len):
+        if bitmap[num] != '0':
+            return False
+
+    return True
+
 class SwitchPort(object):
     """
     Manages Layer 2 switchport interfaces.
     """
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
@@ -280,7 +362,7 @@ class SwitchPort(object):
         self.init_netconf()
 
     def init_module(self):
-        """" init module """
+        """ init module """
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
@@ -312,8 +394,9 @@ class SwitchPort(object):
         conf_str = CE_NC_GET_PORT_ATTR % ifname
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         if "<data/>" in con_obj.xml:
             return intf_info
@@ -336,60 +419,6 @@ class SwitchPort(object):
                     intf_info["trunkVlans"] = attr[0][2]
 
         return intf_info
-
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
-
-    def is_portswitch_enalbe(self, iftype):
-        """"[undo] portswitch"""
-
-        return bool(iftype in SWITCH_PORT_TYPE)
 
     def is_l2switchport(self):
         """Check layer2 switch port"""
@@ -438,8 +467,9 @@ class SwitchPort(object):
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_ACCESS_PORT")
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def merge_trunk_vlan(self, ifname, native_vlan, trunk_vlans):
         """Merge trunk interface vlan"""
@@ -461,7 +491,7 @@ class SwitchPort(object):
                 if trunk_vlans:
                     add_vlans = self.vlan_bitmap_add(
                         self.intf_info["trunkVlans"], vlan_map)
-                    if not self.is_vlan_bitmap_empty(add_vlans):
+                    if not is_vlan_bitmap_empty(add_vlans):
                         self.updates_cmd.append(
                             "port trunk allow-pass %s"
                             % trunk_vlans.replace(',', ' ').replace('-', ' to '))
@@ -495,11 +525,11 @@ class SwitchPort(object):
                 if trunk_vlans:
                     del_vlans = self.vlan_bitmap_del(
                         self.intf_info["trunkVlans"], vlan_map)
-                    if not self.is_vlan_bitmap_empty(del_vlans):
+                    if not is_vlan_bitmap_empty(del_vlans):
                         self.updates_cmd.append(
                             "undo port trunk allow-pass %s"
                             % trunk_vlans.replace(',', ' ').replace('-', ' to '))
-                        undo_map = self.vlan_bitmap_undo(del_vlans)
+                        undo_map = vlan_bitmap_undo(del_vlans)
                         xmlstr += CE_NC_SET_TRUNK_PORT_VLANS % (
                             ifname, undo_map, del_vlans)
                         change = True
@@ -518,8 +548,9 @@ class SwitchPort(object):
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_TRUNK_PORT")
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def default_switchport(self, ifname):
         """Set interface default or unconfigured"""
@@ -545,8 +576,9 @@ class SwitchPort(object):
             con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "DEFAULT_INTF_VLAN")
             self.changed = True
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def vlan_series(self, vlanid_s):
         """ convert vlan range to vlan list """
@@ -600,7 +632,7 @@ class SwitchPort(object):
         vlan_list_len = len(vlanlist)
         for num in range(vlan_list_len):
             tagged_vlans = int(vlanlist[num])
-            if tagged_vlans <= 0 or tagged_vlans >= 4094:
+            if tagged_vlans <= 0 or tagged_vlans > 4094:
                 self.module.fail_json(
                     msg='Error: Vlan id is not in the range from 1 to 4094.')
             j = tagged_vlans / 4
@@ -610,20 +642,6 @@ class SwitchPort(object):
         vlan_xml = ''.join(vlan_bit)
 
         return vlan_xml
-
-    def vlan_bitmap_undo(self, bitmap):
-        """convert vlan bitmap to undo bitmap"""
-
-        vlan_bit = ['F'] * 1024
-
-        if not bitmap or len(bitmap) == 0:
-            return ''.join(vlan_bit)
-
-        for num in range(len(bitmap)):
-            undo = (~int(bitmap[num], 16)) & 0xF
-            vlan_bit[num] = hex(undo)[2]
-
-        return ''.join(vlan_bit)
 
     def vlan_bitmap_add(self, oldmap, newmap):
         """vlan add bitmap"""
@@ -668,18 +686,6 @@ class SwitchPort(object):
 
         return vlan_xml
 
-    def is_vlan_bitmap_empty(self, bitmap):
-        """check vlan bitmap empty"""
-
-        if not bitmap or len(bitmap) == 0:
-            return True
-
-        for num in range(len(bitmap)):
-            if bitmap[num] != '0':
-                return False
-
-        return True
-
     def check_params(self):
         """Check all input params"""
 
@@ -689,12 +695,12 @@ class SwitchPort(object):
 
         # interface type check
         if self.interface:
-            self.intf_type = self.get_interface_type(self.interface)
+            self.intf_type = get_interface_type(self.interface)
             if not self.intf_type:
                 self.module.fail_json(
                     msg='Error: Interface name of %s is error.' % self.interface)
 
-        if not self.intf_type or not self.is_portswitch_enalbe(self.intf_type):
+        if not self.intf_type or not is_portswitch_enalbe(self.intf_type):
             self.module.fail_json(msg='Error: Interface %s is error.')
 
         # check access_vlan
@@ -793,9 +799,6 @@ class SwitchPort(object):
             self.results['updates'] = self.updates_cmd
         else:
             self.results['updates'] = list()
-
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
 
         self.module.exit_json(**self.results)
 

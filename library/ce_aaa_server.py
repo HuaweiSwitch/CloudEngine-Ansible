@@ -16,84 +16,87 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
-
 module: ce_aaa_server
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages AAA server global configuration.
 description:
     - Manages AAA server global configuration
 extends_documentation_fragment: cloudengine
 author:
-    - wangdezhuang (@privateip)
-notes:
-    - The server_type parameter is always required.
+    - wangdezhuang (@CloudEngine-Ansible)
 options:
     state:
         description:
-            - Manage the state of the resource.
-        required: true
+            - Specify desired state of the resource.
+        required: false
         default: present
-        choices: ['present','absent']
-        version_added: "2.2"
+        choices: ['present', 'absent']
     authen_scheme_name:
         description:
-            - authentication scheme name.
+            - Name of an authentication scheme.
+              The value is a string of 1 to 32 characters.
         required: false
-        default: default
-        version_added: "2.2"
+        default: null
     first_authen_mode:
         description:
-            - first authentication scheme mode.
+            - Preferred authentication mode.
         required: false
-        default: local
-        choices: ['invalid', 'local', 'hwtacacs', 'radius',  'none']
-        version_added: "2.2"
+        default: null
+        choices: ['invalid', 'local', 'hwtacacs', 'radius', 'none']
     author_scheme_name:
         description:
-            - authorization scheme name.
+            - Name of an authorization scheme.
+              The value is a string of 1 to 32 characters.
         required: false
-        default: default
-        version_added: "2.2"
+        default: null
     first_author_mode:
         description:
-            - first authorization scheme mode.
+            - Preferred authorization mode.
         required: false
-        default: local
-        choices: ['invalid', 'local', 'hwtacacs', 'if-authenticated',  'none'
-        version_added: "2.2"
+        default: null
+        choices: ['invalid', 'local', 'hwtacacs', 'if-authenticated', 'none']
     acct_scheme_name:
         description:
-            - accounting scheme name.
+            - Accounting scheme name.
+              The value is a string of 1 to 32 characters.
         required: false
-        default: default
-        version_added: "2.2"
+        default: null
     accounting_mode:
         description:
-            - accounting scheme mode.
+            - Accounting Mode.
         required: false
-        default: none
-        choices: ['invalid', 'hwtacacs', 'radius',  'none']
-        version_added: "2.2"
+        default: null
+        choices: ['invalid', 'hwtacacs', 'radius', 'none']
     domain_name:
         description:
-            - domain name.
+            - Name of a domain.
+              The value is a string of 1 to 64 characters.
         required: false
-        default: default
-        version_added: "2.2"
-    group_name:
+        default: null
+    radius_server_group:
         description:
-            - radius group name.
+            - RADIUS server group's name.
+              The value is a string of 1 to 32 case-insensitive characters.
         required: false
-        default: none
-        version_added: "2.2"
+        default: null
     hwtacas_template:
         description:
-            - hwtacas template name.
+            - Name of a HWTACACS template.
+              The value is a string of 1 to 32 case-insensitive characters.
         required: false
-        default: none
-        version_added: "2.2"
+        default: null
+    local_user_group:
+        description:
+            - Name of the user group where the user belongs. The user inherits all the rights of the user group.
+              The value is a string of 1 to 32 characters.
+        required: false
+        default: null
 '''
 
 EXAMPLES = '''
@@ -103,7 +106,18 @@ EXAMPLES = '''
         state:  present
         authen_scheme_name:  test1
         first_authen_mode:  radius
-        group_name:  test2
+        radius_server_group:  test2
+        host:  {{inventory_hostname}}
+        username:  {{username}}
+        password:  {{password}}
+
+# undo radius authentication Server Basic settings
+  - name: "undo radius authentication Server Basic settings"
+    ce_aaa_server:
+        state:  absent
+        authen_scheme_name:  test1
+        first_authen_mode:  radius
+        radius_server_group:  test2
         host:  {{inventory_hostname}}
         username:  {{username}}
         password:  {{password}}
@@ -112,6 +126,17 @@ EXAMPLES = '''
   - name: "hwtacacs accounting Server Basic settings"
     ce_aaa_server:
         state:  present
+        acct_scheme_name:  test1
+        accounting_mode:  hwtacacs
+        hwtacas_template:  test2
+        host:  {{inventory_hostname}}
+        username:  {{username}}
+        password:  {{password}}
+
+# undo hwtacacs accounting Server Basic settings
+  - name: "undo hwtacacs accounting Server Basic settings"
+    ce_aaa_server:
+        state:  absent
         acct_scheme_name:  test1
         accounting_mode:  hwtacacs
         hwtacas_template:  test2
@@ -144,19 +169,21 @@ end_state:
     type: dict
     sample: {"accounting scheme": [["hwtacacs", "test1"]],
             "hwtacacs template": ["huawei", "test2"]}
-execute_time:
-    description: the module execute time
+updates:
+    description: command sent to the device
     returned: always
-    type: string
-    sample: "0:00:03.380753"
+    type: list
+    sample: ["accounting-scheme test1",
+             "accounting-mode hwtacacs",
+             "hwtacacs server template test2",
+             "hwtacacs enable"]
 '''
 
 import re
-import datetime
+import sys
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
@@ -169,6 +196,7 @@ FAILED = """failed"""
 
 INVALID_SCHEME_CHAR = [' ', '/', '\\', ':', '*', '?', '"', '|', '<', '>']
 INVALID_DOMAIN_CHAR = [' ', '*', '?', '"', '\'']
+INVALID_GROUP_CHAR = ['/', '\\', ':', '*', '?', '"', '|', '<', '>']
 
 
 # get authentication scheme
@@ -681,43 +709,85 @@ CE_MERGE_HWTACACS_GLOBAL_CFG = """
     </config>
 """
 
+# get local user group
+CE_GET_LOCAL_USER_GROUP = """
+    <filter type="subtree">
+      <aaa xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+        <userGroups>
+          <userGroup>
+            <userGroupName></userGroupName>
+          </userGroup>
+        </userGroups>
+      </aaa>
+    </filter>
+"""
+# merge local user group
+CE_MERGE_LOCAL_USER_GROUP = """
+    <config>
+      <aaa xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+        <userGroups>
+          <userGroup operation="merge">
+            <userGroupName>%s</userGroupName>
+          </userGroup>
+        </userGroups>
+      </aaa>
+    </config>
+"""
+# delete local user group
+CE_DELETE_LOCAL_USER_GROUP = """
+    <config>
+      <aaa xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+        <userGroups>
+          <userGroup operation="delete">
+            <userGroupName>%s</userGroupName>
+          </userGroup>
+        </userGroups>
+      </aaa>
+    </config>
+"""
 
-class ce_aaa_server(object):
-    """ ce_aaa_server """
+
+class AaaServer(object):
+    """ Manages aaa configuration """
 
     def __init__(self, **kwargs):
-        """ __init__ """
+        """ Class init """
 
         self.netconf = get_netconf(**kwargs)
 
+        if not self.netconf:
+            return None
+
     def netconf_get_config(self, **kwargs):
-        """ netconf_get_config """
+        """ Get configure by netconf """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
         try:
             con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError as e:
-            module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
     def netconf_set_config(self, **kwargs):
-        """ netconf_set_config """
+        """ Set configure by netconf """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
         try:
             con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError as e:
-            module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
     def get_authentication_scheme(self, **kwargs):
-        """ get_authentication_scheme """
+        """ Get scheme of authentication """
 
         module = kwargs["module"]
         conf_str = CE_GET_AUTHENTICATION_SCHEME
@@ -741,7 +811,7 @@ class ce_aaa_server(object):
                 return result
 
     def get_authentication_domain(self, **kwargs):
-        """ get_authentication_domain """
+        """ Get domain of authentication """
 
         module = kwargs["module"]
         conf_str = CE_GET_AUTHENTICATION_DOMAIN
@@ -764,7 +834,7 @@ class ce_aaa_server(object):
                 return result
 
     def merge_authentication_scheme(self, **kwargs):
-        """ merge_authentication_scheme """
+        """ Merge scheme of authentication """
 
         authen_scheme_name = kwargs["authen_scheme_name"]
         first_authen_mode = kwargs["first_authen_mode"]
@@ -775,12 +845,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge authentication scheme failed.')
+            module.fail_json(msg='Error: Merge authentication scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "authentication-scheme %s" % authen_scheme_name
+        cmds.append(cmd)
+        cmd = "authentication-mode %s" % first_authen_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def merge_authentication_domain(self, **kwargs):
-        """ merge_authentication_domain """
+        """ Merge domain of authentication """
 
         domain_name = kwargs["domain_name"]
         authen_scheme_name = kwargs["authen_scheme_name"]
@@ -791,12 +867,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge authentication domain failed.')
+            module.fail_json(msg='Error: Merge authentication domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "authentication-scheme %s" % authen_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def create_authentication_scheme(self, **kwargs):
-        """ create_authentication_scheme """
+        """ Create scheme of authentication """
 
         authen_scheme_name = kwargs["authen_scheme_name"]
         first_authen_mode = kwargs["first_authen_mode"]
@@ -807,12 +889,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create authentication scheme failed.')
+            module.fail_json(msg='Error: Create authentication scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "authentication-scheme %s" % authen_scheme_name
+        cmds.append(cmd)
+        cmd = "authentication-mode %s" % first_authen_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def create_authentication_domain(self, **kwargs):
-        """ create_authentication_domain """
+        """ Create domain of authentication """
 
         domain_name = kwargs["domain_name"]
         authen_scheme_name = kwargs["authen_scheme_name"]
@@ -823,12 +911,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create authentication domain failed.')
+            module.fail_json(msg='Error: Create authentication domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "authentication-scheme %s" % authen_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_authentication_scheme(self, **kwargs):
-        """ delete_authentication_scheme """
+        """ Delete scheme of authentication """
 
         authen_scheme_name = kwargs["authen_scheme_name"]
         first_authen_mode = kwargs["first_authen_mode"]
@@ -843,12 +937,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete authentication scheme failed.')
+            module.fail_json(msg='Error: Delete authentication scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo authentication-scheme %s" % authen_scheme_name
+        cmds.append(cmd)
+        cmd = "authentication-mode none"
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_authentication_domain(self, **kwargs):
-        """ delete_authentication_domain """
+        """ Delete domain of authentication """
 
         domain_name = kwargs["domain_name"]
         authen_scheme_name = kwargs["authen_scheme_name"]
@@ -863,12 +963,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete authentication domain failed.')
+            module.fail_json(msg='Error: Delete authentication domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo authentication-scheme"
+        cmds.append(cmd)
+        cmd = "undo domain %s" % domain_name
+        cmds.append(cmd)
+
+        return cmds
 
     def get_authorization_scheme(self, **kwargs):
-        """ get_authorization_scheme """
+        """ Get scheme of authorization """
 
         module = kwargs["module"]
         conf_str = CE_GET_AUTHORIZATION_SCHEME
@@ -892,7 +998,7 @@ class ce_aaa_server(object):
                 return result
 
     def get_authorization_domain(self, **kwargs):
-        """ get_authorization_domain """
+        """ Get domain of authorization """
 
         module = kwargs["module"]
         conf_str = CE_GET_AUTHORIZATION_DOMAIN
@@ -915,7 +1021,7 @@ class ce_aaa_server(object):
                 return result
 
     def merge_authorization_scheme(self, **kwargs):
-        """ merge_authorization_scheme """
+        """ Merge scheme of authorization """
 
         author_scheme_name = kwargs["author_scheme_name"]
         first_author_mode = kwargs["first_author_mode"]
@@ -926,12 +1032,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge authorization scheme failed.')
+            module.fail_json(msg='Error: Merge authorization scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "authorization-scheme %s" % author_scheme_name
+        cmds.append(cmd)
+        cmd = "authorization-mode %s" % first_author_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def merge_authorization_domain(self, **kwargs):
-        """ merge_authorization_domain """
+        """ Merge domain of authorization """
 
         domain_name = kwargs["domain_name"]
         author_scheme_name = kwargs["author_scheme_name"]
@@ -942,12 +1054,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge authorization domain failed.')
+            module.fail_json(msg='Error: Merge authorization domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "authorization-scheme %s" % author_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def create_authorization_scheme(self, **kwargs):
-        """ create_authorization_scheme """
+        """ Create scheme of authorization """
 
         author_scheme_name = kwargs["author_scheme_name"]
         first_author_mode = kwargs["first_author_mode"]
@@ -958,12 +1076,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create authorization scheme failed.')
+            module.fail_json(msg='Error: Create authorization scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "authorization-scheme %s" % author_scheme_name
+        cmds.append(cmd)
+        cmd = "authorization-mode %s" % first_author_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def create_authorization_domain(self, **kwargs):
-        """ create_authorization_domain """
+        """ Create domain of authorization """
 
         domain_name = kwargs["domain_name"]
         author_scheme_name = kwargs["author_scheme_name"]
@@ -974,12 +1098,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create authorization domain failed.')
+            module.fail_json(msg='Error: Create authorization domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "authorization-scheme %s" % author_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_authorization_scheme(self, **kwargs):
-        """ delete_authorization_scheme """
+        """ Delete scheme of authorization """
 
         author_scheme_name = kwargs["author_scheme_name"]
         first_author_mode = kwargs["first_author_mode"]
@@ -994,12 +1124,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete authorization scheme failed.')
+            module.fail_json(msg='Error: Delete authorization scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo authorization-scheme %s" % author_scheme_name
+        cmds.append(cmd)
+        cmd = "authorization-mode none"
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_authorization_domain(self, **kwargs):
-        """ delete_authorization_domain """
+        """ Delete domain of authorization """
 
         domain_name = kwargs["domain_name"]
         author_scheme_name = kwargs["author_scheme_name"]
@@ -1014,12 +1150,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete authorization domian failed.')
+            module.fail_json(msg='Error: Delete authorization domian failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo authorization-scheme"
+        cmds.append(cmd)
+        cmd = "undo domain %s" % domain_name
+        cmds.append(cmd)
+
+        return cmds
 
     def get_accounting_scheme(self, **kwargs):
-        """ get_accounting_scheme """
+        """ Get scheme of accounting """
 
         module = kwargs["module"]
         conf_str = CE_GET_ACCOUNTING_SCHEME
@@ -1042,7 +1184,7 @@ class ce_aaa_server(object):
                 return result
 
     def get_accounting_domain(self, **kwargs):
-        """ get_accounting_domain """
+        """ Get domain of accounting """
 
         module = kwargs["module"]
         conf_str = CE_GET_ACCOUNTING_DOMAIN
@@ -1065,7 +1207,7 @@ class ce_aaa_server(object):
                 return result
 
     def merge_accounting_scheme(self, **kwargs):
-        """ merge_accounting_scheme """
+        """ Merge scheme of accounting """
 
         acct_scheme_name = kwargs["acct_scheme_name"]
         accounting_mode = kwargs["accounting_mode"]
@@ -1076,12 +1218,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge accounting scheme failed.')
+            module.fail_json(msg='Error: Merge accounting scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "accounting-scheme %s" % acct_scheme_name
+        cmds.append(cmd)
+        cmd = "accounting-mode %s" % accounting_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def merge_accounting_domain(self, **kwargs):
-        """ merge_accounting_domain """
+        """ Merge domain of accounting """
 
         domain_name = kwargs["domain_name"]
         acct_scheme_name = kwargs["acct_scheme_name"]
@@ -1091,12 +1239,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge accounting domain failed.')
+            module.fail_json(msg='Error: Merge accounting domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "accounting-scheme %s" % acct_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def create_accounting_scheme(self, **kwargs):
-        """ create_accounting_scheme """
+        """ Create scheme of accounting """
 
         acct_scheme_name = kwargs["acct_scheme_name"]
         accounting_mode = kwargs["accounting_mode"]
@@ -1107,12 +1261,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create accounting scheme failed.')
+            module.fail_json(msg='Error: Create accounting scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "accounting-scheme %s" % acct_scheme_name
+        cmds.append(cmd)
+        cmd = "accounting-mode %s" % accounting_mode
+        cmds.append(cmd)
+
+        return cmds
 
     def create_accounting_domain(self, **kwargs):
-        """ create_accounting_domain """
+        """ Create domain of accounting """
 
         domain_name = kwargs["domain_name"]
         acct_scheme_name = kwargs["acct_scheme_name"]
@@ -1123,12 +1283,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create accounting domain failed.')
+            module.fail_json(msg='Error: Create accounting domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "accounting-scheme %s" % acct_scheme_name
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_accounting_scheme(self, **kwargs):
-        """ delete_accounting_scheme """
+        """ Delete scheme of accounting """
 
         acct_scheme_name = kwargs["acct_scheme_name"]
         accounting_mode = kwargs["accounting_mode"]
@@ -1143,12 +1309,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete accounting scheme failed.')
+            module.fail_json(msg='Error: Delete accounting scheme failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo accounting-scheme %s" % acct_scheme_name
+        cmds.append(cmd)
+        cmd = "accounting-mode none"
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_accounting_domain(self, **kwargs):
-        """ delete_accounting_domain """
+        """ Delete domain of accounting """
 
         domain_name = kwargs["domain_name"]
         acct_scheme_name = kwargs["acct_scheme_name"]
@@ -1163,12 +1335,18 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete accounting domain failed.')
+            module.fail_json(msg='Error: Delete accounting domain failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo domain %s" % domain_name
+        cmds.append(cmd)
+        cmd = "undo accounting-scheme"
+        cmds.append(cmd)
+
+        return cmds
 
     def get_radius_template(self, **kwargs):
-        """ get_radius_template """
+        """ Get radius template """
 
         module = kwargs["module"]
         conf_str = CE_GET_RADIUS_TEMPLATE
@@ -1190,49 +1368,61 @@ class ce_aaa_server(object):
                 return result
 
     def merge_radius_template(self, **kwargs):
-        """ merge_radius_template """
+        """ Merge radius template """
 
-        group_name = kwargs["group_name"]
+        radius_server_group = kwargs["radius_server_group"]
         module = kwargs["module"]
-        conf_str = CE_MERGE_RADIUS_TEMPLATE % group_name
+        conf_str = CE_MERGE_RADIUS_TEMPLATE % radius_server_group
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge radius template failed.')
+            module.fail_json(msg='Error: Merge radius template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "radius server group %s" % radius_server_group
+        cmds.append(cmd)
+
+        return cmds
 
     def create_radius_template(self, **kwargs):
-        """ create_radius_template """
+        """ Create radius template """
 
-        group_name = kwargs["group_name"]
+        radius_server_group = kwargs["radius_server_group"]
         module = kwargs["module"]
-        conf_str = CE_CREATE_RADIUS_TEMPLATE % group_name
+        conf_str = CE_CREATE_RADIUS_TEMPLATE % radius_server_group
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create radius template failed.')
+            module.fail_json(msg='Error: Create radius template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "radius server group %s" % radius_server_group
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_radius_template(self, **kwargs):
-        """ delete_radius_template """
+        """ Delete radius template """
 
-        group_name = kwargs["group_name"]
+        radius_server_group = kwargs["radius_server_group"]
         module = kwargs["module"]
-        conf_str = CE_DELETE_RADIUS_TEMPLATE % group_name
+        conf_str = CE_DELETE_RADIUS_TEMPLATE % radius_server_group
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete radius template failed.')
+            module.fail_json(msg='Error: Delete radius template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo radius server group %s" % radius_server_group
+        cmds.append(cmd)
+
+        return cmds
 
     def get_radius_client(self, **kwargs):
-        """ get_radius_client """
+        """ Get radius client """
 
         module = kwargs["module"]
         conf_str = CE_GET_RADIUS_CLIENT
@@ -1254,21 +1444,28 @@ class ce_aaa_server(object):
                 return result
 
     def merge_radius_client(self, **kwargs):
-        """ merge_radius_client """
+        """ Merge radius client """
 
-        isEnable = kwargs["isEnable"]
+        enable = kwargs["isEnable"]
         module = kwargs["module"]
-        conf_str = CE_MERGE_RADIUS_CLIENT % isEnable
+        conf_str = CE_MERGE_RADIUS_CLIENT % enable
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge radius client failed.')
+            module.fail_json(msg='Error: Merge radius client failed.')
 
-        return SUCCESS
+        cmds = []
+        if enable == "true":
+            cmd = "radius enable"
+        else:
+            cmd = "undo radius enable"
+        cmds.append(cmd)
+
+        return cmds
 
     def get_hwtacacs_template(self, **kwargs):
-        """ get_hwtacacs_template """
+        """ Get hwtacacs template """
 
         module = kwargs["module"]
         conf_str = CE_GET_HWTACACS_TEMPLATE
@@ -1290,7 +1487,7 @@ class ce_aaa_server(object):
                 return result
 
     def merge_hwtacacs_template(self, **kwargs):
-        """ merge_hwtacacs_template """
+        """ Merge hwtacacs template """
 
         hwtacas_template = kwargs["hwtacas_template"]
         module = kwargs["module"]
@@ -1299,12 +1496,16 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge hwtacacs template failed.')
+            module.fail_json(msg='Error: Merge hwtacacs template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "hwtacacs server template %s" % hwtacas_template
+        cmds.append(cmd)
+
+        return cmds
 
     def create_hwtacacs_template(self, **kwargs):
-        """ create_hwtacacs_template """
+        """ Create hwtacacs template """
 
         hwtacas_template = kwargs["hwtacas_template"]
         module = kwargs["module"]
@@ -1313,12 +1514,16 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='create hwtacacs template failed.')
+            module.fail_json(msg='Error: Create hwtacacs template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "hwtacacs server template %s" % hwtacas_template
+        cmds.append(cmd)
+
+        return cmds
 
     def delete_hwtacacs_template(self, **kwargs):
-        """ delete_hwtacacs_template """
+        """ Delete hwtacacs template """
 
         hwtacas_template = kwargs["hwtacas_template"]
         module = kwargs["module"]
@@ -1327,12 +1532,16 @@ class ce_aaa_server(object):
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='delete hwtacacs template failed.')
+            module.fail_json(msg='Error: Delete hwtacacs template failed.')
 
-        return SUCCESS
+        cmds = []
+        cmd = "undo hwtacacs server template %s" % hwtacas_template
+        cmds.append(cmd)
+
+        return cmds
 
     def get_hwtacacs_global_cfg(self, **kwargs):
-        """ get_hwtacacs_global_cfg """
+        """ Get hwtacacs global configure """
 
         module = kwargs["module"]
         conf_str = CE_GET_HWTACACS_GLOBAL_CFG
@@ -1354,28 +1563,94 @@ class ce_aaa_server(object):
                 return result
 
     def merge_hwtacacs_global_cfg(self, **kwargs):
-        """ merge_hwtacacs_global_cfg """
+        """ Merge hwtacacs global configure """
 
-        isEnable = kwargs["isEnable"]
+        enable = kwargs["isEnable"]
         module = kwargs["module"]
-        conf_str = CE_MERGE_HWTACACS_GLOBAL_CFG % isEnable
+        conf_str = CE_MERGE_HWTACACS_GLOBAL_CFG % enable
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
         if "<ok/>" not in con_obj.xml:
-            module.fail_json(msg='merge hwtacacs global config failed.')
+            module.fail_json(msg='Error: Merge hwtacacs global config failed.')
 
-        return SUCCESS
+        cmds = []
+
+        if enable == "true":
+            cmd = "hwtacacs enable"
+        else:
+            cmd = "undo hwtacacs enable"
+        cmds.append(cmd)
+
+        return cmds
+
+    def get_local_user_group(self, **kwargs):
+        """ Get local user group """
+
+        module = kwargs["module"]
+        conf_str = CE_GET_LOCAL_USER_GROUP
+
+        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+
+        xml_str = con_obj.xml
+        result = list()
+
+        if "<data/>" in xml_str:
+            return result
+        else:
+            re_find = re.findall(
+                r'.*<userGroupName>(.*)</userGroupName>.*', xml_str)
+
+            if re_find:
+                return re_find
+            else:
+                return result
+
+    def merge_local_user_group(self, **kwargs):
+        """ Merge local user group """
+
+        local_user_group = kwargs["local_user_group"]
+        module = kwargs["module"]
+        conf_str = CE_MERGE_LOCAL_USER_GROUP % local_user_group
+
+        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+
+        if "<ok/>" not in con_obj.xml:
+            module.fail_json(msg='Error: Merge local user group failed.')
+
+        cmds = []
+        cmd = "user-group %s" % local_user_group
+        cmds.append(cmd)
+
+        return cmds
+
+    def delete_local_user_group(self, **kwargs):
+        """ Delete local user group """
+
+        local_user_group = kwargs["local_user_group"]
+        module = kwargs["module"]
+        conf_str = CE_DELETE_LOCAL_USER_GROUP % local_user_group
+
+        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+
+        if "<ok/>" not in con_obj.xml:
+            module.fail_json(msg='Error: Delete local user group failed.')
+
+        cmds = []
+        cmd = "undo user-group %s" % local_user_group
+        cmds.append(cmd)
+
+        return cmds
 
 
-def get_ce_aaa_server(**kwargs):
-    """ get_ce_aaa_server """
+def get_aaa_server(**kwargs):
+    """ Get aaa server instance """
 
-    return ce_aaa_server(**kwargs)
+    return AaaServer(**kwargs)
 
 
 def check_name(**kwargs):
-    """ check_name """
+    """ Check invalid name """
 
     module = kwargs["module"]
     name = kwargs["name"]
@@ -1384,11 +1659,11 @@ def check_name(**kwargs):
     for item in invalid_char:
         if item in name:
             module.fail_json(
-                msg='invalid char %s is in the name %s ' % (item, name))
+                msg='Error: invalid char %s is in the name %s.' % (item, name))
 
 
 def check_module_argument(**kwargs):
-    """ check_module_argument """
+    """ Check module argument """
 
     module = kwargs["module"]
 
@@ -1396,13 +1671,14 @@ def check_module_argument(**kwargs):
     author_scheme_name = module.params['author_scheme_name']
     acct_scheme_name = module.params['acct_scheme_name']
     domain_name = module.params['domain_name']
-    group_name = module.params['group_name']
+    radius_server_group = module.params['radius_server_group']
     hwtacas_template = module.params['hwtacas_template']
+    local_user_group = module.params['local_user_group']
 
     if authen_scheme_name:
         if len(authen_scheme_name) > 32:
             module.fail_json(
-                msg='authen_scheme_name %s '
+                msg='Error: authen_scheme_name %s '
                     'is large than 32.' % authen_scheme_name)
         check_name(module=module, name=authen_scheme_name,
                    invalid_char=INVALID_SCHEME_CHAR)
@@ -1410,7 +1686,7 @@ def check_module_argument(**kwargs):
     if author_scheme_name:
         if len(author_scheme_name) > 32:
             module.fail_json(
-                msg='author_scheme_name %s '
+                msg='Error: author_scheme_name %s '
                     'is large than 32.' % author_scheme_name)
         check_name(module=module, name=author_scheme_name,
                    invalid_char=INVALID_SCHEME_CHAR)
@@ -1418,7 +1694,7 @@ def check_module_argument(**kwargs):
     if acct_scheme_name:
         if len(acct_scheme_name) > 32:
             module.fail_json(
-                msg='acct_scheme_name %s '
+                msg='Error: acct_scheme_name %s '
                     'is large than 32.' % acct_scheme_name)
         check_name(module=module, name=acct_scheme_name,
                    invalid_char=INVALID_SCHEME_CHAR)
@@ -1426,7 +1702,7 @@ def check_module_argument(**kwargs):
     if domain_name:
         if len(domain_name) > 64:
             module.fail_json(
-                msg='domain_name %s '
+                msg='Error: domain_name %s '
                     'is large than 64.' % domain_name)
         check_name(module=module, name=domain_name,
                    invalid_char=INVALID_DOMAIN_CHAR)
@@ -1434,51 +1710,58 @@ def check_module_argument(**kwargs):
             module.fail_json(msg='domain_name %s '
                                  'is invalid.' % domain_name)
 
-    if group_name and len(group_name) > 32:
-        module.fail_json(msg='group_name %s '
-                             'is large than 32.' % group_name)
+    if radius_server_group and len(radius_server_group) > 32:
+        module.fail_json(msg='Error: radius_server_group %s '
+                             'is large than 32.' % radius_server_group)
 
     if hwtacas_template and len(hwtacas_template) > 32:
         module.fail_json(
-            msg='hwtacas_template %s '
+            msg='Error: hwtacas_template %s '
                 'is large than 32.' % hwtacas_template)
+
+    if local_user_group:
+        if len(local_user_group) > 32:
+            module.fail_json(
+                msg='Error: local_user_group %s '
+                    'is large than 32.' % local_user_group)
+        check_name(module=module, name=local_user_group,
+                   invalid_char=INVALID_GROUP_CHAR)
 
 
 def main():
-    """ main """
-
-    start_time = datetime.datetime.now()
+    """ Module main """
 
     argument_spec = dict(
         state=dict(choices=['present', 'absent'],
                    default='present'),
-        host=dict(required=True),
-        username=dict(required=True),
-        password=dict(required=True),
         authen_scheme_name=dict(type='str'),
         first_authen_mode=dict(choices=['invalid', 'local',
-                                        'hwtacacs', 'radius', 'none'],
-                               default='local'),
+                                        'hwtacacs', 'radius', 'none']),
         author_scheme_name=dict(type='str'),
         first_author_mode=dict(choices=['invalid', 'local',
-                                        'hwtacacs', 'if-authenticated', 'none'],
-                               default='local'),
+                                        'hwtacacs', 'if-authenticated', 'none']),
         acct_scheme_name=dict(type='str'),
         accounting_mode=dict(choices=['invalid', 'hwtacacs',
-                                      'radius', 'none'],
-                             default='none'),
+                                      'radius', 'none']),
         domain_name=dict(type='str'),
-        group_name=dict(type='str'),
-        hwtacas_template=dict(type='str')
+        radius_server_group=dict(type='str'),
+        hwtacas_template=dict(type='str'),
+        local_user_group=dict(type='str')
     )
 
     if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
+        raise Exception("Error: The ncclient library is required")
 
     module = NetworkModule(argument_spec=argument_spec,
-                        supports_check_mode=True)
+                           supports_check_mode=True)
 
     check_module_argument(module=module)
+
+    changed = False
+    proposed = dict()
+    existing = dict()
+    end_state = dict()
+    updates = []
 
     state = module.params['state']
     host = module.params['host']
@@ -1492,30 +1775,38 @@ def main():
     acct_scheme_name = module.params['acct_scheme_name']
     accounting_mode = module.params['accounting_mode']
     domain_name = module.params['domain_name']
-    group_name = module.params['group_name']
+    radius_server_group = module.params['radius_server_group']
     hwtacas_template = module.params['hwtacas_template']
+    local_user_group = module.params['local_user_group']
 
-    ce_aaa_server = get_ce_aaa_server(
+    ce_aaa_server = get_aaa_server(
         host=host, port=port, username=username, password=password)
 
     if not ce_aaa_server:
-        module.fail_json(msg='init module failed.')
+        module.fail_json(msg='Error: init module failed.')
 
-    args = dict(authen_scheme_name=authen_scheme_name,
-                first_authen_mode=first_authen_mode,
-                author_scheme_name=author_scheme_name,
-                first_author_mode=first_author_mode,
-                acct_scheme_name=acct_scheme_name,
-                accounting_mode=accounting_mode,
-                domain_name=domain_name,
-                group_name=group_name,
-                hwtacas_template=hwtacas_template,
-                state=state)
-
-    changed = False
-    proposed = dict((k, v) for k, v in args.iteritems() if v is not None)
-    existing = dict()
-    end_state = dict()
+    # get proposed
+    proposed["state"] = state
+    if authen_scheme_name:
+        proposed["authen_scheme_name"] = authen_scheme_name
+    if first_authen_mode:
+        proposed["first_authen_mode"] = first_authen_mode
+    if author_scheme_name:
+        proposed["author_scheme_name"] = author_scheme_name
+    if first_author_mode:
+        proposed["first_author_mode"] = first_author_mode
+    if acct_scheme_name:
+        proposed["acct_scheme_name"] = acct_scheme_name
+    if accounting_mode:
+        proposed["accounting_mode"] = accounting_mode
+    if domain_name:
+        proposed["domain_name"] = domain_name
+    if radius_server_group:
+        proposed["radius_server_group"] = radius_server_group
+    if hwtacas_template:
+        proposed["hwtacas_template"] = hwtacas_template
+    if local_user_group:
+        proposed["local_user_group"] = local_user_group
 
     # authentication
     if authen_scheme_name:
@@ -1529,19 +1820,21 @@ def main():
         if state == "present":
             # present authentication scheme
             if len(scheme_exist) == 0:
-                ce_aaa_server.create_authentication_scheme(
+                cmd = ce_aaa_server.create_authentication_scheme(
                     module=module,
                     authen_scheme_name=authen_scheme_name,
                     first_authen_mode=first_authen_mode)
+
+                updates.append(cmd)
+                changed = True
 
             elif scheme_new not in scheme_exist:
-                ce_aaa_server.merge_authentication_scheme(
+                cmd = ce_aaa_server.merge_authentication_scheme(
                     module=module,
                     authen_scheme_name=authen_scheme_name,
                     first_authen_mode=first_authen_mode)
-
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
             # present authentication domain
             if domain_name:
@@ -1550,19 +1843,20 @@ def main():
                 domain_new = (domain_name.lower(), authen_scheme_name.lower())
 
                 if len(domain_exist) == 0:
-                    ce_aaa_server.create_authentication_domain(
+                    cmd = ce_aaa_server.create_authentication_domain(
                         module=module,
                         domain_name=domain_name,
                         authen_scheme_name=authen_scheme_name)
+                    updates.append(cmd)
+                    changed = True
 
                 elif domain_new not in domain_exist:
-                    ce_aaa_server.merge_authentication_domain(
+                    cmd = ce_aaa_server.merge_authentication_domain(
                         module=module,
                         domain_name=domain_name,
                         authen_scheme_name=authen_scheme_name)
-
-                else:
-                    pass
+                    updates.append(cmd)
+                    changed = True
 
         else:
             # absent authentication scheme
@@ -1571,10 +1865,12 @@ def main():
             elif scheme_new not in scheme_exist:
                 pass
             else:
-                ce_aaa_server.delete_authentication_scheme(
+                cmd = ce_aaa_server.delete_authentication_scheme(
                     module=module,
                     authen_scheme_name=authen_scheme_name,
                     first_authen_mode=first_authen_mode)
+                updates.append(cmd)
+                changed = True
 
             # absent authentication domain
             if domain_name:
@@ -1587,20 +1883,15 @@ def main():
                 elif domain_new not in domain_exist:
                     pass
                 else:
-                    ce_aaa_server.delete_authentication_domain(
+                    cmd = ce_aaa_server.delete_authentication_domain(
                         module=module,
                         domain_name=domain_name,
                         authen_scheme_name=authen_scheme_name)
+                    updates.append(cmd)
+                    changed = True
 
         scheme_end = ce_aaa_server.get_authentication_scheme(module=module)
         end_state["authentication scheme"] = scheme_end
-
-        if changed == False:
-            scheme_exist.sort()
-            scheme_end.sort()
-
-            if scheme_exist != scheme_end:
-                changed = True
 
     # authorization
     if author_scheme_name:
@@ -1614,17 +1905,19 @@ def main():
         if state == "present":
             # present authorization scheme
             if len(scheme_exist) == 0:
-                ce_aaa_server.create_authorization_scheme(
+                cmd = ce_aaa_server.create_authorization_scheme(
                     module=module,
                     author_scheme_name=author_scheme_name,
                     first_author_mode=first_author_mode)
+                updates.append(cmd)
+                changed = True
             elif scheme_new not in scheme_exist:
-                ce_aaa_server.merge_authorization_scheme(
+                cmd = ce_aaa_server.merge_authorization_scheme(
                     module=module,
                     author_scheme_name=author_scheme_name,
                     first_author_mode=first_author_mode)
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
             # present authorization domain
             if domain_name:
@@ -1633,17 +1926,19 @@ def main():
                 domain_new = (domain_name.lower(), author_scheme_name.lower())
 
                 if len(domain_exist) == 0:
-                    ce_aaa_server.create_authorization_domain(
+                    cmd = ce_aaa_server.create_authorization_domain(
                         module=module,
                         domain_name=domain_name,
                         author_scheme_name=author_scheme_name)
+                    updates.append(cmd)
+                    changed = True
                 elif domain_new not in domain_exist:
-                    ce_aaa_server.merge_authorization_domain(
+                    cmd = ce_aaa_server.merge_authorization_domain(
                         module=module,
                         domain_name=domain_name,
                         author_scheme_name=author_scheme_name)
-                else:
-                    pass
+                    updates.append(cmd)
+                    changed = True
 
         else:
             # absent authorization scheme
@@ -1652,10 +1947,12 @@ def main():
             elif scheme_new not in scheme_exist:
                 pass
             else:
-                ce_aaa_server.delete_authorization_scheme(
+                cmd = ce_aaa_server.delete_authorization_scheme(
                     module=module,
                     author_scheme_name=author_scheme_name,
                     first_author_mode=first_author_mode)
+                updates.append(cmd)
+                changed = True
 
             # absent authorization domain
             if domain_name:
@@ -1668,20 +1965,15 @@ def main():
                 elif domain_new not in domain_exist:
                     pass
                 else:
-                    ce_aaa_server.delete_authorization_domain(
+                    cmd = ce_aaa_server.delete_authorization_domain(
                         module=module,
                         domain_name=domain_name,
                         author_scheme_name=author_scheme_name)
+                    updates.append(cmd)
+                    changed = True
 
         scheme_end = ce_aaa_server.get_authorization_scheme(module=module)
         end_state["authorization scheme"] = scheme_end
-
-        if changed == False:
-            scheme_exist.sort()
-            scheme_end.sort()
-
-            if scheme_exist != scheme_end:
-                changed = True
 
     # accounting
     if acct_scheme_name:
@@ -1694,17 +1986,19 @@ def main():
         if state == "present":
             # present accounting scheme
             if len(scheme_exist) == 0:
-                ce_aaa_server.create_accounting_scheme(
+                cmd = ce_aaa_server.create_accounting_scheme(
                     module=module,
                     acct_scheme_name=acct_scheme_name,
                     accounting_mode=accounting_mode)
+                updates.append(cmd)
+                changed = True
             elif scheme_new not in scheme_exist:
-                ce_aaa_server.merge_accounting_scheme(
+                cmd = ce_aaa_server.merge_accounting_scheme(
                     module=module,
                     acct_scheme_name=acct_scheme_name,
                     accounting_mode=accounting_mode)
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
             # present accounting domain
             if domain_name:
@@ -1713,17 +2007,19 @@ def main():
                 domain_new = (domain_name.lower(), acct_scheme_name.lower())
 
                 if len(domain_exist) == 0:
-                    ce_aaa_server.create_accounting_domain(
+                    cmd = ce_aaa_server.create_accounting_domain(
                         module=module,
                         domain_name=domain_name,
                         acct_scheme_name=acct_scheme_name)
+                    updates.append(cmd)
+                    changed = True
                 elif domain_new not in domain_exist:
-                    ce_aaa_server.merge_accounting_domain(
+                    cmd = ce_aaa_server.merge_accounting_domain(
                         module=module,
                         domain_name=domain_name,
                         acct_scheme_name=acct_scheme_name)
-                else:
-                    pass
+                    updates.append(cmd)
+                    changed = True
 
         else:
             # absent accounting scheme
@@ -1732,10 +2028,12 @@ def main():
             elif scheme_new not in scheme_exist:
                 pass
             else:
-                ce_aaa_server.delete_accounting_scheme(
+                cmd = ce_aaa_server.delete_accounting_scheme(
                     module=module,
                     acct_scheme_name=acct_scheme_name,
                     accounting_mode=accounting_mode)
+                updates.append(cmd)
+                changed = True
 
             # absent accounting domain
             if domain_name:
@@ -1747,30 +2045,25 @@ def main():
                 elif domain_new not in domain_exist:
                     pass
                 else:
-                    ce_aaa_server.delete_accounting_domain(
+                    cmd = ce_aaa_server.delete_accounting_domain(
                         module=module,
                         domain_name=domain_name,
                         acct_scheme_name=acct_scheme_name)
+                    updates.append(cmd)
+                    changed = True
 
         scheme_end = ce_aaa_server.get_accounting_scheme(module=module)
         end_state["accounting scheme"] = scheme_end
-
-        if changed == False:
-            scheme_exist.sort()
-            scheme_end.sort()
-
-            if scheme_exist != scheme_end:
-                changed = True
 
     # radius group name
     if (authen_scheme_name and first_authen_mode.lower() == "radius") \
             or (acct_scheme_name and accounting_mode.lower() == "radius"):
 
-        if not group_name:
-            module.fail_json(msg='please input group_name when use radius.')
+        if not radius_server_group:
+            module.fail_json(msg='please input radius_server_group when use radius.')
 
         rds_template_exist = ce_aaa_server.get_radius_template(module=module)
-        rds_template_new = (group_name)
+        rds_template_new = (radius_server_group)
 
         rds_enable_exist = ce_aaa_server.get_radius_client(module=module)
 
@@ -1780,20 +2073,22 @@ def main():
         if state == "present":
             # present radius group name
             if len(rds_template_exist) == 0:
-                ce_aaa_server.create_radius_template(
-                    module=module, group_name=group_name)
+                cmd = ce_aaa_server.create_radius_template(
+                    module=module, radius_server_group=radius_server_group)
+                updates.append(cmd)
+                changed = True
             elif rds_template_new not in rds_template_exist:
-                ce_aaa_server.merge_radius_template(
-                    module=module, group_name=group_name)
-            else:
-                pass
+                cmd = ce_aaa_server.merge_radius_template(
+                    module=module, radius_server_group=radius_server_group)
+                updates.append(cmd)
+                changed = True
 
             rds_enable_new = ("true")
             if rds_enable_new not in rds_enable_exist:
-                ce_aaa_server.merge_radius_client(
+                cmd = ce_aaa_server.merge_radius_client(
                     module=module, isEnable="true")
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
         else:
             # absent radius group name
@@ -1802,13 +2097,17 @@ def main():
             elif rds_template_new not in rds_template_exist:
                 pass
             else:
-                ce_aaa_server.delete_radius_template(
-                    module=module, group_name=group_name)
+                cmd = ce_aaa_server.delete_radius_template(
+                    module=module, radius_server_group=radius_server_group)
+                updates.append(cmd)
+                changed = True
 
             rds_enable_new = ("false")
             if rds_enable_new not in rds_enable_exist:
-                ce_aaa_server.merge_radius_client(
+                cmd = ce_aaa_server.merge_radius_client(
                     module=module, isEnable="false")
+                updates.append(cmd)
+                changed = True
             else:
                 pass
 
@@ -1817,13 +2116,6 @@ def main():
 
         rds_enable_end = ce_aaa_server.get_radius_client(module=module)
         end_state["radius enable"] = rds_enable_end
-
-        if changed == False:
-            rds_template_exist.sort()
-            rds_template_end.sort()
-
-            if rds_template_exist != rds_template_end:
-                changed = True
 
     tmp_scheme = author_scheme_name
 
@@ -1848,20 +2140,22 @@ def main():
         if state == "present":
             # present hwtacas template
             if len(hwtacacs_exist) == 0:
-                ce_aaa_server.create_hwtacacs_template(
+                cmd = ce_aaa_server.create_hwtacacs_template(
                     module=module, hwtacas_template=hwtacas_template)
+                updates.append(cmd)
+                changed = True
             elif hwtacacs_new not in hwtacacs_exist:
-                ce_aaa_server.merge_hwtacacs_template(
+                cmd = ce_aaa_server.merge_hwtacacs_template(
                     module=module, hwtacas_template=hwtacas_template)
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
             hwtacacs_enbale_new = ("true")
             if hwtacacs_enbale_new not in hwtacacs_enbale_exist:
-                ce_aaa_server.merge_hwtacacs_global_cfg(
+                cmd = ce_aaa_server.merge_hwtacacs_global_cfg(
                     module=module, isEnable="true")
-            else:
-                pass
+                updates.append(cmd)
+                changed = True
 
         else:
             # absent hwtacas template
@@ -1870,13 +2164,17 @@ def main():
             elif hwtacacs_new not in hwtacacs_exist:
                 pass
             else:
-                ce_aaa_server.delete_hwtacacs_template(
+                cmd = ce_aaa_server.delete_hwtacacs_template(
                     module=module, hwtacas_template=hwtacas_template)
+                updates.append(cmd)
+                changed = True
 
             hwtacacs_enbale_new = ("false")
             if hwtacacs_enbale_new not in hwtacacs_enbale_exist:
-                ce_aaa_server.merge_hwtacacs_global_cfg(
+                cmd = ce_aaa_server.merge_hwtacacs_global_cfg(
                     module=module, isEnable="false")
+                updates.append(cmd)
+                changed = True
             else:
                 pass
 
@@ -1887,21 +2185,48 @@ def main():
             module=module)
         end_state["hwtacacs enable"] = hwtacacs_enable_end
 
-        if changed == False:
-            hwtacacs_exist.sort()
-            hwtacacs_end.sort()
+    # local user group
+    if local_user_group:
 
-            if hwtacacs_exist != hwtacacs_end:
+        user_group_exist = ce_aaa_server.get_local_user_group(module=module)
+        user_group_new = (local_user_group)
+
+        existing["local user group"] = user_group_exist
+
+        if state == "present":
+            # present local user group
+            if len(user_group_exist) == 0:
+                cmd = ce_aaa_server.merge_local_user_group(
+                    module=module, local_user_group=local_user_group)
+                updates.append(cmd)
                 changed = True
+            elif user_group_new not in user_group_exist:
+                cmd = ce_aaa_server.merge_local_user_group(
+                    module=module, local_user_group=local_user_group)
+                updates.append(cmd)
+                changed = True
+
+        else:
+            # absent local user group
+            if len(user_group_exist) == 0:
+                pass
+            elif user_group_new not in user_group_exist:
+                pass
+            else:
+                cmd = ce_aaa_server.delete_local_user_group(
+                    module=module, local_user_group=local_user_group)
+                updates.append(cmd)
+                changed = True
+
+        user_group_end = ce_aaa_server.get_local_user_group(module=module)
+        end_state["local user group"] = user_group_end
 
     results = dict()
     results['proposed'] = proposed
     results['existing'] = existing
     results['changed'] = changed
     results['end_state'] = end_state
-
-    end_time = datetime.datetime.now()
-    results['execute_time'] = str(end_time - start_time)
+    results['updates'] = updates
 
     module.exit_json(**results)
 

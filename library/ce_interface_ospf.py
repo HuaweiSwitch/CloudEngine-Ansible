@@ -16,19 +16,28 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = """
 ---
-module: ce_ospf
-version_added: "2.2"
+module: ce_interface_ospf
+version_added: "2.3"
 short_description: Manages configuration of an OSPF interface instance.
 description:
     - Manages configuration of an OSPF interface instance.
-author: QijunPan (@privateip)
-extends_documentation_fragment: CloudEngine
+author: QijunPan (@CloudEngine-Ansible)
+extends_documentation_fragment: cloudengine
 options:
+    interface:
+        description:
+            - Full name of interface, i.e. 40GE1/0/10.
+        required: true
     process_id:
         description:
-            - Name of the ospf process-id.
+            - Specifies a process ID.
+              The value is an integer ranging from 1 to 4294967295.
         required: true
     area:
         description:
@@ -39,7 +48,7 @@ options:
     cost:
         description:
             - The cost associated with this interface.
-             Valid values are an integer in the range from 1 to 65535.
+              Valid values are an integer in the range from 1 to 65535.
         required: false
         default: null
     hello_interval:
@@ -64,17 +73,14 @@ options:
         default: null
     auth_mode:
         description:
-            - Algorithm used for authentication among neighboring routers
-              within an area.
+            - Specifies the authentication type.
         required: false
         choices: ['none', 'null', 'hmac-sha256', 'md5', 'hmac-md5', 'simple']
         default: null
     auth_text_simple:
         description:
-            - Authentication cipher-text when C(auth_mode=simple).
-              Valid value is a string in the range from 1 to 8, no space and character '?'.
-              If string start with \" and end with\", space can be include
-              (i.e. '\"abc def\"').
+            - Specifies a password for simple authentication.
+              The value is a string of 1 to 8 characters.
         required: false
         default: null
     auth_key_id:
@@ -85,10 +91,8 @@ options:
         default: null
     auth_text_md5:
         description:
-            - Authentication cipher-text when C(auth_mode) is 'hmac-sha256', 'md5' or 'hmac-md5.
-              Valid value is a string in the range from 1 to 255, no space and character '?'.
-              If string start with \" and end with\", space can be include
-              (i.e. '\"abc def\"').
+            - Specifies a password for MD5, HMAC-MD5, or HMAC-SHA256 authentication.
+              The value is a string of 1 to 255 case-sensitive characters, spaces not supported.
         required: false
         default: null
     state:
@@ -101,11 +105,42 @@ options:
 """
 
 EXAMPLES = '''
+# Enables OSPF and sets the cost on an interface
 - ce_interface_ospf:
     interface: 40GE2/0/30
     process_id: 1
     area: 100
     cost: 100
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
+
+# Sets the dead interval of the OSPF neighbor
+- ce_interface_ospf:
+    interface: 40GE2/0/30
+    process_id: 1
+    area: 100
+    dead_interval: 10
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
+
+# Sets the interval for sending Hello packets on an interface
+- ce_interface_ospf:
+    interface: 40GE2/0/30
+    process_id: 1
+    area: 100
+    hello_interval: 2
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
+
+#disables an interface from receiving and sending OSPF packets
+- ce_interface_ospf:
+    interface: 40GE2/0/30
+    process_id: 1
+    area: 100
+    silent_interface: true
     username: "{{ un }}"
     password: "{{ pwd }}"
     host: "{{ inventory_hostname }}"
@@ -143,18 +178,16 @@ changed:
     sample: true
 '''
 
-import datetime
+import sys
 from xml.etree import ElementTree
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -261,14 +294,80 @@ CE_NC_XML_SET_AUTH_MD5 = """
 """
 
 
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
+
+    if interface is None:
+        return None
+
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def is_valid_v4addr(addr):
+    """check is ipv4 addr is valid"""
+
+    if not addr:
+        return False
+
+    if addr.find('.') != -1:
+        addr_list = addr.split('.')
+        if len(addr_list) != 4:
+            return False
+        for each_num in addr_list:
+            if not each_num.isdigit():
+                return False
+            if int(each_num) > 255:
+                return False
+        return True
+
+    return False
+
 class InterfaceOSPF(object):
     """
     Manages configuration of an OSPF interface instance.
     """
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
@@ -308,7 +407,7 @@ class InterfaceOSPF(object):
         self.init_netconf()
 
     def init_module(self):
-        """"init module"""
+        """init module"""
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
@@ -338,8 +437,9 @@ class InterfaceOSPF(object):
 
         try:
             con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -349,8 +449,9 @@ class InterfaceOSPF(object):
         try:
             con_obj = self.netconf.set_config(config=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -360,59 +461,11 @@ class InterfaceOSPF(object):
         try:
             con_obj = self.netconf.execute_action(action=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
-
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
 
     def get_area_ip(self):
         """convert integer to ip address"""
@@ -477,22 +530,6 @@ class InterfaceOSPF(object):
                     ospf_info["interface"][attr.tag] = attr.text
 
         return ospf_info
-
-    def is_valid_v4addr(self, addr):
-        """check is ipv4 addr is valid"""
-
-        if addr.find('.') != -1:
-            addr_list = addr.split('.')
-            if len(addr_list) != 4:
-                return False
-            for each_num in addr_list:
-                if not each_num.isdigit():
-                    return False
-                if int(each_num) > 255:
-                    return False
-            return True
-
-        return False
 
     def set_ospf_interface(self):
         """set interface ospf enable, and set its ospf attributes"""
@@ -645,7 +682,7 @@ class InterfaceOSPF(object):
         self.interface = self.interface.replace(" ", "").upper()
 
         # interface check
-        if not self.get_interface_type(self.interface):
+        if not get_interface_type(self.interface):
             self.module.fail_json(msg="Error: interface is invalid.")
 
         # process_id check
@@ -659,7 +696,7 @@ class InterfaceOSPF(object):
             if int(self.area) < 0 or int(self.area) > 4294967295:
                 self.module.fail_json(msg="Error: area id (Integer) must be between 0 and 4294967295.")
         else:
-            if not self.is_valid_v4addr(self.area):
+            if not is_valid_v4addr(self.area):
                 self.module.fail_json(msg="Error: area id is invalid.")
 
         # area authentication check
@@ -800,9 +837,8 @@ class InterfaceOSPF(object):
         else:
             self.results['updates'] = list()
 
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
         self.module.exit_json(**self.results)
+
 
 def main():
     """Module main"""

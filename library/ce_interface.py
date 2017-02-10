@@ -16,14 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_interface
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages physical attributes of interfaces.
+extends_documentation_fragment: cloudengine
 description:
     - Manages physical attributes of interfaces of Huawei CloudEngine switches.
-author: Pan Qijun (@privateip)
+author: QijunPan (@CloudEngine-Ansible)
 notes:
     - This module is also used to create logical interfaces such as
       vlanif and loopbacks.
@@ -31,7 +36,7 @@ options:
     interface:
         description:
             - Full name of interface, i.e. 40GE1/0/10, Tunnel1.
-        required: true
+        required: false
         default: null
     interface_type:
         description:
@@ -42,13 +47,18 @@ options:
                   'eth-trunk', 'nve', 'tunnel', 'ethernet', 'fcoe-port', 'fabric-port', 'stack-port', 'null']
     admin_state:
         description:
-            - Administrative state of the interface.
+            - Specifies the interface management status.
+              The value is an enumerated type.
+              up, An interface is in the administrative Up state.
+              down, An interface is in the administrative Down state.
         required: false
-        default: up
+        default: null
         choices: ['up','down']
     description:
         description:
-            - Interface description, in the range from 1 to 242.
+            - Specifies an interface description.
+              The value is a string of 1 to 242 case-sensitive characters,
+              spaces supported but question marks (?) not supported.
         required: false
         default: null
     mode:
@@ -57,6 +67,12 @@ options:
         required: false
         default: null
         choices: ['layer2','layer3']
+    l2sub:
+        description:
+            - Specifies whether the interface is a Layer 2 sub-interface.
+        required: false
+        default: null
+        choices: ['true','false']
     state:
         description:
             - Specify desired state of the resource.
@@ -114,11 +130,10 @@ changed:
 
 
 import re
-import datetime
+import sys
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
@@ -174,6 +189,18 @@ CE_NC_XML_CREATE_INTF = """
 </ifm>
 """
 
+CE_NC_XML_CREATE_INTF_L2SUB = """
+<ifm xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+<interfaces>
+  <interface operation="create">
+    <ifName>%s</ifName>
+    <ifDescr>%s</ifDescr>
+    <l2SubIfFlag>true</l2SubIfFlag>
+  </interface>
+</interfaces>
+</ifm>
+"""
+
 CE_NC_XML_DELETE_INTF = """
 <ifm xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
 <interfaces>
@@ -217,23 +244,80 @@ CE_NC_XML_MERGE_INTF_L2ENABLE = """
 </ethernet>
 """
 
-admin_state_type = ('ge', '10ge', '25ge', '4x10ge', '40ge', '100ge',
+ADMIN_STATE_TYPE = ('ge', '10ge', '25ge', '4x10ge', '40ge', '100ge',
                     'vlanif', 'meth', 'eth-trunk', 'vbdif', 'tunnel',
                     'ethernet', 'stack-port')
 
-switch_port_type = ('ge', '10ge', '25ge',
+SWITCH_PORT_TYPE = ('ge', '10ge', '25ge',
                     '4x10ge', '40ge', '100ge', 'eth-trunk')
 
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
 
-class CE_Interface(object):
-    """CE_Interface"""
+    if interface is None:
+        return None
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def is_admin_state_enable(iftype):
+    """admin state disable: loopback nve"""
+
+    return bool(iftype in ADMIN_STATE_TYPE)
+
+def is_portswitch_enalbe(iftype):
+    """"is portswitch? """
+
+    return bool(iftype in SWITCH_PORT_TYPE)
+
+
+class Interface(object):
+    """Manages physical attributes of interfaces."""
+
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.nc = None
+        self.netconf = None
         self.init_module()
 
         # interface info
@@ -242,6 +326,7 @@ class CE_Interface(object):
         self.admin_state = self.module.params['admin_state']
         self.description = self.module.params['description']
         self.mode = self.module.params['mode']
+        self.l2sub = self.module.params['l2sub']
         self.state = self.module.params['state']
 
         # host info
@@ -276,9 +361,8 @@ class CE_Interface(object):
         if not HAS_NCCLIENT:
             raise Exception("the ncclient library is required")
 
-        self.nc = get_netconf(host=self.host, port=self.port,
-                              username=self.username, password=self.password)
-        if not self.nc:
+        self.netconf = get_netconf(host=self.host, port=self.port, username=self.username, password=self.password)
+        if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
     def check_response(self, con_obj, xml_name):
@@ -288,20 +372,16 @@ class CE_Interface(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def build_config_xml(self, xmlstr):
-        """build_config_xml"""
-
-        return '<config> ' + xmlstr + ' </config>'
-
     def get_interfaces_dict(self):
         """ get interfaces attributes dict."""
 
         intfs_info = dict()
         conf_str = CE_NC_GET_INTFS
         try:
-            con_obj = self.nc.get_config(filter=conf_str)
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+            con_obj = self.netconf.get_config(filter=conf_str)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         if "<data/>" in con_obj.xml:
             return intfs_info
@@ -312,17 +392,14 @@ class CE_Interface(object):
             r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*\s*<ifAdminStatus>'
             r'(.*)</ifAdminStatus>.*\s*<ifMtu>(.*)</ifMtu>.*', con_obj.xml)
 
-        for i in range(len(intf)):
-            if intf[i][1]:
-                if not intfs_info.get(intf[i][1].lower()):
+        for tmp in intf:
+            if tmp[1]:
+                if not intfs_info.get(tmp[1].lower()):
                     # new interface type list
-                    intfs_info[intf[i][1].lower()] = list()
-                intfs_info[intf[i][1].lower()].append\
-                    (dict(ifName=intf[i][0], ifPhyType=intf[i][1],
-                          ifNumber=intf[i][2], ifDescr=intf[i][3],
-                          isL2SwitchPort=intf[i][4],
-                          ifAdminStatus=intf[i][5],
-                          ifMtu=intf[i][6]))
+                    intfs_info[tmp[1].lower()] = list()
+                intfs_info[tmp[1].lower()].append(dict(ifName=tmp[0], ifPhyType=tmp[1], ifNumber=tmp[2],
+                                                       ifDescr=tmp[3], isL2SwitchPort=tmp[4],
+                                                       ifAdminStatus=tmp[5], ifMtu=tmp[6]))
 
         return intfs_info
 
@@ -332,9 +409,10 @@ class CE_Interface(object):
         intf_info = dict()
         conf_str = CE_NC_GET_INTF % ifname
         try:
-            con_obj = self.nc.get_config(filter=conf_str)
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+            con_obj = self.netconf.get_config(filter=conf_str)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         if "<data/>" in con_obj.xml:
             return intf_info
@@ -356,98 +434,30 @@ class CE_Interface(object):
 
         return intf_info
 
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
-
-    def is_admin_state_enable(self, iftype):
-        """admin state disable: loopback nve"""
-
-        if iftype in admin_state_type:
-            return True
-        else:
-            return False
-
-    def is_portswitch_enalbe(self, iftype):
-        """"is portswitch? """
-
-        if iftype in switch_port_type:
-            return True
-        else:
-            return False
-
-    def is_create_enalbe(self, iftype):
-        """is_create_enalbe"""
-
-        return True
-
-    def is_delete_enable(self, iftype):
-        """is_delete_enable"""
-
-        return True
-
-    def create_interface(self, ifname, descritption, admin_state, mode):
+    def create_interface(self, ifname, description, admin_state, mode, l2sub):
         """Create interface."""
 
-        self.updates_cmd.append("interface %s" % ifname)
-        if not descritption:
-            descritption = ''
+        if l2sub == "true":
+            self.updates_cmd.append("interface %s mode l2" % ifname)
         else:
-            self.updates_cmd.append("descritption %s" % descritption)
+            self.updates_cmd.append("interface %s" % ifname)
 
-        xmlstr = CE_NC_XML_CREATE_INTF % (ifname, descritption)
-        if admin_state and self.is_admin_state_enable(self.intf_type):
+        if not description:
+            description = ''
+        else:
+            self.updates_cmd.append("description %s" % description)
+
+        if l2sub == "true":
+            xmlstr = CE_NC_XML_CREATE_INTF_L2SUB % (ifname, description)
+        else:
+            xmlstr = CE_NC_XML_CREATE_INTF % (ifname, description)
+        if admin_state and is_admin_state_enable(self.intf_type):
             xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (ifname, admin_state)
             if admin_state == 'up':
                 self.updates_cmd.append("undo shutdown")
             else:
                 self.updates_cmd.append("shutdown")
-        if mode and self.is_portswitch_enalbe(self.intf_type):
+        if mode and is_portswitch_enalbe(self.intf_type):
             if mode == "layer2":
                 xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (ifname, 'enable')
                 self.updates_cmd.append('portswitch')
@@ -455,27 +465,29 @@ class CE_Interface(object):
                 xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (ifname, 'disable')
                 self.updates_cmd.append('undo portswitch')
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "CREATE_INTF")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def delete_interface(self, ifname):
         """ Delete interface."""
 
         xmlstr = CE_NC_XML_DELETE_INTF % ifname
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
         self.updates_cmd.append('undo interface %s' % ifname)
 
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "DELETE_INTF")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def delete_interfaces(self, iftype):
         """ Delete interfaces with type."""
@@ -485,31 +497,31 @@ class CE_Interface(object):
         if not intfs_list:
             return
 
-        for i in range(len(intfs_list)):
-            xmlstr += CE_NC_XML_DELETE_INTF % intfs_list[i]['ifName']
-            self.updates_cmd.append('undo interface %s' %
-                                    intfs_list[i]['ifName'])
+        for intf in intfs_list:
+            xmlstr += CE_NC_XML_DELETE_INTF % intf['ifName']
+            self.updates_cmd.append('undo interface %s' % intf['ifName'])
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "DELETE_INTFS")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-    def merge_interface(self, ifname, descritption, admin_state, mode):
+    def merge_interface(self, ifname, description, admin_state, mode):
         """ Merge interface attributes."""
 
         xmlstr = ''
         change = False
         self.updates_cmd.append("interface %s" % ifname)
-        if descritption and self.intf_info["ifDescr"] != descritption:
-            xmlstr += CE_NC_XML_MERGE_INTF_DES % (ifname, descritption)
-            self.updates_cmd.append("descritption %s" % descritption)
+        if description and self.intf_info["ifDescr"] != description:
+            xmlstr += CE_NC_XML_MERGE_INTF_DES % (ifname, description)
+            self.updates_cmd.append("description %s" % description)
             change = True
 
-        if admin_state and self.is_admin_state_enable(self.intf_type) \
+        if admin_state and is_admin_state_enable(self.intf_type) \
                 and self.intf_info["ifAdminStatus"] != admin_state:
             xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (ifname, admin_state)
             change = True
@@ -518,7 +530,7 @@ class CE_Interface(object):
             else:
                 self.updates_cmd.append("shutdown")
 
-        if self.is_portswitch_enalbe(self.intf_type):
+        if is_portswitch_enalbe(self.intf_type):
             if mode == "layer2" and self.intf_info["isL2SwitchPort"] != "true":
                 xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (ifname, 'enable')
                 self.updates_cmd.append("portswitch")
@@ -532,16 +544,17 @@ class CE_Interface(object):
         if not change:
             return
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
 
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_INTF_ATTR")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-    def merge_interfaces(self, iftype, descritption, admin_state, mode):
+    def merge_interfaces(self, iftype, description, admin_state, mode):
         """ Merge interface attributes by type."""
 
         xmlstr = ''
@@ -550,35 +563,35 @@ class CE_Interface(object):
         if not intfs_list:
             return
 
-        for i in range(len(intfs_list)):
+        for intf in intfs_list:
             if_change = False
-            self.updates_cmd.append("interface %s" % intfs_list[i]['ifName'])
-            if descritption and intfs_list[i]["ifDescr"] != descritption:
+            self.updates_cmd.append("interface %s" % intf['ifName'])
+            if description and intf["ifDescr"] != description:
                 xmlstr += CE_NC_XML_MERGE_INTF_DES % (
-                    intfs_list[i]['ifName'], descritption)
-                self.updates_cmd.append("descritption %s" % descritption)
+                    intf['ifName'], description)
+                self.updates_cmd.append("description %s" % description)
                 if_change = True
-            if admin_state and self.is_admin_state_enable(self.intf_type)\
-                    and intfs_list[i]["ifAdminStatus"] != admin_state:
+            if admin_state and is_admin_state_enable(self.intf_type)\
+                    and intf["ifAdminStatus"] != admin_state:
                 xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (
-                    intfs_list[i]['ifName'], admin_state)
+                    intf['ifName'], admin_state)
                 if_change = True
                 if admin_state == "up":
                     self.updates_cmd.append("undo shutdown")
                 else:
                     self.updates_cmd.append("shutdown")
 
-            if self.is_portswitch_enalbe(self.intf_type):
+            if is_portswitch_enalbe(self.intf_type):
                 if mode == "layer2" \
-                        and intfs_list[i]["isL2SwitchPort"] != "true":
+                        and intf["isL2SwitchPort"] != "true":
                     xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (
-                        intfs_list[i]['ifName'], 'enable')
+                        intf['ifName'], 'enable')
                     self.updates_cmd.append("portswitch")
                     if_change = True
                 elif mode == "layer3" \
-                        and intfs_list[i]["isL2SwitchPort"] != "false":
+                        and intf["isL2SwitchPort"] != "false":
                     xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (
-                        intfs_list[i]['ifName'], 'disable')
+                        intf['ifName'], 'disable')
                     self.updates_cmd.append("undo portswitch")
                     if_change = True
 
@@ -590,36 +603,37 @@ class CE_Interface(object):
         if not change:
             return
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
 
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "MERGE_INTFS_ATTR")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-    def default_interface(self, ifname, default_all=False):
+    def default_interface(self, ifname):
         """default_interface"""
 
         change = False
         xmlstr = ""
         self.updates_cmd.append("interface %s" % ifname)
-        # set descritption default
+        # set description default
         if self.intf_info["ifDescr"]:
             xmlstr += CE_NC_XML_MERGE_INTF_DES % (ifname, '')
-            self.updates_cmd.append("undo descritption")
+            self.updates_cmd.append("undo description")
             change = True
 
         # set admin_status default
-        if self.is_admin_state_enable(self.intf_type) \
+        if is_admin_state_enable(self.intf_type) \
                 and self.intf_info["ifAdminStatus"] != 'up':
             xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (ifname, 'up')
             self.updates_cmd.append("undo shutdown")
             change = True
 
         # set portswitch default
-        if self.is_portswitch_enalbe(self.intf_type) \
+        if is_portswitch_enalbe(self.intf_type) \
                 and self.intf_info["isL2SwitchPort"] != "true":
             xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (ifname, 'enable')
             self.updates_cmd.append("portswitch")
@@ -628,15 +642,16 @@ class CE_Interface(object):
         if not change:
             return
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "SET_INTF_DEFAULT")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
-    def default_interfaces(self, iftype, default_all=False):
+    def default_interfaces(self, iftype):
         """ Set interface config to default by type."""
 
         change = False
@@ -645,30 +660,25 @@ class CE_Interface(object):
         if not intfs_list:
             return
 
-        for i in range(len(intfs_list)):
+        for intf in intfs_list:
             if_change = False
-            self.updates_cmd.append("interface %s" % intfs_list[i]['ifName'])
+            self.updates_cmd.append("interface %s" % intf['ifName'])
 
-            # set descritption default
-            if intfs_list[i]['ifDescr']:
-                xmlstr += CE_NC_XML_MERGE_INTF_DES % (
-                    intfs_list[i]['ifName'], '')
-                self.updates_cmd.append("undo descritption")
+            # set description default
+            if intf['ifDescr']:
+                xmlstr += CE_NC_XML_MERGE_INTF_DES % (intf['ifName'], '')
+                self.updates_cmd.append("undo description")
                 if_change = True
 
             # set admin_status default
-            if self.is_admin_state_enable(self.intf_type) \
-                    and intfs_list[i]["ifAdminStatus"] != 'up':
-                xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (
-                    intfs_list[i]['ifName'], 'up')
+            if is_admin_state_enable(self.intf_type) and intf["ifAdminStatus"] != 'up':
+                xmlstr += CE_NC_XML_MERGE_INTF_STATUS % (intf['ifName'], 'up')
                 self.updates_cmd.append("undo shutdown")
                 if_change = True
 
             # set portswitch default
-            if self.is_portswitch_enalbe(self.intf_type) \
-                    and intfs_list[i]["isL2SwitchPort"] != "true":
-                xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (
-                    intfs_list[i]['ifName'], 'enable')
+            if is_portswitch_enalbe(self.intf_type) and intf["isL2SwitchPort"] != "true":
+                xmlstr += CE_NC_XML_MERGE_INTF_L2ENABLE % (intf['ifName'], 'enable')
                 self.updates_cmd.append("portswitch")
                 if_change = True
 
@@ -680,13 +690,14 @@ class CE_Interface(object):
         if not change:
             return
 
-        conf_str = self.build_config_xml(xmlstr)
+        conf_str = '<config> ' + xmlstr + ' </config>'
         try:
-            con_obj = self.nc.set_config(config=conf_str)
+            con_obj = self.netconf.set_config(config=conf_str)
             self.check_response(con_obj, "SET_INTFS_DEFAULT")
             self.changed = True
-        except RPCError as e:
-            self.module.fail_json(msg='Error: %s' % e.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
     def check_params(self):
         """Check all input params"""
@@ -701,14 +712,14 @@ class CE_Interface(object):
 
         # interface type check
         if self.interface:
-            self.intf_type = self.get_interface_type(self.interface)
+            self.intf_type = get_interface_type(self.interface)
             if not self.intf_type:
                 self.module.fail_json(
                     msg='Error: interface name of %s'
                         ' is error.' % self.interface)
 
         elif self.interface_type:
-            self.intf_type = self.get_interface_type(self.interface_type)
+            self.intf_type = get_interface_type(self.interface_type)
             if not self.intf_type or self.intf_type != self.interface_type.replace(" ", "").lower():
                 self.module.fail_json(
                     msg='Error: interface type of %s'
@@ -719,20 +730,14 @@ class CE_Interface(object):
                 msg='Error: interface or interface type %s is error.')
 
         # shutdown check
-        if not self.is_admin_state_enable(self.intf_type) \
+        if not is_admin_state_enable(self.intf_type) \
                 and self.state == "present" and self.admin_state == "down":
             self.module.fail_json(
                 msg='Error: The %s interface can not'
                     ' be shutdown.' % self.intf_type)
 
-        # absent check
-        if not self.is_delete_enable(self.intf_type) and self.state == "absent":
-            self.module.fail_json(
-                msg='Error: The %s interface can not'
-                    ' be delete.' % self.intf_type)
-
         # port switch mode check
-        if not self.is_portswitch_enalbe(self.intf_type)\
+        if not is_portswitch_enalbe(self.intf_type)\
                 and self.mode and self.state == "present":
             self.module.fail_json(
                 msg='Error: The %s interface can not manage'
@@ -745,6 +750,12 @@ class CE_Interface(object):
                 self.module.fail_json(
                     msg='Error: interface description '
                         'is not in the range from 1 to 242.')
+        # check l2sub flag
+        if self.l2sub and self.l2sub == "true":
+            if not self.interface:
+                self.module.fail_json(msg='Error: L2sub flag can not be set when there no interface set with.')
+            if self.interface.count(".") != 1:
+                self.module.fail_json(msg='Error: Interface name is invalid, it is not sub-interface.')
 
     def get_proposed(self):
         """get_proposed"""
@@ -762,13 +773,15 @@ class CE_Interface(object):
                 self.proposed["mode"] = self.mode
             if self.admin_state:
                 self.proposed["admin_state"] = self.admin_state
+            if self.l2sub:
+                self.proposed["l2sub"] = self.l2sub
 
         elif self.state == 'default':
             if self.description:
                 self.proposed["description"] = ""
-            if self.is_admin_state_enable(self.intf_type) and self.admin_state:
+            if is_admin_state_enable(self.intf_type) and self.admin_state:
                 self.proposed["admin_state"] = self.admin_state
-            if self.is_portswitch_enalbe(self.intf_type) and self.mode:
+            if is_portswitch_enalbe(self.intf_type) and self.mode:
                 self.proposed["mode"] = self.mode
 
     def get_existing(self):
@@ -776,10 +789,10 @@ class CE_Interface(object):
 
         if self.intf_info:
             self.existing["interface"] = self.intf_info["ifName"]
-            if self.is_admin_state_enable(self.intf_type):
+            if is_admin_state_enable(self.intf_type):
                 self.existing["admin_state"] = self.intf_info["ifAdminStatus"]
             self.existing["description"] = self.intf_info["ifDescr"]
-            if self.is_portswitch_enalbe(self.intf_type):
+            if is_portswitch_enalbe(self.intf_type):
                 if self.intf_info["isL2SwitchPort"] == "true":
                     self.existing["mode"] = "layer2"
                 else:
@@ -792,10 +805,10 @@ class CE_Interface(object):
             end_info = self.get_interface_dict(self.interface)
             if end_info:
                 self.end_state["interface"] = end_info["ifName"]
-                if self.is_admin_state_enable(self.intf_type):
+                if is_admin_state_enable(self.intf_type):
                     self.end_state["admin_state"] = end_info["ifAdminStatus"]
                 self.end_state["description"] = end_info["ifDescr"]
-                if self.is_portswitch_enalbe(self.intf_type):
+                if is_portswitch_enalbe(self.intf_type):
                     if end_info["isL2SwitchPort"] == "true":
                         self.end_state["mode"] = "layer2"
                     else:
@@ -813,19 +826,18 @@ class CE_Interface(object):
             if self.state == 'present':
                 if not self.intf_info:
                     # create interface
-                    self.create_interface\
-                        (self.interface,
-                         self.description,
-                         self.admin_state,
-                         self.mode)
+                    self.create_interface(self.interface,
+                                          self.description,
+                                          self.admin_state,
+                                          self.mode,
+                                          self.l2sub)
                 else:
                     # merge interface
                     if self.description or self.admin_state or self.mode:
-                        self.merge_interface\
-                            (self.interface,
-                             self.description,
-                             self.admin_state,
-                             self.mode)
+                        self.merge_interface(self.interface,
+                                             self.description,
+                                             self.admin_state,
+                                             self.mode)
 
             elif self.state == 'absent':
                 if self.intf_info:
@@ -851,11 +863,10 @@ class CE_Interface(object):
             if self.state == 'present':
                 if self.intfs_info.get(self.intf_type.lower()):
                     if self.description or self.admin_state or self.mode:
-                        self.merge_interfaces\
-                            (self.intf_type,
-                             self.description,
-                             self.admin_state,
-                             self.mode)
+                        self.merge_interfaces(self.intf_type,
+                                              self.description,
+                                              self.admin_state,
+                                              self.mode)
             elif self.state == 'absent':
                 # delete all interface of this type
                 if self.intfs_info.get(self.intf_type.lower()):
@@ -880,9 +891,6 @@ class CE_Interface(object):
         else:
             self.results['updates'] = list()
 
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
-
         self.module.exit_json(**self.results)
 
 
@@ -895,11 +903,12 @@ def main():
         description=dict(required=False, default=None),
         mode=dict(choices=['layer2', 'layer3'], required=False),
         interface_type=dict(required=False),
+        l2sub=dict(choices=['true', 'false'], required=False),
         state=dict(choices=['absent', 'present', 'default'],
                    default='present', required=False),
     )
 
-    interface = CE_Interface(argument_spec)
+    interface = Interface(argument_spec)
     interface.work()
 
 

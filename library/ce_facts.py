@@ -16,11 +16,15 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = """
 ---
 module: ce_facts
-version_added: "2.2"
-author: "wangdezhuang (@privateip)"
+version_added: "2.3"
+author: "wangdezhuang (@CloudEngine-Ansible)"
 short_description: Gets facts about HUAWEI CloudEngine switches
 description:
   - Collects facts from CloudEngine devices running the CloudEngine
@@ -36,13 +40,12 @@ options:
     description:
       - When supplied, this argument will restrict the facts collected
         to a given subset.  Possible values for this argument include
-        all, hardware, config, legacy, and interfaces.  Can specify a
+        all, hardware, config, and interfaces.  Can specify a
         list of values to include a larger subset.  Values can also be used
         with an initial C(M(!)) to specify that a specific subset should
         not be collected.
     required: false
     default: '!config'
-    version_added: "2.2"
 """
 
 EXAMPLES = """
@@ -58,7 +61,7 @@ vars:
 - ce_facts:
     gather_subset: all
 
-# Collect only the config and default facts
+# Collect only the config facts
 - ce_facts:
     gather_subset:
       - config
@@ -70,108 +73,94 @@ vars:
 """
 
 RETURN = """
-ansible_net_gather_subset:
+gather_subset:
   description: The list of fact subsets collected from the device
   returned: always
   type: list
 
 # default
-ansible_net_model:
-  description: The model name returned from the device
+BIOS Version:
+  description: The BIOS version running on the remote device
   returned: always
   type: str
-ansible_net_serialnum:
-  description: The serial number of the remote device
+Board Type:
+  description: The board type of the remote device
   returned: always
   type: str
-ansible_net_version:
-  description: The operating system version running on the remote device
+CPLD1 Version:
+  description: The CPLD1 Version running the remote device
   returned: always
   type: str
-ansible_net_hostname:
-  description: The configured hostname of the device
+CPLD2 Version:
+  description: The CPLD2 Version running the remote device
   returned: always
-  type: string
-ansible_net_image:
-  description: The image file the device is running
+  type: str
+MAB Version:
+  description: The MAB Version running the remote device
   returned: always
-  type: string
+  type: str
+PCB Version:
+  description: The PCB Version running the remote device
+  returned: always
+  type: str
+hostname:
+  description: The hostname of the remote device
+  returned: always
+  type: str
 
 # hardware
-ansible_net_filesystems:
-  description: All file system names available on the device
+FAN:
+  description: The fan state on the device
   returned: when hardware is configured
-  type: list
-ansible_net_memfree_mb:
-  description: The available free memory on the remote device in Mb
+  type: str
+PWR:
+  description: The power state on the device
   returned: when hardware is configured
-  type: int
-ansible_net_memtotal_mb:
-  description: The total memory on the remote device in Mb
+  type: str
+filesystems:
+  description: The filesystems on the device
   returned: when hardware is configured
-  type: int
+  type: str
+flash_free:
+  description: The flash free space on the device
+  returned: when hardware is configured
+  type: str
+flash_total:
+  description: The flash total space on the device
+  returned: when hardware is configured
+  type: str
+memory_free:
+  description: The memory free space on the remote device
+  returned: when hardware is configured
+  type: str
+memory_total:
+  description: The memory total space on the remote device
+  returned: when hardware is configured
+  type: str
 
 # config
-ansible_net_config:
-  description: The current active config from the device
+config:
+  description: The current system configuration on the device
   returned: when config is configured
   type: str
 
 # interfaces
-ansible_net_all_ipv4_addresses:
+all_ipv4_addresses:
   description: All IPv4 addresses configured on the device
   returned: when interfaces is configured
   type: list
-ansible_net_all_ipv6_addresses:
-  description: All IPv6 addresses configured on the device
-  returned: when interfaces is configured
-  type: list
-ansible_net_interfaces:
+interfaces:
   description: A hash of all interfaces running on the system
   returned: when interfaces is configured
   type: dict
-ansible_net_neighbors:
+neighbors:
   description: The list of LLDP neighbors from the remote device
   returned: when interfaces is configured
   type: dict
-
-# legacy (pre Ansible 2.2)
-fan_info:
-  description: A hash of facts about fans in the remote device
-  returned: when legacy is configured
-  type: dict
-hostname:
-  description: The configured hostname of the remote device
-  returned: when legacy is configured
-  type: dict
-interfaces_list:
-  description: The list of interface names on the remote device
-  returned: when legacy is configured
-  type: dict
-kickstart:
-  description: The software version used to boot the system
-  returned: when legacy is configured
-  type: str
-module:
-  description: A hash of facts about the modules in a remote device
-  returned: when legacy is configured
-  type: dict
-platform:
-  description: The hardware platform reported by the remote device
-  returned: when legacy is configured
-  type: str
-power_supply_info:
-  description: A hash of facts about the power supplies in the remote device
-  returned: when legacy is configured
-  type: str
-vlan_list:
-  description: The list of VLAN IDs configured on the remote device
-  returned: when legacy is configured
-  type: list
 """
+
 import re
-import datetime
-import ansible.module_utils.cloudengine
+from ansible.module_utils.cloudengine import get_cli_exception
 from ansible.module_utils.basic import get_exception
 from ansible.module_utils.netcli import CommandRunner, AddCommandError
 from ansible.module_utils.network import NetworkModule, NetworkError
@@ -179,7 +168,7 @@ from ansible.module_utils.six import iteritems
 
 
 def add_command(runner, command, output=None):
-    """ add_command """
+    """ Add command operation """
 
     try:
         runner.add_command(command, output)
@@ -189,96 +178,129 @@ def add_command(runner, command, output=None):
         raise AddCommandError
 
 
+def transform_dict(data, keymap):
+    """ Get transform dict """
+
+    transform = dict()
+    for key, fact in keymap:
+        if key in data:
+            transform[fact] = data[key]
+    return transform
+
+
+def transform_iterable(iterable, keymap):
+    """ Transform iterable """
+
+    for item in iterable:
+        yield transform_dict(item, keymap)
+
+
 class FactsBase(object):
-    """ FactsBase """
+    """ Class FactsBase """
 
     def __init__(self, module, runner):
+        self.ipv4 = False
+        self.lldp_enabled = False
         self.module = module
         self.runner = runner
         self.facts = dict()
         self.commands()
 
     def commands(self):
-        """ commands """
+        """ Commands method """
 
         raise NotImplementedError
 
-    def transform_dict(self, data, keymap):
-        """ transform_dict """
-
-        transform = dict()
-        for key, fact in keymap:
-            if key in data:
-                transform[fact] = data[key]
-        return transform
-
-    def transform_iterable(self, iterable, keymap):
-        """ transform_iterable """
-
-        for item in iterable:
-            yield self.transform_dict(item, keymap)
-
 
 class Default(FactsBase):
-    """ Default """
+    """ Class default """
 
     def commands(self):
-        """ commands """
+        """ Commands method """
 
         add_command(self.runner, 'display version')
+        add_command(self.runner, 'display current-configuration | include sysname')
 
     def populate(self):
-        """ populate """
+        """ Populate method """
 
         data = self.runner.get_command('display version')
+        if data:
+            version = data.split("\n")
+            tmp_version = version[11:]
+            for item in tmp_version:
+                tmp_item = item.split()
+                tmp_key = tmp_item[1] + " " + tmp_item[2]
+                self.facts[tmp_key] = tmp_item[4]
 
-        self.facts['version'] = data.split("\n")
+        data = self.runner.get_command('display current-configuration | include sysname')
+        if data:
+            tmp_value = re.findall(r'sysname (.*)', data)
+            self.facts['hostname'] = tmp_value[0]
 
 
 class Config(FactsBase):
-    """ Config """
+    """ Class config """
 
     def commands(self):
-        """ commands """
+        """ Commands method """
 
         add_command(self.runner,
                     'display current-configuration configuration system')
 
     def populate(self):
-        """ populate """
+        """ Populate method """
 
         data = self.runner.get_command(
             'display current-configuration configuration system')
-        self.facts['config'] = data.split("\n")
+        if data:
+            self.facts['config'] = data.split("\n")
 
 
 class Hardware(FactsBase):
-    """ Hardware """
+    """ Class hardware """
 
     def commands(self):
-        """ commands """
+        """ Commands method """
 
         add_command(self.runner, 'dir')
         add_command(self.runner, 'display memory')
+        add_command(self.runner, 'display device')
 
     def populate(self):
-        """ populate """
+        """ Populate method """
 
-        data = self.runner.get_command('dir', 'text')
-        self.facts['filesystems'] = re.findall(
-            r'^Directory of (.+)/', data, re.M)
+        data = self.runner.get_command('dir')
+        if data:
+            self.facts['filesystems'] = re.findall(r'^Directory of (.*)/', data)[0]
+            self.facts['flash_total'] = re.findall(r'(.*) total', data)[0].replace(",", "")
+            self.facts['flash_free'] = re.findall(r'total \((.*) free\)', data)[0].replace(",", "")
 
         data = self.runner.get_command('display memory')
-        temp_data = data.split(
-            r"----------------------------")
-        self.facts['memeory'] = temp_data[0].split("\n")
+        if data:
+            memory_total = re.findall(r'Total Memory Used: (.*) Kbytes', data)[0]
+            use_percent = re.findall(r'Memory Using Percentage: (.*)%', data)[0]
+            memory_free = str(int(memory_total) - int(memory_total) * int(use_percent) / 100)
+            self.facts['memory_total'] = memory_total + " Kb"
+            self.facts['memory_free'] = memory_free + " Kb"
+
+        data = self.runner.get_command('display device')
+        if data:
+            device_info = data.split("\n")
+            tmp_device_info = device_info[4:-1]
+            for item in tmp_device_info:
+                tmp_item = item.split()
+                if len(tmp_item) == 8:
+                    self.facts[tmp_item[2]] = tmp_item[6]
+                elif len(tmp_item) == 7:
+                    self.facts[tmp_item[0]] = tmp_item[5]
 
 
 class Interfaces(FactsBase):
-    """ Interfaces """
+    """ Class interfaces """
 
     def commands(self):
-        """ commands """
+        """ Commands method """
 
         add_command(self.runner, 'display interface brief')
 
@@ -295,47 +317,44 @@ class Interfaces(FactsBase):
             self.lldp_enabled = False
 
     def populate(self):
-        """ populate """
+        """ Populate method"""
 
-        self.facts['all_ipv4_addresses'] = list()
+        interface_dict = dict()
+        ipv4_addr_dict = dict()
+        neighbors_dict = dict()
 
         data = self.runner.get_command('display interface brief')
-        temp_data = data.split(
-            r"InUti/OutUti: input utility rate/output utility rate")
-        self.facts['interfaces'] = temp_data[1].split("\n")
+        if data:
+            interface_info = data.split("\n")
+            tmp_interface = interface_info[12:]
+            for item in tmp_interface:
+                tmp_item = item.split()
+                interface_dict[tmp_item[0]] = tmp_item[1]
+            self.facts['interfaces'] = interface_dict
 
         if self.ipv4:
             data = self.runner.get_command('display ip interface brief')
             if data:
-                self.facts['all_ipv4_addresses'] = data.split("\n")
+                ipv4_addr = data.split("\n")
+                tmp_ipv4 = ipv4_addr[11:]
+                for item in tmp_ipv4:
+                    tmp_item = item.split()
+                    ipv4_addr_dict[tmp_item[0]] = tmp_item[1]
+                self.facts['all_ipv4_addresses'] = ipv4_addr_dict
 
         if self.lldp_enabled:
             data = self.runner.get_command('display lldp neighbor brief')
-            self.facts['neighbors'] = data.split("\n")
-
-
-class Legacy(FactsBase):
-    """ Legacy """
-
-    def commands(self):
-        """ commands """
-
-        add_command(self.runner, 'display device')
-        add_command(self.runner, 'display vlan summary')
-
-    def populate(self):
-        """ populate """
-
-        data = self.runner.get_command('display device')
-        self.facts['device'] = data.split("\n")
-
-        data = self.runner.get_command('display vlan summary')
-        self.facts['vlan'] = data.split("\n")
+            if data:
+                neighbors = data.split("\n")
+                tmp_neighbors = neighbors[2:]
+                for item in tmp_neighbors:
+                    tmp_item = item.split()
+                    neighbors_dict[tmp_item[0]] = tmp_item[3]
+                self.facts['neighbors'] = neighbors_dict
 
 
 FACT_SUBSETS = dict(
     default=Default,
-    legacy=Legacy,
     hardware=Hardware,
     interfaces=Interfaces,
     config=Config,
@@ -345,9 +364,7 @@ VALID_SUBSETS = frozenset(FACT_SUBSETS.keys())
 
 
 def main():
-    """ main """
-
-    start_time = datetime.datetime.now()
+    """ Module main """
 
     spec = dict(
         gather_subset=dict(default=['!config'], type='list')
@@ -400,7 +417,7 @@ def main():
         runner.run()
     except NetworkError:
         exc = get_exception()
-        module.fail_json(msg=str(exc), **exc.kwargs)
+        module.fail_json(msg=get_cli_exception(exc), **exc.kwargs)
 
     try:
         for inst in instances:
@@ -414,11 +431,7 @@ def main():
         if key.startswith('_'):
             ansible_facts[key[1:]] = value
         else:
-            key = 'ansible_net_%s' % key
             ansible_facts[key] = value
-
-    end_time = datetime.datetime.now()
-    ansible_facts['execute_time'] = str(end_time - start_time)
 
     module.exit_json(ansible_facts=ansible_facts)
 

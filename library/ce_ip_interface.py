@@ -16,16 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_ip_interface
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages L3 attributes for IPv4 and IPv6 interfaces.
 description:
     - Manages Layer 3 attributes for IPv4 and IPv6 interfaces.
-extends_documentation_fragment: CloudEngine
-author:
-    - Pan Qijun (@privateip)
+extends_documentation_fragment: cloudengine
+author: QijunPan (@CloudEngine-Ansible)
 notes:
     - Interface must already be a L3 port when using this module.
     - Logical interfaces (loopback, vlanif) must be created first.
@@ -53,6 +56,15 @@ options:
         required: false
         default: v4
         choices: ['v4','v6']
+    ipv4_type:
+        description:
+            - Specifies an address type.
+              The value is an enumerated type.
+              main, primary IP address.
+              sub, secondary IP address.
+        required: false
+        default: main
+        choices: ['main','sub']
     state:
         description:
             - Specify desired state of the resource.
@@ -64,6 +76,8 @@ options:
 EXAMPLES = '''
 # ensure ipv4 address is configured on 40GE1/0/22
 - ce_ip_interface: interface=40GE1/0/22 version=v4 state=present addr=20.20.20.20 mask=24
+# ensure ipv4 secondary address is configured on 40GE1/0/22
+- ce_ip_interface: interface=40GE1/0/22 version=v4 state=present addr=30.30.30.30 mask=24 type=sub
 # ensure ipv6 is enabled on 40GE1/0/22
 - ce_ip_interface: interface=40GE1/0/22 version=v6 state=present
 # ensure ipv6 address is configured on 40GE1/0/22
@@ -86,7 +100,7 @@ end_state:
     returned: always
     type: dict
     sample: {"ipv4": [{"ifIpAddr": "20.20.20.20", "subnetMask": "255.255.255.0", "addrType": "main"}],
-            "interface": "40GE1/0/22""}
+            "interface": "40GE1/0/22"}
 updates:
     description: commands sent to the device
     returned: always
@@ -100,17 +114,15 @@ changed:
 '''
 
 import re
-import datetime
+import sys
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -140,7 +152,7 @@ CE_NC_ADD_IPV4 = """
             <am4CfgAddr operation="merge">
               <ifIpAddr>%s</ifIpAddr>
               <subnetMask>%s</subnetMask>
-              <addrType>main</addrType>
+              <addrType>%s</addrType>
             </am4CfgAddr>
           </am4CfgAddrs>
         </ifmAm4>
@@ -188,7 +200,7 @@ CE_NC_DEL_IPV4 = """
             <am4CfgAddr operation="delete">
               <ifIpAddr>%s</ifIpAddr>
               <subnetMask>%s</subnetMask>
-              <addrType>main</addrType>
+              <addrType>%s</addrType>
             </am4CfgAddr>
           </am4CfgAddrs>
         </ifmAm4>
@@ -255,25 +267,91 @@ CE_NC_MERGE_IPV6_ENABLE = """
 </config>
 """
 
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
+
+    if interface is None:
+        return None
+
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def is_valid_v4addr(addr):
+    """check is ipv4 addr is valid"""
+
+    if not addr:
+        return False
+
+    if addr.find('.') != -1:
+        addr_list = addr.split('.')
+        if len(addr_list) != 4:
+            return False
+        for each_num in addr_list:
+            if not each_num.isdigit():
+                return False
+            if int(each_num) > 255:
+                return False
+        return True
+
+    return False
 
 class IpInterface(object):
     """
     Manages L3 attributes for IPv4 and IPv6 interfaces.
     """
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
-        self.init_module()
+        self.__init_module__()
 
         # module input info]
         self.interface = self.module.params['interface']
         self.addr = self.module.params['addr']
         self.mask = self.module.params['mask']
         self.version = self.module.params['version']
+        self.ipv4_type = self.module.params['ipv4_type']
         self.state = self.module.params['state']
 
         # host info
@@ -293,15 +371,15 @@ class IpInterface(object):
         self.intf_type = None
 
         # init netconf connect
-        self.init_netconf()
+        self.__init_netconf__()
 
-    def init_module(self):
-        """" init module """
+    def __init_module__(self):
+        """ init module """
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
+    def __init_netconf__(self):
         """ init netconf """
 
         if not HAS_NCCLIENT:
@@ -312,7 +390,7 @@ class IpInterface(object):
                                    username=self.username,
                                    password=self.module.params['password'])
         if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
+            self.module.fail_json(msg='Error: netconf init failed.')
 
     def check_response(self, con_obj, xml_name):
         """Check if response message is already succeed."""
@@ -326,8 +404,9 @@ class IpInterface(object):
 
         try:
             con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -337,8 +416,9 @@ class IpInterface(object):
         try:
             con_obj = self.netconf.set_config(config=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -348,8 +428,9 @@ class IpInterface(object):
         try:
             con_obj = self.netconf.execute_action(action=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -385,7 +466,7 @@ class IpInterface(object):
         ipv6_info = re.findall(
             r'.*<ifmAm6>.*\s*<enableFlag>(.*)</enableFlag>.*', con_obj.xml)
         if not ipv6_info:
-            self.module.fail_json(msg='Fail to get interface IPv6 state')
+            self.module.fail_json(msg='Error: Fail to get interface IPv6 state.')
         else:
             intf_info["enableFlag"] = ipv6_info[0]
 
@@ -401,55 +482,6 @@ class IpInterface(object):
 
         return intf_info
 
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
-
     def convert_len_to_mask(self, masklen):
         """convert mask length to ip address mask, i.e. 24 to 255.255.255.0"""
 
@@ -457,7 +489,7 @@ class IpInterface(object):
         length = int(masklen)
 
         if length > 32:
-            self.module.fail_json(msg='IPv4 ipaddress mask length is invalid')
+            self.module.fail_json(msg='Error: IPv4 ipaddress mask length is invalid.')
         if length < 8:
             mask_int[0] = str(int((0xFF << (8 - length % 8)) & 0xFF))
         if length >= 8:
@@ -474,7 +506,7 @@ class IpInterface(object):
 
         return '.'.join(mask_int)
 
-    def is_ipv4_exist(self, addr, maskstr):
+    def is_ipv4_exist(self, addr, maskstr, ipv4_type):
         """"Check IPv4 address exist"""
 
         addrs = self.intf_info["am4CfgAddr"]
@@ -483,7 +515,7 @@ class IpInterface(object):
 
         for address in addrs:
             if address["ifIpAddr"] == addr:
-                return address["subnetMask"] == maskstr and address["addrType"] == "main"
+                return address["subnetMask"] == maskstr and address["addrType"] == ipv4_type
         return False
 
     def get_ipv4_main_addr(self):
@@ -512,40 +544,52 @@ class IpInterface(object):
                     return True
                 else:
                     self.module.fail_json(
-                        msg="Input IPv6 address or mask is invalid")
+                        msg="Error: Input IPv6 address or mask is invalid.")
 
         return False
 
-    def set_ipv4_addr(self, ifname, addr, mask):
+    def set_ipv4_addr(self, ifname, addr, mask, ipv4_type):
         """Set interface IPv4 address"""
 
-        if not addr or not mask:
+        if not addr or not mask or not type:
             return
 
         maskstr = self.convert_len_to_mask(mask)
         if self.state == "present":
-            if not self.is_ipv4_exist(addr, maskstr):
-                main_addr = self.get_ipv4_main_addr()
-                if not main_addr:
-                    # no ipv4 main address in this interface
-                    xml_str = CE_NC_ADD_IPV4 % (ifname, addr, maskstr)
-                    self.netconf_set_config(xml_str, "ADD_IPV4_ADDR")
+            if not self.is_ipv4_exist(addr, maskstr, ipv4_type):
+                # primary IP address
+                if ipv4_type == "main":
+                    main_addr = self.get_ipv4_main_addr()
+                    if not main_addr:
+                        # no ipv4 main address in this interface
+                        xml_str = CE_NC_ADD_IPV4 % (ifname, addr, maskstr, ipv4_type)
+                        self.netconf_set_config(xml_str, "ADD_IPV4_ADDR")
+                    else:
+                        # remove old address and set new
+                        xml_str = CE_NC_MERGE_IPV4 % (ifname, main_addr["ifIpAddr"],
+                                                      main_addr["subnetMask"],
+                                                      addr, maskstr)
+                        self.netconf_set_config(xml_str, "MERGE_IPV4_ADDR")
+                # secondary IP address
                 else:
-                    # remove old address and set new
-                    xml_str = CE_NC_MERGE_IPV4 % (ifname, main_addr["ifIpAddr"],
-                                                  main_addr["subnetMask"],
-                                                  addr, maskstr)
-                    self.netconf_set_config(xml_str, "MERGE_IPV4_ADDR")
+                    xml_str = CE_NC_ADD_IPV4 % (ifname, addr, maskstr, ipv4_type)
+                    self.netconf_set_config(xml_str, "ADD_IPV4_ADDR")
+
                 self.updates_cmd.append("interface %s" % ifname)
-                self.updates_cmd.append("ip address %s %s" % (addr, maskstr))
+                if ipv4_type == "main":
+                    self.updates_cmd.append("ip address %s %s" % (addr, maskstr))
+                else:
+                    self.updates_cmd.append("ip address %s %s sub" % (addr, maskstr))
                 self.changed = True
         else:
-            if self.is_ipv4_exist(addr, maskstr):
-                xml_str = CE_NC_DEL_IPV4 % (ifname, addr, maskstr)
+            if self.is_ipv4_exist(addr, maskstr, ipv4_type):
+                xml_str = CE_NC_DEL_IPV4 % (ifname, addr, maskstr, ipv4_type)
                 self.netconf_set_config(xml_str, "DEL_IPV4_ADDR")
                 self.updates_cmd.append("interface %s" % ifname)
-                self.updates_cmd.append(
-                    "undo ip address %s %s" % (addr, maskstr))
+                if ipv4_type == "main":
+                    self.updates_cmd.append("undo ip address %s %s" % (addr, maskstr))
+                else:
+                    self.updates_cmd.append("undo ip address %s %s sub" % (addr, maskstr))
                 self.changed = True
 
     def set_ipv6_addr(self, ifname, addr, mask):
@@ -598,28 +642,12 @@ class IpInterface(object):
                 self.updates_cmd.append("undo ipv6 enable")
                 self.changed = True
 
-    def is_valid_v4addr(self, addr):
-        """check is ipv4 addr is valid"""
-
-        if addr.find('.') != -1:
-            addr_list = addr.split('.')
-            if len(addr_list) != 4:
-                return False
-            for each_num in addr_list:
-                if not each_num.isdigit():
-                    return False
-                if int(each_num) > 255:
-                    return False
-            return True
-
-        return False
-
     def check_params(self):
         """Check all input params"""
 
         # check interface type
         if self.interface:
-            self.intf_type = self.get_interface_type(self.interface)
+            self.intf_type = get_interface_type(self.interface)
             if not self.intf_type:
                 self.module.fail_json(
                     msg='Error: Interface name of %s '
@@ -629,9 +657,9 @@ class IpInterface(object):
         if self.version == "v4":
             if not self.addr or not self.mask:
                 self.module.fail_json(msg='Error: addr and mask must be set.')
-            if not self.is_valid_v4addr(self.addr):
+            if not is_valid_v4addr(self.addr):
                 self.module.fail_json(
-                    msg='Error: The %s is not a valid address' % self.addr)
+                    msg='Error: The %s is not a valid address.' % self.addr)
             if not self.mask.isdigit():
                 self.module.fail_json(msg='Error: mask is invalid.')
             if int(self.mask) > 32 or int(self.mask) < 1:
@@ -663,6 +691,7 @@ class IpInterface(object):
         self.proposed["state"] = self.state
         self.proposed["addr"] = self.addr
         self.proposed["mask"] = self.mask
+        self.proposed["ipv4_type"] = self.ipv4_type
         self.proposed["version"] = self.version
         self.proposed["interface"] = self.interface
 
@@ -692,7 +721,7 @@ class IpInterface(object):
 
         # deal present or absent
         if self.version == "v4":
-            self.set_ipv4_addr(self.interface, self.addr, self.mask)
+            self.set_ipv4_addr(self.interface, self.addr, self.mask, self.ipv4_type)
         else:
             if not self.addr and not self.mask:
                 self.set_ipv6_enable(self.interface)
@@ -709,9 +738,6 @@ class IpInterface(object):
         else:
             self.results['updates'] = list()
 
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
-
         self.module.exit_json(**self.results)
 
 
@@ -724,6 +750,7 @@ def main():
         version=dict(required=False, choices=['v4', 'v6'],
                      default='v4'),
         mask=dict(type='str', required=False),
+        ipv4_type=dict(required=False, choices=['main', 'sub'], default='main'),
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )

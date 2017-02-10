@@ -16,16 +16,19 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: ce_eth_trunk
-version_added: "2.2"
+version_added: "2.3"
 short_description: Manages Eth-Trunk interfaces.
 description:
     - Manages Eth-Trunk specific configuration parameters.
-extends_documentation_fragment: CloudEngine
-author:
-    - Pan Qijun (@privateip)
+extends_documentation_fragment: cloudengine
+author: QijunPan (@CloudEngine-Ansible)
 notes:
     - C(state=absent) removes the Eth-Trunk config and interface if it
       already exists. If members to be removed are not explicitly
@@ -36,27 +39,35 @@ options:
     trunk_id:
         description:
             - Eth-Trunk interface number.
+              The value is an integer.
+              The value range depends on the assign forward eth-trunk mode { 256 | 512 | 1024 } command.
+              When 256 is specified, the value ranges from 0 to 255.
+              When 512 is specified, the value ranges from 0 to 511.
+              When 1024 is specified, the value ranges from 0 to 1023.
         required: true
     mode:
         description:
-            - Working mode for the Eth-Trunk, i.e. manual, dynamic, static.
+            - Specifies the working mode of an Eth-Trunk interface.
         required: false
         default: null
         choices: ['manual','lacp-dynamic','lacp-static']
     min_links:
         description:
-            - Min links required to keep Eth-Trunk up.
+            - Specifies the minimum number of Eth-Trunk member links in the Up state.
+              The value is an integer ranging from 1 to the maximum number of interfaces
+              that can be added to a Eth-Trunk interface.
         required: false
         default: null
     hash_type:
         description:
-            - Trunk load-balance arithmetic.
+            - Hash algorithm used for load balancing among Eth-Trunk member interfaces.
         required: false
         default: null
         choices: ['src-dst-ip', 'src-dst-mac', 'enhanced', 'dst-ip', 'dst-mac', 'src-ip', 'src-mac']
     members:
         description:
             - List of interfaces that will be managed in a given Eth-Trunk.
+              The interface name must be full name.
         required: false
         default: null
     force:
@@ -123,17 +134,15 @@ changed:
 '''
 
 import re
-import datetime
+import sys
 from ansible.module_utils.network import NetworkModule
 from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.rpc import RPCError
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
-    pass
 
 
 CE_NC_GET_TRUNK = """
@@ -221,21 +230,90 @@ CE_NC_XML_DELETE_MEMBER = """
 </TrunkMemberIf>
 """
 
+MODE_XML2CLI = {"Manual": "manual", "Dynamic": "lacp-dynamic", "Static": "lacp-static"}
+MODE_CLI2XML = {"manual": "Manual", "lacp-dynamic": "Dynamic", "lacp-static": "Static"}
+HASH_XML2CLI = {"IP": "src-dst-ip", "MAC": "src-dst-mac", "Enhanced": "enhanced",
+                "Desip": "dst-ip", "Desmac": "dst-mac", "Sourceip": "src-ip", "Sourcemac": "src-mac"}
+HASH_CLI2XML = {"src-dst-ip": "IP", "src-dst-mac": "MAC", "enhanced": "Enhanced",
+                "dst-ip": "Desip", "dst-mac": "Desmac", "src-ip": "Sourceip", "src-mac": "Sourcemac"}
+
+def get_interface_type(interface):
+    """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
+
+    if interface is None:
+        return None
+
+    iftype = None
+
+    if interface.upper().startswith('GE'):
+        iftype = 'ge'
+    elif interface.upper().startswith('10GE'):
+        iftype = '10ge'
+    elif interface.upper().startswith('25GE'):
+        iftype = '25ge'
+    elif interface.upper().startswith('4X10GE'):
+        iftype = '4x10ge'
+    elif interface.upper().startswith('40GE'):
+        iftype = '40ge'
+    elif interface.upper().startswith('100GE'):
+        iftype = '100ge'
+    elif interface.upper().startswith('VLANIF'):
+        iftype = 'vlanif'
+    elif interface.upper().startswith('LOOPBACK'):
+        iftype = 'loopback'
+    elif interface.upper().startswith('METH'):
+        iftype = 'meth'
+    elif interface.upper().startswith('ETH-TRUNK'):
+        iftype = 'eth-trunk'
+    elif interface.upper().startswith('VBDIF'):
+        iftype = 'vbdif'
+    elif interface.upper().startswith('NVE'):
+        iftype = 'nve'
+    elif interface.upper().startswith('TUNNEL'):
+        iftype = 'tunnel'
+    elif interface.upper().startswith('ETHERNET'):
+        iftype = 'ethernet'
+    elif interface.upper().startswith('FCOE-PORT'):
+        iftype = 'fcoe-port'
+    elif interface.upper().startswith('FABRIC-PORT'):
+        iftype = 'fabric-port'
+    elif interface.upper().startswith('STACK-PORT'):
+        iftype = 'stack-port'
+    elif interface.upper().startswith('NULL'):
+        iftype = 'null'
+    else:
+        return None
+
+    return iftype.lower()
+
+def mode_xml_to_cli_str(mode):
+    """convert mode to cli format string"""
+
+    if not mode:
+        return ""
+
+    return MODE_XML2CLI.get(mode)
+
+def hash_type_xml_to_cli_str(hash_type):
+    """convert trunk hash type netconf xml to cli format string"""
+
+    if not hash_type:
+        return ""
+
+    return HASH_XML2CLI.get(hash_type)
 
 class EthTrunk(object):
     """
     Manages Eth-Trunk interfaces.
     """
 
-    def __init__(self, argument_spec, ):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
-        self.init_module()
+        self.__init_module__()
 
-        # module input info]
+        # module input info
         self.trunk_id = self.module.params['trunk_id']
         self.mode = self.module.params['mode']
         self.min_links = self.module.params['min_links']
@@ -261,15 +339,15 @@ class EthTrunk(object):
         self.trunk_info = dict()
 
         # init netconf connect
-        self.init_netconf()
+        self.__init_netconf__()
 
-    def init_module(self):
-        """" init module """
+    def __init_module__(self):
+        """ init module """
 
         self.module = NetworkModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
+    def __init_netconf__(self):
         """ init netconf """
 
         if not HAS_NCCLIENT:
@@ -294,8 +372,9 @@ class EthTrunk(object):
 
         try:
             con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -305,8 +384,9 @@ class EthTrunk(object):
         try:
             con_obj = self.netconf.set_config(config=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
 
@@ -316,59 +396,11 @@ class EthTrunk(object):
         try:
             con_obj = self.netconf.execute_action(action=xml_str)
             self.check_response(con_obj, xml_name)
-        except RPCError as err:
-            self.module.fail_json(msg='Error: %s' % err.message)
+        except RPCError:
+            err = sys.exc_info()[1]
+            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
 
         return con_obj
-
-    def get_interface_type(self, interface):
-        """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
-
-        if interface is None:
-            return None
-
-        iftype = None
-
-        if interface.upper().startswith('GE'):
-            iftype = 'ge'
-        elif interface.upper().startswith('10GE'):
-            iftype = '10ge'
-        elif interface.upper().startswith('25GE'):
-            iftype = '25ge'
-        elif interface.upper().startswith('4X10GE'):
-            iftype = '4x10ge'
-        elif interface.upper().startswith('40GE'):
-            iftype = '40ge'
-        elif interface.upper().startswith('100GE'):
-            iftype = '100ge'
-        elif interface.upper().startswith('VLANIF'):
-            iftype = 'vlanif'
-        elif interface.upper().startswith('LOOPBACK'):
-            iftype = 'loopback'
-        elif interface.upper().startswith('METH'):
-            iftype = 'meth'
-        elif interface.upper().startswith('ETH-TRUNK'):
-            iftype = 'eth-trunk'
-        elif interface.upper().startswith('VBDIF'):
-            iftype = 'vbdif'
-        elif interface.upper().startswith('NVE'):
-            iftype = 'nve'
-        elif interface.upper().startswith('TUNNEL'):
-            iftype = 'tunnel'
-        elif interface.upper().startswith('ETHERNET'):
-            iftype = 'ethernet'
-        elif interface.upper().startswith('FCOE-PORT'):
-            iftype = 'fcoe-port'
-        elif interface.upper().startswith('FABRIC-PORT'):
-            iftype = 'fabric-port'
-        elif interface.upper().startswith('STACK-PORT'):
-            iftype = 'stack-Port'
-        elif interface.upper().startswith('NULL'):
-            iftype = 'null'
-        else:
-            return None
-
-        return iftype.lower()
 
     def get_trunk_dict(self, trunk_id):
         """ get one interface attributes dict."""
@@ -429,68 +461,12 @@ class EthTrunk(object):
     def get_mode_xml_str(self):
         """trunk mode netconf xml fromat string"""
 
-        if self.mode == "manual":
-            return "Manual"
-        elif self.mode == "lacp-dynamic":
-            return "Dynamic"
-        elif self.mode == "lacp-static":
-            return "Static"
-        else:
-            return self.mode
-
-    def mode_xml_to_cli_str(self, mode):
-        """convert mode to cli format string"""
-
-        if mode == "Manual":
-            return "manual"
-        elif mode == "Dynamic":
-            return "lacp-dynamic"
-        elif mode == "Static":
-            return "lacp-static"
-        else:
-            return mode.lower()
+        return MODE_CLI2XML.get(self.mode)
 
     def get_hash_type_xml_str(self):
         """trunk hash type netconf xml format string"""
 
-        if self.hash_type == 'src-dst-ip':
-            hash_type_str = "IP"
-        elif self.hash_type == 'src-dst-mac':
-            hash_type_str = "MAC"
-        elif self.hash_type == 'enhanced':
-            hash_type_str = "Enhanced"
-        elif self.hash_type == 'dst-ip':
-            hash_type_str = "Desip"
-        elif self.hash_type == 'dst-mac':
-            hash_type_str = "Desmac"
-        elif self.hash_type == 'src-ip':
-            hash_type_str = "Sourceip"
-        elif self.hash_type == 'src-mac':
-            hash_type_str = "Sourcemac"
-        else:
-            hash_type_str = self.hash_type
-        return hash_type_str
-
-    def hash_type_xml_to_cli_str(self, hash_type):
-        """convert trunk hash type netconf xml to cli format string"""
-
-        if hash_type == 'IP':
-            hash_type_str = "src-dst-ip"
-        elif hash_type == 'MAC':
-            hash_type_str = "src-dst-mac"
-        elif hash_type == 'Enhanced':
-            hash_type_str = "enhanced"
-        elif hash_type == 'Desip':
-            hash_type_str = "dst-ip"
-        elif hash_type == 'Desmac':
-            hash_type_str = "dst-mac"
-        elif hash_type == 'Sourceip':
-            hash_type_str = "src-ip"
-        elif hash_type == 'Sourcemac':
-            hash_type_str = "src-mac"
-        else:
-            hash_type_str = hash_type.lower()
-        return hash_type_str
+        return HASH_CLI2XML.get(self.hash_type)
 
     def create_eth_trunk(self):
         """Create Eth-Trunk interface"""
@@ -642,7 +618,7 @@ class EthTrunk(object):
         # members check and convert members to upper
         if self.members:
             for mem in self.members:
-                if not self.get_interface_type(mem.replace(" ", "")):
+                if not get_interface_type(mem.replace(" ", "")):
                     self.module.fail_json(
                         msg='The parameter of members is invalid.')
 
@@ -670,8 +646,8 @@ class EthTrunk(object):
 
         self.existing["trunk_id"] = self.trunk_info["trunkId"]
         self.existing["min_links"] = self.trunk_info["minUpNum"]
-        self.existing["hash_type"] = self.hash_type_xml_to_cli_str(self.trunk_info["hashType"])
-        self.existing["mode"] = self.mode_xml_to_cli_str(self.trunk_info["workMode"])
+        self.existing["hash_type"] = hash_type_xml_to_cli_str(self.trunk_info["hashType"])
+        self.existing["mode"] = mode_xml_to_cli_str(self.trunk_info["workMode"])
         self.existing["members_detail"] = self.trunk_info["TrunkMemberIfs"]
 
     def get_end_state(self):
@@ -683,8 +659,8 @@ class EthTrunk(object):
 
         self.end_state["trunk_id"] = trunk_info["trunkId"]
         self.end_state["min_links"] = trunk_info["minUpNum"]
-        self.end_state["hash_type"] = self.hash_type_xml_to_cli_str(trunk_info["hashType"])
-        self.end_state["mode"] = self.mode_xml_to_cli_str(trunk_info["workMode"])
+        self.end_state["hash_type"] = hash_type_xml_to_cli_str(trunk_info["hashType"])
+        self.end_state["mode"] = mode_xml_to_cli_str(trunk_info["workMode"])
         self.end_state["members_detail"] = trunk_info["TrunkMemberIfs"]
 
     def work(self):
@@ -723,9 +699,6 @@ class EthTrunk(object):
             self.results['updates'] = self.updates_cmd
         else:
             self.results['updates'] = list()
-
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
 
         self.module.exit_json(**self.results)
 

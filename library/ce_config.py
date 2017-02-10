@@ -16,11 +16,15 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'community',
+                    'version': '1.0'}
+
 DOCUMENTATION = """
 ---
 module: ce_config
-version_added: "2.2"
-author: "Pan Qijun (@privateip)"
+version_added: "2.3"
+author: "QijunPan (@CloudEngine-Ansible)"
 short_description: Manage Huawei CloudEngine configuration sections
 description:
   - Huawei CloudEngine configurations use a simple block indent file syntax
@@ -28,7 +32,7 @@ description:
     an implementation for working with CloudEngine configuration sections in
     a deterministic way.  This module works with CLI
     transports.
-extends_documentation_fragment: CloudEngine
+extends_documentation_fragment: cloudengine
 options:
   lines:
     description:
@@ -151,12 +155,12 @@ vars:
     transport: cli
 
 - name: configure top level configuration and save it
-  cd_config:
+  ce_config:
     lines: sysname {{ inventory_hostname }}
     save: yes
     provider: "{{ cli }}"
 
-- cd_config:
+- ce_config:
     lines:
       - rule 10 permit source 1.1.1.1 32
       - rule 20 permit source 2.2.2.2 32
@@ -168,7 +172,7 @@ vars:
     match: exact
     provider: "{{ cli }}"
 
-- cd_config:
+- ce_config:
     lines:
       - rule 10 permit source 1.1.1.1 32
       - rule 20 permit source 2.2.2.2 32
@@ -193,15 +197,49 @@ backup_path:
   sample: /playbooks/ansible/backup/ce_config.2016-07-16@22:28:34
 """
 
-import ansible.module_utils.cloudengine
+from ansible.module_utils.cloudengine import get_cli_exception
 from ansible.module_utils.basic import get_exception
 from ansible.module_utils.network import NetworkModule, NetworkError
 from ansible.module_utils.netcfg import NetworkConfig, dumps
+from ansible.module_utils.basic import remove_values
+
+try:
+    from ansible.errors import AnsibleModuleExit
+    HAS_ANSIBLE_MODULE_EXIT = True
+except ImportError:
+    HAS_ANSIBLE_MODULE_EXIT = False
+
+
+def config_exit(module, **result):
+    """ return from the module, without error """
+
+    if HAS_ANSIBLE_MODULE_EXIT:
+        if 'changed' not in result:
+            result['changed'] = False
+        if 'invocation' not in result:
+            result['invocation'] = {'module_args': module.params}
+        result = remove_values(result, module.no_log_values)
+        raise AnsibleModuleExit(result)
+    else:
+        module.exit_json(**result)
+
+def config_fail(module, **result):
+    """ return from the module, with an error message """
+
+    if HAS_ANSIBLE_MODULE_EXIT:
+        assert 'msg' in result, "implementation error -- msg to explain the error is required"
+        result['failed'] = True
+        if 'invocation' not in result:
+            result['invocation'] = {'module_args': module.params}
+        result = remove_values(result, module.no_log_values)
+        raise AnsibleModuleExit(result)
+    else:
+        module.fail_json(**result)
 
 
 def get_candidate(module):
     """ get candidat info. """
-    candidate = NetworkConfig(indent=2)
+    candidate = NetworkConfig(indent=1)
     if module.params['src']:
         candidate.load(module.params['src'])
     elif module.params['lines']:
@@ -217,7 +255,7 @@ def get_config(module):
     if not contents:
         defaults = module.params['defaults']
         contents = module.config.get_config(include_defaults=defaults)
-    return NetworkConfig(indent=2, contents=contents)
+    return NetworkConfig(indent=1, contents=contents)
 
 
 def run(module, result):
@@ -304,9 +342,9 @@ def main():
         run(module, result)
     except NetworkError:
         exc = get_exception()
-        module.fail_json(msg=str(exc), **exc.kwargs)
+        config_fail(module, msg=get_cli_exception(exc), **exc.kwargs)
 
-    module.exit_json(**result)
+    config_exit(module, **result)
 
 
 if __name__ == '__main__':
