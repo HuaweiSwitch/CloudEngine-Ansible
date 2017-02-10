@@ -1,31 +1,38 @@
-#!/usr/bin/python
+# This code is part of Ansible, but is an independent component.
+# This particular file snippet, and this file snippet only, is BSD licensed.
+# Modules you write using this snippet, which is embedded dynamically by Ansible
+# still belong to the author of the module, and may assign their own license
+# to the complete work.
 #
-# This file is part of Ansible
+# Redistribution and use in source and binary forms, with or without modification,
+# are permitted provided that the following conditions are met:
 #
-# Ansible is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#    * Redistributions in binary form must reproduce the above copyright notice,
+#      this list of conditions and the following disclaimer in the documentation
+#      and/or other materials provided with the distribution.
 #
-# Ansible is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+# USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
 import re
 import time
 
-from ansible.module_utils.basic import json
+from ansible.module_utils.basic import json, get_exception
 from ansible.module_utils.network import NetworkError
 from ansible.module_utils.network import add_argument,\
     register_transport, to_list
-from ansible.module_utils.shell import CliBase
+from ansible.module_utils.shell import CliBase, ShellError
 
-HAS_NCCLIENT = False
 try:
     from ncclient import manager
     HAS_NCCLIENT = True
@@ -57,8 +64,22 @@ class CeConfigMixin(object):
             cmd += ' include-default'
         if regular:
             cmd += ' ' + regular
+        cfg = self.execute([cmd])[0]
+        if not include_defaults:
+            return cfg
 
-        return self.execute([cmd])[0]
+        # remove default configuration prefix
+        if cfg:
+            cmds = cfg.split("\n")
+            for i in range(len(cmds)):
+                if not cmds[i]:
+                    continue
+                if cmds[i].count('~') > 0:
+                    index = cmds[i].index('~')
+                    if cmds[i][:index] == ' '*index:
+                        cmds[i] = cmds[i].replace("~", "", 1)
+            cfg = '\n'.join(cmds)
+        return cfg
 
     def load_config(self, config):
         """ load_config """
@@ -70,28 +91,18 @@ class CeConfigMixin(object):
         except TypeError:
             self.execute(['system-view immediately',
                           'commit label %s' % checkpoint])
+        except Exception:
+            raise
 
         try:
-            self.configure(config)
-        except NetworkError:
-            self.load_checkpoint(checkpoint)
-            raise
+            try:
+                self.configure(config)
+            except (NetworkError, Exception):
+                self.load_checkpoint(checkpoint)
+                self.clear_checkpoint(checkpoint)
+                raise
         finally:
-            # get commit id and clear it
-            responses = self.execute(
-                'display configuration commit list '
-                'label | include %s' % checkpoint)
-            match = re.match(
-                r'[\r\n]?\d+\s+(\d{10})\s+ansible.*', responses[0])
-            if match is not None:
-                try:
-                    self.execute(['return',
-                                  'clear configuration commit %s '
-                                  'label' % match.group(1)], output='text')
-                except TypeError:
-                    self.execute(['return',
-                                  'clear configuration commit %s '
-                                  'label' % match.group(1)])
+            self.clear_checkpoint(checkpoint)
 
     def save_config(self, **kwargs):
         """ save_config """
@@ -114,6 +125,24 @@ class CeConfigMixin(object):
                            ' label %s' % checkpoint])
         pass
 
+    def clear_checkpoint(self, checkpoint):
+        """ clear checkpoint """
+
+        # get commit id and clear it
+        responses = self.execute(
+            'display configuration commit list '
+            'label | include %s' % checkpoint)
+        match = re.match(
+            r'[\r\n]?\d+\s+(\d{10})\s+ansible.*', responses[0])
+        if match is not None:
+            try:
+                self.execute(['return',
+                              'clear configuration commit %s '
+                              'label' % match.group(1)], output='text')
+            except TypeError:
+                self.execute(['return',
+                              'clear configuration commit %s '
+                              'label' % match.group(1)])
 
 class Netconf(object):
     """ Netconf """
@@ -187,7 +216,8 @@ class Cli(CeConfigMixin, CliBase):
     """ Cli """
 
     CLI_PROMPTS_RE = [
-        re.compile(r'[\r\n]?[<|\[]{1}.+[>|\]]{1}(?:\s*)$'),
+        re.compile(r'[\r\n]?<.+>(?:\s*)$'),
+        re.compile(r'[\r\n]?\[.+\](?:\s*)$'),
     ]
 
     CLI_ERRORS_RE = [
@@ -201,7 +231,8 @@ class Cli(CeConfigMixin, CliBase):
         re.compile(r"'[^']' +returned error code: ?\d+"),
         re.compile(r"syntax error"),
         re.compile(r"unknown command"),
-        re.compile(r"Error\[\d+\]: ")
+        re.compile(r"Error\[\d+\]: ", re.I),
+        re.compile(r"Error:", re.I)
     ]
 
     NET_PASSWD_RE = re.compile(r"[\r\n]?password: $", re.I)
@@ -212,6 +243,21 @@ class Cli(CeConfigMixin, CliBase):
         super(Cli, self).connect(params, kickstart=False, **kwargs)
         self.shell.send('screen-length 0 temporary')
         self.shell.send('mmi-mode enable')
+
+    def execute(self, commands):
+        try:
+            return self.shell.send(commands)
+        except ShellError:
+            exc = get_exception()
+            cmd = ""
+            if exc.command:
+                cmd = "Command: %s\r\n" % str(exc.command)
+            msg = str(exc.message)
+            if str(exc.command) in msg:
+                msg = msg.replace(str(exc.command), "")
+            if "matched error in response: " in msg:
+                msg = msg.replace("matched error in response: ", "")
+            raise NetworkError(cmd+msg, commands=commands)
 
     def run_commands(self, commands):
         """ run_commands """
@@ -260,3 +306,39 @@ def prepare_commands(commands):
         if cmd.command.endswith('| json'):
             cmd.output = 'json'
         yield cmd
+
+def get_cli_exception(exc=None):
+    """ get cli exception message"""
+
+    msg = list()
+    if not exc:
+        exc = get_exception()
+    if exc:
+        errs = str(exc).split("\r\n")
+        for err in errs:
+            if not err:
+                continue
+            if "matched error in response:" in err:
+                continue
+            if " at '^' position" in err:
+                err = err.replace(" at '^' position", "")
+            if err.replace(" ", "") == "^":
+                continue
+            if len(err) > 2 and err[0] in ["<", "["] and err[-1] in [">", "]"]:
+                continue
+            if err[-1] == ".":
+                err = err[:-1]
+            if err.replace(" ", "") == "":
+                continue
+            msg.append(err)
+    else:
+        msg = ["Error: Fail to get cli exception message."]
+
+    while msg[-1][-1] == ' ':
+        msg[-1] = msg[-1][:-1]
+
+    if msg[-1][-1] != ".":
+        msg[-1] += "."
+
+    return ", ".join(msg).capitalize()
+
