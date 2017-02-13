@@ -2287,7 +2287,7 @@ class BgpAf(object):
 
             bgp_network_route_new = (network_address, mask_len)
 
-            if check_ip_addr(ipaddr=network_address) == False:
+            if not check_ip_addr(ipaddr=network_address):
                 module.fail_json(
                     msg='Error: The network_address %s is invalid.' % network_address)
 

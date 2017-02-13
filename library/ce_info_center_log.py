@@ -402,7 +402,7 @@ class InfoCenterLog(object):
                 self.module_name, self.channel_id)
         else:
             if not source or self.module_name != source.get("moduleName").lower() or \
-                            self.channel_id != source.get("icChannelId"):
+                    self.channel_id != source.get("icChannelId"):
                 return ''
 
             if not self.log_enable and not self.log_level:

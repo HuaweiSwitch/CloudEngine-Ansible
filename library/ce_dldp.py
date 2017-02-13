@@ -286,7 +286,7 @@ class Dldp(object):
         """Check all input params"""
 
         if (self.auth_mode and self.auth_mode != 'none' and not self.auth_pwd) \
-            or (self.auth_pwd and not self.auth_mode):
+                or (self.auth_pwd and not self.auth_mode):
             self.module.fail_json(msg="Error: auth_mode and auth_pwd must both exist or not exist.")
 
         if self.dldp_conf['dldpEnable'] == 'false' and not self.enable:
@@ -314,7 +314,7 @@ class Dldp(object):
                 self.module.fail_json(
                     msg='Error: The auth_pwd string excludes a question mark (?).')
             if (len(self.auth_pwd) != 24) and (len(self.auth_pwd) != 32) and (len(self.auth_pwd) != 48) and \
-                (len(self.auth_pwd) != 108) and (len(self.auth_pwd) != 128):
+                    (len(self.auth_pwd) != 108) and (len(self.auth_pwd) != 128):
                 if (len(self.auth_pwd) < 1) or (len(self.auth_pwd) > 16):
                     self.module.fail_json(
                         msg='Error: The value is a string of 1 to 16 case-sensitive plaintexts or 24/32/48/108/128 '
