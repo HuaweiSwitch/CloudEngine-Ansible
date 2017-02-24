@@ -28,7 +28,6 @@ short_description: Manages VXLAN virtual access point.
 description:
     - Manages VXLAN Virtual access point.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     bridge_domain_id:
         description:
@@ -79,29 +78,37 @@ options:
 """
 
 EXAMPLES = '''
-# Create a papping between a VLAN and a BD
-- ce_vxlan_vap:
+- name: vxlan vap module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Create a papping between a VLAN and a BD
+  ce_vxlan_vap:
     bridge_domain_id: 100
     bind_vlan_id: 99
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 
-# Bind a Layer 2 sub-interface to a BD
-- ce_vxlan_vap:
+- name: Bind a Layer 2 sub-interface to a BD
+  ce_vxlan_vap:
     bridge_domain_id: 100
     l2_sub_interface: 10GE3/0/40.1
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 
-# Configure an encapsulation type on a Layer 2 sub-interface
-- ce_vxlan_vap:
+- name: Configure an encapsulation type on a Layer 2 sub-interface
+  ce_vxlan_vap:
     l2_sub_interface: 10GE3/0/40.1
     encapsulation: dot1q
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -137,8 +144,9 @@ changed:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf
+from ansible.module_utils.ce import ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -435,9 +443,9 @@ class VxlanVap(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.vap_info = dict()
@@ -456,9 +464,8 @@ class VxlanVap(object):
     def __init_module__(self):
         """init module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
-
     def __init_netconf__(self):
         """init netconf"""
 
@@ -468,7 +475,7 @@ class VxlanVap(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: Netconf init failed')
 
@@ -1001,7 +1008,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanVap(argument_spec)
     module.work()
 

@@ -28,7 +28,6 @@ short_description: Manages VXLAN tunnel configuration.
 description:
     - This module offers the ability to set the VNI and mapped to the BD,
       and configure an ingress replication list on CloudEngine switch.
-extends_documentation_fragment: cloudengine
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -78,15 +77,27 @@ options:
         choices: ['present','absent']
 '''
 EXAMPLES = '''
-# Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
-- ce_vxlan_tunnel:
+- name: vxlan tunnel module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
+  ce_vxlan_tunnel:
     nve_name: Nve1
     vni_id: 100
     protocol_type: bgp
     state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -122,8 +133,8 @@ end_state:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, get_config, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -356,9 +367,9 @@ class VxlanTunnel(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.changed = False
@@ -378,7 +389,7 @@ class VxlanTunnel(object):
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -390,7 +401,7 @@ class VxlanTunnel(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed.')
 
@@ -429,12 +440,14 @@ class VxlanTunnel(object):
     def get_current_config(self, vni_id, peer_ip_list):
         """get current configuration"""
 
+        flags = list()
         exp = " | include vni "
         exp += vni_id
         exp += " head-end peer-list "
         for peer_ip in peer_ip_list:
             exp += "| exclude %s " % peer_ip
-        return self.module.config.get_config(regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def get_vni2bd_dict(self):
         """ get vni2bd attributes dict."""
@@ -961,7 +974,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanTunnel(argument_spec)
     module.work()
 

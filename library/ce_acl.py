@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages base ACL configuration.
 description:
     - Manages base ACL configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -124,57 +123,58 @@ options:
         description:
             - Flag of logging matched data packets.
         required: false
-        default: null
+        default: false
         choices: ['true', 'false']
 '''
 
 EXAMPLES = '''
-# config ACL
-  - name: "config ACL"
+
+- name: CloudEngine command test
+  vars:
+    host: "{{ inventory_hostname }}"
+    username: admin
+    password: admin
+    transport: cli
+
+  tasks:
+
+  - name: "Config ACL"
     ce_acl:
-        state:  present
-        acl_name:  2200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL
-  - name: "undo ACL"
+      state:  present
+      acl_name:  2200
+      provider: "{{ cli }}"
+
+  - name: "Undo ACL"
     ce_acl:
-        state:  delete_acl
-        acl_name:  2200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config ACL base rule
-  - name: "config ACL base rule"
+      state:  delete_acl
+      acl_name:  2200
+      provider: "{{ cli }}"
+
+  - name: "Config ACL base rule"
     ce_acl:
-        state:  present
-        acl_name:  2200
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        time_range:  wdz_acl_time
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL base rule
+      state:  present
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"
+
   - name: "undo ACL base rule"
     ce_acl:
-        state:  absent
-        acl_name:  2200
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        time_range:  wdz_acl_time
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -208,8 +208,8 @@ updates:
 import socket
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -348,15 +348,14 @@ class BaseAcl(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
+        self.host = self.module.params['provider']['host']
+        self.port = self.module.params['provider']['port']
+        self.username = self.module.params['provider']['username']
+        self.password = self.module.params['provider']['password']
         self.acl_name = self.module.params['acl_name'] or None
         self.acl_num = self.module.params['acl_num'] or None
         self.acl_type = None
@@ -372,7 +371,7 @@ class BaseAcl(object):
         self.vrf_name = self.module.params['vrf_name'] or None
         self.time_range = self.module.params['time_range'] or None
         self.rule_description = self.module.params['rule_description'] or None
-        self.log_flag = self.module.params['log_flag'] or None
+        self.log_flag = self.module.params['log_flag']
 
         # cur config
         self.cur_acl_cfg = dict()
@@ -651,8 +650,7 @@ class BaseAcl(object):
                     conf_str += "<aclTimeName></aclTimeName>"
                 if self.rule_description:
                     conf_str += "<aclRuleDescription></aclRuleDescription>"
-                if self.log_flag:
-                    conf_str += "<aclLogFlag></aclLogFlag>"
+                conf_str += "<aclLogFlag></aclLogFlag>"
 
                 conf_str += CE_GET_ACL_BASE_RULE_TAIL
                 con_obj = self.netconf_get_config(conf_str=conf_str)
@@ -714,7 +712,7 @@ class BaseAcl(object):
                                 find_flag = False
                             if self.rule_description and tmp.get("aclRuleDescription") != self.rule_description:
                                 find_flag = False
-                            if self.log_flag and tmp.get("aclLogFlag") != self.log_flag:
+                            if tmp.get("aclLogFlag") != str(self.log_flag).lower():
                                 find_flag = False
 
                             if find_flag:
@@ -883,8 +881,7 @@ class BaseAcl(object):
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_MERGE_ACL_BASE_RULE_TAIL
 
@@ -906,7 +903,7 @@ class BaseAcl(object):
                 cmd += " time-range %s" % self.time_range
             if self.vrf_name:
                 cmd += " vpn-instance %s" % self.vrf_name
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -939,8 +936,7 @@ class BaseAcl(object):
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_DELETE_ACL_BASE_RULE_TAIL
 
@@ -985,7 +981,7 @@ class BaseAcl(object):
                 cmd += " time-range %s" % self.time_range
             if self.vrf_name:
                 cmd += " vpn-instance %s" % self.vrf_name
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -1043,9 +1039,10 @@ def main():
         vrf_name=dict(type='str'),
         time_range=dict(type='str'),
         rule_description=dict(type='str'),
-        log_flag=dict(choices=['true', 'false'])
+        log_flag=dict(required=False, default=False, type='bool')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = BaseAcl(argument_spec=argument_spec)
     module.work()
 

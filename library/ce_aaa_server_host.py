@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages AAA server host configuration.
 description:
     - Manages AAA server host configuration
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -169,83 +168,74 @@ options:
 '''
 
 EXAMPLES = '''
-# config local user when use local scheme
-  - name: "config local user when use local scheme"
-    ce_aaa_server_host:
-        state:  present
-        local_user_name:  user1
-        local_password:  123456
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
 
-# undo local user when use local scheme
-  - name: "undo local user when use local scheme"
-    ce_aaa_server_host:
-        state:  absent
-        local_user_name:  user1
-        local_password:  123456
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+- name: AAA server host test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# config radius server ip
-  - name: "config radius server ip"
-    ce_aaa_server_host:
-        state:  present
-        radius_group_name:  group1
-        raduis_server_type:  Authentication
-        radius_server_ip:  10.1.10.1
-        radius_server_port:  2000
-        radius_server_mode:  Primary-server
-        radius_vpn_name:  _public_
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+  tasks:
 
-# undo radius server ip
-  - name: "undo radius server ip"
+  - name: "Config local user when use local scheme"
     ce_aaa_server_host:
-        state:  absent
-        radius_group_name:  group1
-        raduis_server_type:  Authentication
-        radius_server_ip:  10.1.10.1
-        radius_server_port:  2000
-        radius_server_mode:  Primary-server
-        radius_vpn_name:  _public_
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      local_user_name:  user1
+      local_password:  123456
+      provider: "{{ cli }}"
 
-# config hwtacacs server ip
-  - name: "config hwtacacs server ip"
+  - name: "Undo local user when use local scheme"
     ce_aaa_server_host:
-        state:  present
-        hwtacacs_template:  template
-        hwtacacs_server_ip:  10.10.10.10
-        hwtacacs_server_type:  Authorization
-        hwtacacs_vpn_name:  _public_
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      local_user_name:  user1
+      local_password:  123456
+      provider: "{{ cli }}"
 
-# undo hwtacacs server ip
-  - name: "undo hwtacacs server ip"
+  - name: "Config radius server ip"
     ce_aaa_server_host:
-        state:  absent
-        hwtacacs_template:  template
-        hwtacacs_server_ip:  10.10.10.10
-        hwtacacs_server_type:  Authorization
-        hwtacacs_vpn_name:  _public_
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      radius_group_name:  group1
+      raduis_server_type:  Authentication
+      radius_server_ip:  10.1.10.1
+      radius_server_port:  2000
+      radius_server_mode:  Primary-server
+      radius_vpn_name:  _public_
+      provider: "{{ cli }}"
+
+  - name: "Undo radius server ip"
+    ce_aaa_server_host:
+      state:  absent
+      radius_group_name:  group1
+      raduis_server_type:  Authentication
+      radius_server_ip:  10.1.10.1
+      radius_server_port:  2000
+      radius_server_mode:  Primary-server
+      radius_vpn_name:  _public_
+      provider: "{{ cli }}"
+
+  - name: "Config hwtacacs server ip"
+    ce_aaa_server_host:
+      state:  present
+      hwtacacs_template:  template
+      hwtacacs_server_ip:  10.10.10.10
+      hwtacacs_server_type:  Authorization
+      hwtacacs_vpn_name:  _public_
+      provider: "{{ cli }}"
+
+  - name: "Undo hwtacacs server ip"
+    ce_aaa_server_host:
+      state:  absent
+      hwtacacs_template:  template
+      hwtacacs_server_ip:  10.10.10.10
+      hwtacacs_server_type:  Authorization
+      hwtacacs_vpn_name:  _public_
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -295,8 +285,8 @@ updates:
 import sys
 import socket
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.cloudengine import get_netconf, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -1665,17 +1655,17 @@ class AaaServerHost(object):
                                 need_cfg = True
                     if "isSecondaryServer" in tmp.keys():
                         if state == "present":
-                            if tmp["isSecondaryServer"] != hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] != str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                         else:
-                            if tmp["isSecondaryServer"] == hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] == str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                     if "isPublicNet" in tmp.keys():
                         if state == "present":
-                            if tmp["isPublicNet"] != hwtacacs_is_public_net:
+                            if tmp["isPublicNet"] != str(hwtacacs_is_public_net).lower():
                                 need_cfg = True
                         else:
-                            if tmp["isPublicNet"] == hwtacacs_is_public_net:
+                            if tmp["isPublicNet"] == str(hwtacacs_is_public_net).lower():
                                 need_cfg = True
                     if "vpnName" in tmp.keys():
                         if state == "present":
@@ -1702,8 +1692,8 @@ class AaaServerHost(object):
 
         conf_str = CE_MERGE_HWTACACS_SERVER_CFG_IPV4 % (
             hwtacacs_template, hwtacacs_server_ip,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
-            hwtacacs_vpn_name, hwtacacs_is_public_net)
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
+            hwtacacs_vpn_name, str(hwtacacs_is_public_net).lower())
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
@@ -1731,7 +1721,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
@@ -1740,7 +1730,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
@@ -1749,7 +1739,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -1769,8 +1759,8 @@ class AaaServerHost(object):
 
         conf_str = CE_DELETE_HWTACACS_SERVER_CFG_IPV4 % (
             hwtacacs_template, hwtacacs_server_ip,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
-            hwtacacs_vpn_name, hwtacacs_is_public_net)
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
+            hwtacacs_vpn_name, str(hwtacacs_is_public_net).lower())
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
@@ -1789,7 +1779,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Authorization":
@@ -1798,7 +1788,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
@@ -1807,7 +1797,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
@@ -1816,7 +1806,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -1881,10 +1871,10 @@ class AaaServerHost(object):
                                 need_cfg = True
                     if "isSecondaryServer" in tmp.keys():
                         if state == "present":
-                            if tmp["isSecondaryServer"] != hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] != str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                         else:
-                            if tmp["isSecondaryServer"] == hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] == str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                     if "vpnName" in tmp.keys():
                         if state == "present":
@@ -1910,7 +1900,7 @@ class AaaServerHost(object):
 
         conf_str = CE_MERGE_HWTACACS_SERVER_CFG_IPV6 % (
             hwtacacs_template, hwtacacs_server_ipv6,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
             hwtacacs_vpn_name)
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
@@ -1928,28 +1918,28 @@ class AaaServerHost(object):
             cmd = "hwtacacs server authentication %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Authorization":
             cmd = "hwtacacs server authorization %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
             cmd = "hwtacacs server accounting %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
             cmd = "hwtacacs server %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -1968,7 +1958,7 @@ class AaaServerHost(object):
 
         conf_str = CE_DELETE_HWTACACS_SERVER_CFG_IPV6 % (
             hwtacacs_template, hwtacacs_server_ipv6,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
             hwtacacs_vpn_name)
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
@@ -1986,28 +1976,28 @@ class AaaServerHost(object):
             cmd = "undo hwtacacs server authentication %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Authorization":
             cmd = "undo hwtacacs server authorization %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
             cmd = "undo hwtacacs server accounting %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
             cmd = "undo hwtacacs server %s" % hwtacacs_server_ipv6
             if hwtacacs_vpn_name and hwtacacs_vpn_name != "_public_":
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -2073,17 +2063,17 @@ class AaaServerHost(object):
                                 need_cfg = True
                     if "isSecondaryServer" in tmp.keys():
                         if state == "present":
-                            if tmp["isSecondaryServer"] != hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] != str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                         else:
-                            if tmp["isSecondaryServer"] == hwtacacs_is_secondary_server:
+                            if tmp["isSecondaryServer"] == str(hwtacacs_is_secondary_server).lower():
                                 need_cfg = True
                     if "isPublicNet" in tmp.keys():
                         if state == "present":
-                            if tmp["isPublicNet"] != hwtacacs_is_public_net:
+                            if tmp["isPublicNet"] != str(hwtacacs_is_public_net).lower():
                                 need_cfg = True
                         else:
-                            if tmp["isPublicNet"] == hwtacacs_is_public_net:
+                            if tmp["isPublicNet"] == str(hwtacacs_is_public_net).lower():
                                 need_cfg = True
                     if "vpnName" in tmp.keys():
                         if state == "present":
@@ -2110,8 +2100,8 @@ class AaaServerHost(object):
 
         conf_str = CE_MERGE_HWTACACS_HOST_SERVER_CFG % (
             hwtacacs_template, hwtacacs_server_host_name,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
-            hwtacacs_vpn_name, hwtacacs_is_public_net)
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
+            hwtacacs_vpn_name, str(hwtacacs_is_public_net).lower())
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
@@ -2127,7 +2117,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Authorization":
@@ -2136,7 +2126,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
@@ -2145,7 +2135,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
@@ -2154,7 +2144,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -2174,8 +2164,8 @@ class AaaServerHost(object):
 
         conf_str = CE_DELETE_HWTACACS_HOST_SERVER_CFG % (
             hwtacacs_template, hwtacacs_server_host_name,
-            hwtacacs_server_type, hwtacacs_is_secondary_server,
-            hwtacacs_vpn_name, hwtacacs_is_public_net)
+            hwtacacs_server_type, str(hwtacacs_is_secondary_server).lower(),
+            hwtacacs_vpn_name, str(hwtacacs_is_public_net).lower())
 
         con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
 
@@ -2191,7 +2181,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Authorization":
@@ -2200,7 +2190,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Accounting":
@@ -2209,7 +2199,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         elif hwtacacs_server_type == "Common":
@@ -2218,7 +2208,7 @@ class AaaServerHost(object):
                 cmd += " vpn-instance %s" % hwtacacs_vpn_name
             if hwtacacs_is_public_net:
                 cmd += " public-net"
-            if hwtacacs_is_secondary_server == "true":
+            if hwtacacs_is_secondary_server:
                 cmd += " secondary"
 
         cmds.append(cmd)
@@ -2393,17 +2383,19 @@ def main():
         hwtacacs_server_type=dict(
             choices=['Authentication', 'Authorization', 'Accounting', 'Common']),
         hwtacacs_is_secondary_server=dict(
-            choices=['true', 'false'], default='false'),
+            required=False, default=False, type='bool'),
         hwtacacs_vpn_name=dict(type='str'),
         hwtacacs_is_public_net=dict(
-            choices=['true', 'false'], default='false'),
+            required=False, default=False, type='bool'),
         hwtacacs_server_host_name=dict(type='str')
     )
 
     if not HAS_NCCLIENT:
         raise Exception("Error: The ncclient library is required.")
 
-    module = NetworkModule(argument_spec=argument_spec,
+    argument_spec.update(ce_argument_spec)
+
+    module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True)
 
     check_module_argument(module=module)
@@ -2416,10 +2408,10 @@ def main():
 
     # common para
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
+    host = module.params['provider']['host']
+    port = module.params['provider']['port']
+    username = module.params['provider']['username']
+    password = module.params['provider']['password']
 
     # local para
     local_user_name = module.params['local_user_name']
@@ -2494,12 +2486,10 @@ def main():
         proposed["hwtacacs_server_ipv6"] = hwtacacs_server_ipv6
     if hwtacacs_server_type:
         proposed["hwtacacs_server_type"] = hwtacacs_server_type
-    if hwtacacs_is_secondary_server:
-        proposed["hwtacacs_is_secondary_server"] = hwtacacs_is_secondary_server
+    proposed["hwtacacs_is_secondary_server"] = hwtacacs_is_secondary_server
     if hwtacacs_vpn_name:
         proposed["hwtacacs_vpn_name"] = hwtacacs_vpn_name
-    if hwtacacs_is_public_net:
-        proposed["hwtacacs_is_public_net"] = hwtacacs_is_public_net
+    proposed["hwtacacs_is_public_net"] = hwtacacs_is_public_net
     if hwtacacs_server_host_name:
         proposed["hwtacacs_server_host_name"] = hwtacacs_server_host_name
 
@@ -2635,17 +2625,15 @@ def main():
             module.fail_json(
                 msg='Error: Please input hwtacacs_server_ip or hwtacacs_server_ipv6 or hwtacacs_server_host_name.')
 
-        if not hwtacacs_server_type or not hwtacacs_is_secondary_server or not hwtacacs_vpn_name \
-                or not hwtacacs_is_public_net:
+        if not hwtacacs_server_type or not hwtacacs_vpn_name:
             module.fail_json(
-                msg='Error: Please input hwtacacs_server_type hwtacacs_is_secondary_server '
-                    'hwtacacs_vpn_name hwtacacs_is_public_net.')
+                msg='Error: Please input hwtacacs_server_type hwtacacs_vpn_name.')
 
         if hwtacacs_server_ip and hwtacacs_server_ipv6:
             module.fail_json(
                 msg='Error: Please do not set hwtacacs_server_ip and hwtacacs_server_ipv6 at the same time.')
 
-        if hwtacacs_vpn_name and hwtacacs_is_public_net == "true":
+        if hwtacacs_vpn_name and hwtacacs_is_public_net:
             module.fail_json(
                 msg='Error: Please do not set vpn and public net at the same time.')
 

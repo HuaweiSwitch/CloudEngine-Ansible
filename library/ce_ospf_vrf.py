@@ -28,7 +28,6 @@ short_description: Manages configuration of an OSPF VPN instance.
 description:
     - Manages configuration of an OSPF VPN instance.
 author: Yang yang (@CloudEngine Ansible)
-extends_documentation_fragment: cloudengine
 options:
     ospf:
         description:
@@ -67,8 +66,7 @@ options:
               If true use general timer
               If false use intelligent timer
         required: false
-        choices: ['true','false']
-        default: false
+        default: False
     lsaainterval:
         description:
             - Specifies the interval of arrive LSA when use the general timer.
@@ -100,8 +98,7 @@ options:
               true:cancel the interval of LSA originate,the interval is 0.
               false:do not cancel the interval of LSA originate
         required: false
-        choices: ['true','false']
-        default: false
+        default: False
     lsaointerval:
         description:
             - Specifies the interval of originate LSA .
@@ -175,14 +172,27 @@ options:
 '''
 
 EXAMPLES = '''
-- ce_ospf_vrf:
-    ospf=2
-    route_id=2.2.2.2
-    lsaointervalflag=false
-    lsaointerval=2
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: ospf vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Configure ospf route id
+  ce_ospf_vrf:
+    ospf: 2
+    route_id: 2.2.2.2
+    lsaointervalflag: False
+    lsaointerval: 2
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -197,10 +207,10 @@ proposed:
         "lsaainterval": null,
         "lsaamaxinterval": "1000",
         "lsaastartinterval": "500",
-        "lsaalflag": "false",
+        "lsaalflag": "False",
         "lsaoholdinterval": "1000",
         "lsaointerval": "2",
-        "lsaointervalflag": "false",
+        "lsaointervalflag": "False",
         "lsaomaxinterval": "5000",
         "lsaostartinterval": "500",
         "process_id": "2",
@@ -280,8 +290,8 @@ changed:
 '''
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -414,9 +424,9 @@ class OspfVrf(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # ospf info
         self.ospf_info = dict()
@@ -441,7 +451,7 @@ class OspfVrf(object):
     def init_module(self):
         """" init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -453,7 +463,7 @@ class OspfVrf(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
@@ -975,10 +985,7 @@ class OspfVrf(object):
             if not self.is_valid_bandwidth():
                 self.module.fail_json(
                     msg='Error: The ospf bandwidth reference should between 1 - 2147483648.')
-        if self.lsaalflag == '':
-            self.module.fail_json(
-                msg='Error: The ospf lsa arrival flag should not be null.')
-        if self.lsaalflag == 'true':
+        if self.lsaalflag is True:
             if not self.is_valid_lsa_arrival_interval():
                 self.module.fail_json(
                     msg='Error: The ospf lsa arrival interval should between 0 - 10000.')
@@ -986,7 +993,7 @@ class OspfVrf(object):
                 self.module.fail_json(
                     msg='Error: Non-Intelligent Timer and Intelligent Timer Interval of '
                         'lsa-arrival-interval can not configured at the same time.')
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             if self.lsaainterval:
                 self.module.fail_json(
                     msg='Error: The parameter of lsa arrival interval command is invalid, '
@@ -1006,10 +1013,7 @@ class OspfVrf(object):
                 if not self.isvalidlsaholdarrivalinterval():
                     self.module.fail_json(
                         msg='Error: The ospf lsa arrival hold interval should between 1 - 5000.')
-        if self.lsaointervalflag == '':
-            self.module.fail_json(
-                msg='Error: The ospf lsa originate interval flag should not be null.')
-        if self.lsaointervalflag == 'true':
+        if self.lsaointervalflag is True:
             if self.lsaointerval or self.lsaomaxinterval \
                     or self.lsaostartinterval or self.lsaoholdinterval:
                 self.module.fail_json(
@@ -1272,7 +1276,7 @@ class OspfVrf(object):
                 self.description_changed = True
                 description = ''
 
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             lsa_in_interval = ''
             if self.state == 'present':
                 if self.lsaamaxinterval:
@@ -1311,7 +1315,10 @@ class OspfVrf(object):
                         self.lsa_arrival_changed = True
         else:
             if self.state == 'present':
-                if self.lsaalflag != self.get_exist_lsa_a_interval_flag():
+                lsaalflag = "false"
+                if self.lsaalflag is True:
+                    lsaalflag = "true"
+                if lsaalflag != self.get_exist_lsa_a_interval_flag():
                     self.lsa_arrival_changed = True
                     if self.lsaainterval is None:
                         self.module.fail_json(
@@ -1328,11 +1335,11 @@ class OspfVrf(object):
                     if self.lsaainterval != self.get_exist_lsa_a_interval():
                         self.module.fail_json(
                             msg='Error: The lsaainterval %s is not exist.' % self.lsaainterval)
-                    self.lsaalflag = 'false'
+                    self.lsaalflag = False
                     lsa_in_interval = ''
                     self.lsa_arrival_changed = True
 
-        if self.lsaointervalflag == 'false':
+        if self.lsaointervalflag is False:
             if self.state == 'present':
                 if self.lsaomaxinterval:
                     if self.lsaomaxinterval != self.getexistlsaomaxinterval():
@@ -1389,7 +1396,7 @@ class OspfVrf(object):
                     lsa_originate_hold_interval = '1000'
             else:
                 if self.getexistlsaointerval_flag() == 'true':
-                    self.lsaointervalflag = 'false'
+                    self.lsaointervalflag = False
                     self.lsa_originate_changed = True
         if self.spfintervaltype != self.get_exist_spf_interval_type():
             self.spf_changed = True
@@ -1468,12 +1475,17 @@ class OspfVrf(object):
             return
         else:
             self.changed = True
-
+        lsaointervalflag = "false"
+        lsaalflag = "false"
+        if self.lsaointervalflag is True:
+            lsaointervalflag = "true"
+        if self.lsaalflag is True:
+            lsaalflag = "true"
         configxmlstr = CE_NC_CREATE_OSPF_VRF % (
             self.ospf, config_route_id_xml, vrf,
-            description, bandwidth_reference, self.lsaalflag,
+            description, bandwidth_reference, lsaalflag,
             lsa_in_interval, lsa_arrival_max_interval, lsa_arrival_start_interval,
-            lsa_arrival_hold_interval, self.lsaointervalflag, lsa_originate_interval,
+            lsa_arrival_hold_interval, lsaointervalflag, lsa_originate_interval,
             lsa_originate_max_interval, lsa_originate_start_interval, lsa_originate_hold_interval,
             self.spfintervaltype, spf_interval, spf_interval_milli,
             spf_max_interval, spf_start_interval, spf_hold_interval)
@@ -1541,7 +1553,7 @@ class OspfVrf(object):
                         'bandwidth-reference %s' % (self.get_exist_bandwidth()))
             else:
                 self.updates_cmd.append('undo bandwidth-reference')
-        if self.lsaalflag == 'true':
+        if self.lsaalflag is True:
             if self.lsa_arrival_changed:
                 if self.state == 'present':
                     self.updates_cmd.append(
@@ -1550,7 +1562,7 @@ class OspfVrf(object):
                     self.updates_cmd.append(
                         'undo lsa-arrival-interval')
 
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             if self.lsa_arrival_changed:
                 if self.state == 'present':
                     if self.get_exist_lsa_a_max_interval() != '1000' \
@@ -1566,7 +1578,7 @@ class OspfVrf(object):
                             and self.get_exist_lsa_a_hold_interval() == '500':
                         self.updates_cmd.append(
                             'undo lsa-arrival-interval')
-        if self.lsaointervalflag == 'false':
+        if self.lsaointervalflag is False:
             if self.lsa_originate_changed:
                 if self.state == 'present':
                     if self.getexistlsaointerval() != '5' \
@@ -1581,7 +1593,7 @@ class OspfVrf(object):
                 else:
                     self.updates_cmd.append(
                         'undo lsa-originate-interval')
-        if self.lsaointervalflag == 'true':
+        if self.lsaointervalflag is True:
             if self.lsa_originate_changed:
                 if self.state == 'present':
                     self.updates_cmd.append('lsa-originate-interval 0 ')
@@ -1654,14 +1666,12 @@ def main():
         vrf=dict(required=False, type='str', default='_public_'),
         description=dict(required=False, type='str'),
         bandwidth=dict(required=False, type='str'),
-        lsaalflag=dict(required=False, default='false',
-                       choices=['true', 'false']),
+        lsaalflag=dict(type='bool', default=False),
         lsaainterval=dict(required=False, type='str'),
         lsaamaxinterval=dict(required=False, type='str'),
         lsaastartinterval=dict(required=False, type='str'),
         lsaaholdinterval=dict(required=False, type='str'),
-        lsaointervalflag=dict(
-            required=False, default='false', choices=['true', 'false']),
+        lsaointervalflag=dict(type='bool', default=False),
         lsaointerval=dict(required=False, type='str'),
         lsaomaxinterval=dict(required=False, type='str'),
         lsaostartinterval=dict(required=False, type='str'),
@@ -1675,7 +1685,7 @@ def main():
         spfholdinterval=dict(required=False, type='str'),
         state=dict(required=False, choices=['present', 'absent'], default='present'),
     )
-
+    argument_spec.update(ce_argument_spec)
     module = OspfVrf(argument_spec)
     module.work()
 

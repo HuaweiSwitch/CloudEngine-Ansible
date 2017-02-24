@@ -26,7 +26,6 @@ short_description: Manages VPN instance address family.
 description:
     - Manages VPN instance address family of Huawei CloudEngine switches.
 author: Yang yang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, the module will return error.
       If state=absent, the vrf will be removed, regardless of the
@@ -82,27 +81,34 @@ options:
 '''
 
 EXAMPLES = '''
-# Config vpna, set address family is ipv4
-- ce_vrf_af:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vrf af module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Config vpna, set address family is ipv4
+  ce_vrf_af:
     vrf: vpna
     vrf_aftype: v4
     state: present
-# Config vpna, delete address family is ipv4
-- ce_vrf_af:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
+- name: Config vpna, delete address family is ipv4
+  ce_vrf_af:
     vrf: vpna
     vrf_aftype: v4
     state: absent
-# Config vpna, set address family is ipv4,rd=1:1,set vpn_target_type=export_extcommunity,vpn_target_value=2:2
-- ce_vrf_af:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
+- name: Config vpna, set address family is ipv4,rd=1:1,set vpn_target_type=export_extcommunity,vpn_target_value=2:2
+  ce_vrf_af:
     vrf: vpna
     vrf_aftype: v4
     route_distinguisher: 1:1
@@ -110,18 +116,17 @@ EXAMPLES = '''
     vpn_target_value: 2:2
     vpn_target_state: present
     state: present
-# Config vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=2:2
-- ce_vrf_af:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
+- name: Config vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=2:2
+  ce_vrf_af:
     vrf: vpna
     vrf_aftype: v4
     route_distinguisher: 1:1
     vpn_target_type: export_extcommunity
     vpn_target_value: 2:2
     vpn_target_state: absent
-    state=present
+    state: present
+    provider: "{{ cli }}"
 '''
 RETURN = '''
 proposed:
@@ -190,8 +195,8 @@ changed:
 import re
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -404,10 +409,9 @@ class VrfAf(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.changed = False
@@ -427,7 +431,7 @@ class VrfAf(object):
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -439,7 +443,7 @@ class VrfAf(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
@@ -505,7 +509,7 @@ class VrfAf(object):
 
         for vrf_af_ele in self.vrf_af_info["vpnInstAF"]:
             if vrf_af_ele["afType"] == self.vrf_aftype:
-                if self.evpn == "false":
+                if self.evpn is False:
                     if not vrf_af_ele.get("vpnTargets"):
                         return False
                     for vpn_target in vrf_af_ele.get("vpnTargets"):
@@ -549,7 +553,7 @@ class VrfAf(object):
                         'undo route-distinguisher %s' % self.get_exist_rd())
             if self.vpn_target_state == "present":
                 if not self.is_vrf_rt_exist():
-                    if self.evpn == "false":
+                    if self.evpn is False:
                         self.updates_cmd.append(
                             'vpn-target %s %s' % (self.vpn_target_value, self.vpn_target_type))
                     else:
@@ -557,7 +561,7 @@ class VrfAf(object):
                             'vpn-target %s %s evpn' % (self.vpn_target_value, self.vpn_target_type))
             elif self.vpn_target_state == "absent":
                 if self.is_vrf_rt_exist():
-                    if self.evpn == "false":
+                    if self.evpn is False:
                         self.updates_cmd.append(
                             'undo vpn-target %s %s' % (self.vpn_target_value, self.vpn_target_type))
                     else:
@@ -594,7 +598,7 @@ class VrfAf(object):
         """ check if vrf is need to change"""
 
         self.vrf_af_info["vpnInstAF"] = list()
-        if self.evpn == 'true':
+        if self.evpn is True:
             getxmlstr = CE_NC_GET_VRF_AF % (
                 self.vrf, CE_NC_GET_EXTEND_VRF_TARGET)
         else:
@@ -698,26 +702,26 @@ class VrfAf(object):
                 self.vrf_af_type_changed = bool(self.is_vrf_af_exist())
 
             if self.vpn_target_state == 'present':
-                if self.evpn == "false" and not self.is_vrf_rt_exist():
+                if self.evpn is False and not self.is_vrf_rt_exist():
                     vrf_target_operate = CE_NC_CREATE_VRF_TARGET % (
                         self.vpn_target_type, self.vpn_target_value)
                     configxmlstr = CE_NC_CREATE_VRF_AF % (
                         self.vrf, self.vrf_aftype, route_d, vrf_target_operate)
                     self.vpn_target_changed = True
-                if self.evpn == "true" and not self.is_vrf_rt_exist():
+                if self.evpn is True and not self.is_vrf_rt_exist():
                     vrf_target_operate = CE_NC_CREATE_EXTEND_VRF_TARGET % (
                         self.vpn_target_type, self.vpn_target_value)
                     configxmlstr = CE_NC_CREATE_VRF_AF % (
                         self.vrf, self.vrf_aftype, route_d, vrf_target_operate)
                     self.vpn_target_changed = True
             elif self.vpn_target_state == 'absent':
-                if self.evpn == "false" and self.is_vrf_rt_exist():
+                if self.evpn is False and self.is_vrf_rt_exist():
                     vrf_target_operate = CE_NC_DELETE_VRF_TARGET % (
                         self.vpn_target_type, self.vpn_target_value)
                     configxmlstr = CE_NC_CREATE_VRF_AF % (
                         self.vrf, self.vrf_aftype, route_d, vrf_target_operate)
                     self.vpn_target_changed = True
-                if self.evpn == "true" and self.is_vrf_rt_exist():
+                if self.evpn is True and self.is_vrf_rt_exist():
                     vrf_target_operate = CE_NC_DELETE_EXTEND_VRF_TARGET % (
                         self.vpn_target_type, self.vpn_target_value)
                     configxmlstr = CE_NC_CREATE_VRF_AF % (
@@ -878,8 +882,7 @@ def main():
         vrf_aftype=dict(choices=['v4', 'v6'],
                         default='v4', required=False),
         route_distinguisher=dict(required=False, type='str'),
-        evpn=dict(choices=['false', 'true'],
-                  default='false', required=False),
+        evpn=dict(type='bool', default=False),
         vpn_target_type=dict(
             choices=['export_extcommunity', 'import_extcommunity'], required=False),
         vpn_target_value=dict(required=False, type='str'),
@@ -887,7 +890,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = VrfAf(argument_spec)
     interface.work()
 

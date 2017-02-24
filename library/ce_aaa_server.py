@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages AAA server global configuration.
 description:
     - Manages AAA server global configuration
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -100,49 +99,52 @@ options:
 '''
 
 EXAMPLES = '''
-# radius authentication Server Basic settings
-  - name: "radius authentication Server Basic settings"
-    ce_aaa_server:
-        state:  present
-        authen_scheme_name:  test1
-        first_authen_mode:  radius
-        radius_server_group:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
 
-# undo radius authentication Server Basic settings
-  - name: "undo radius authentication Server Basic settings"
-    ce_aaa_server:
-        state:  absent
-        authen_scheme_name:  test1
-        first_authen_mode:  radius
-        radius_server_group:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- name: AAA server test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# hwtacacs accounting Server Basic settings
-  - name: "hwtacacs accounting Server Basic settings"
-    ce_aaa_server:
-        state:  present
-        acct_scheme_name:  test1
-        accounting_mode:  hwtacacs
-        hwtacas_template:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+  tasks:
 
-# undo hwtacacs accounting Server Basic settings
-  - name: "undo hwtacacs accounting Server Basic settings"
+  - name: "Radius authentication Server Basic settings"
     ce_aaa_server:
-        state:  absent
-        acct_scheme_name:  test1
-        accounting_mode:  hwtacacs
-        hwtacas_template:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      authen_scheme_name:  test1
+      first_authen_mode:  radius
+      radius_server_group:  test2
+      provider: "{{ cli }}"
+
+  - name: "Undo radius authentication Server Basic settings"
+    ce_aaa_server:
+      state:  absent
+      authen_scheme_name:  test1
+      first_authen_mode:  radius
+      radius_server_group:  test2
+      provider: "{{ cli }}"
+
+  - name: "Hwtacacs accounting Server Basic settings"
+    ce_aaa_server:
+      state:  present
+      acct_scheme_name:  test1
+      accounting_mode:  hwtacacs
+      hwtacas_template:  test2
+      provider: "{{ cli }}"
+
+  - name: "Undo hwtacacs accounting Server Basic settings"
+    ce_aaa_server:
+      state:  absent
+      acct_scheme_name:  test1
+      accounting_mode:  hwtacacs
+      hwtacas_template:  test2
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -181,8 +183,8 @@ updates:
 
 import re
 import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -1752,7 +1754,9 @@ def main():
     if not HAS_NCCLIENT:
         raise Exception("Error: The ncclient library is required")
 
-    module = NetworkModule(argument_spec=argument_spec,
+    argument_spec.update(ce_argument_spec)
+
+    module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True)
 
     check_module_argument(module=module)
@@ -1764,10 +1768,10 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
+    host = module.params['provider']['host']
+    port = module.params['provider']['port']
+    username = module.params['provider']['username']
+    password = module.params['provider']['password']
     authen_scheme_name = module.params['authen_scheme_name']
     first_authen_mode = module.params['first_authen_mode']
     author_scheme_name = module.params['author_scheme_name']

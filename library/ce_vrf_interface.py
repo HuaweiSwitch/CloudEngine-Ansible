@@ -25,7 +25,6 @@ DOCUMENTATION = '''
 module: ce_vrf_interface
 version_added: "2.3"
 short_description: Manages interface specific VPN configuration.
-extends_documentation_fragment: cloudengine
 description:
     - Manages interface specific VPN configuration of Huawei CloudEngine switches.
 author: Zhijin Zhou (@CloudEngine-Ansible)
@@ -36,14 +35,12 @@ options:
         description:
             - VPN instance, the length of vrf name is 1 ~ 31,i.e. "test", but can not be _public_.
         required: true
-        default: null
     vpn_interface:
         description:
             - An interface that can binding VPN instance, i.e. 40GE1/0/22, Vlanif10.
               Must be fully qualified interface name.
               Interface types, such as 10GE, 40GE, 100GE, LoopBack, MEth, Tunnel, Vlanif....
         required: true
-        default: null
     state:
         description:
             - Manage the state of the resource.
@@ -53,10 +50,33 @@ options:
 '''
 
 EXAMPLES = '''
-# Configure a VPN instance for the interface
-- ce_vrf_interface: vpn_interface=40GE1/0/2 vrf=test state=present
-# Disable the association between a VPN instance and an interface
-- ce_vrf_interface: vpn_interface=40GE1/0/2 vrf=test state=absent
+- name: VRF interface test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Configure a VPN instance for the interface"
+    ce_vrf_interface:
+      vpn_interface: 40GE1/0/2
+      vrf: test
+      state: present
+      provider: "{{ cli }}"
+
+  - name: "Disable the association between a VPN instance and an interface"
+    ce_vrf_interface:
+      vpn_interface: 40GE1/0/2
+      vrf: test
+      state: absent
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -101,8 +121,8 @@ changed:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -248,7 +268,7 @@ def get_interface_type(interface):
 class VrfInterface(object):
     """Manange vpn instance"""
 
-    def __init__(self, argument_spec, ):
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
         self.netconf = None
@@ -265,10 +285,10 @@ class VrfInterface(object):
         self.conf_exist = False
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.password = self.module.params['provider']['password']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.changed = False
@@ -284,7 +304,7 @@ class VrfInterface(object):
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -293,7 +313,7 @@ class VrfInterface(object):
         if HAS_NCCLIENT:
             self.netconf = get_netconf(host=self.host, port=self.port,
                                        username=self.username,
-                                       password=self.module.params['password'])
+                                       password=self.module.params['provider']['password'])
             if not self.netconf:
                 self.module.fail_json(msg='Error: netconf init failed')
         else:
@@ -545,7 +565,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     vrf_intf = VrfInterface(argument_spec)
     vrf_intf.work()
 

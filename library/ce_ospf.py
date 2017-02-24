@@ -28,7 +28,6 @@ short_description: Manages configuration of an OSPF instance.
 description:
     - Manages configuration of an OSPF instance.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     process_id:
         description:
@@ -106,13 +105,26 @@ options:
 '''
 
 EXAMPLES = '''
-- ce_ospf:
+- name: ospf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Configure ospf
+  ce_ospf:
     process_id: 1
     area: 100
     state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -147,8 +159,8 @@ changed:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -380,9 +392,9 @@ class OSPF(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # ospf info
         self.ospf_info = dict()
@@ -401,7 +413,7 @@ class OSPF(object):
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -413,7 +425,7 @@ class OSPF(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
@@ -1036,7 +1048,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = OSPF(argument_spec)
     module.work()
 

@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages NetStream template configuration.
 description:
     - Manages NetStream template configuration on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -76,43 +75,39 @@ options:
 
 EXAMPLES = '''
 # config ipv4 netstream record
-  - name: "config ipv4 netstream record"
-    ce_netstream_template:
-        state:  present
-        type:  ip
-        record_name:  test
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- ce_netstream_template:
+    state:  present
+    type:  ip
+    record_name:  test
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
 # undo ipv4 netstream record
-  - name: "undo ipv4 netstream record"
-    ce_netstream_template:
-        state:  absent
-        type:  ip
-        record_name:  test
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- ce_netstream_template:
+    state:  absent
+    type:  ip
+    record_name:  test
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
 # config ipv4 netstream record collect_counter
-  - name: "config ipv4 netstream record collect_counter"
-    ce_netstream_template:
-        state:  present
-        type:  ip
-        record_name:  test
-        collect_counter:  bytes
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- ce_netstream_template:
+    state:  present
+    type:  ip
+    record_name:  test
+    collect_counter:  bytes
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
 # undo ipv4 netstream record collect_counter
-  - name: "undo ipv4 netstream record collect_counter"
-    ce_netstream_template:
-        state:  absent
-        type:  ip
-        record_name:  test
-        collect_counter:  bytes
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- ce_netstream_template:
+    state:  absent
+    type:  ip
+    record_name:  test
+    collect_counter:  bytes
+    username: "{{ un }}"
+    password: "{{ pwd }}"
+    host: "{{ inventory_hostname }}"
 '''
 
 RETURN = '''
@@ -147,8 +142,9 @@ updates:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
 
 
 class NetstreamTemplate(object):
@@ -160,8 +156,7 @@ class NetstreamTemplate(object):
         # module
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # netstream config
         self.netstream_cfg = None
@@ -187,11 +182,7 @@ class NetstreamTemplate(object):
         """ Cli load configuration """
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_get_netstream_config(self):
         """ Cli get netstream configuration """
@@ -200,9 +191,10 @@ class NetstreamTemplate(object):
             cmd = "netstream record %s ip" % self.record_name
         else:
             cmd = "netstream record %s vxlan inner-ip" % self.record_name
-
+        flags = list()
         regular = "| section include %s" % cmd
-        self.netstream_cfg = self.module.config.get_config(regular=regular)
+        flags.append(regular)
+        self.netstream_cfg = get_config(self.module, flags)
 
     def check_args(self):
         """ Check module args """
@@ -468,7 +460,7 @@ def main():
         collect_interface=dict(choices=['input', 'output']),
         description=dict(type='str')
     )
-
+    argument_spec.update(ce_argument_spec)
     module = NetstreamTemplate(argument_spec=argument_spec)
     module.work()
 

@@ -99,41 +99,46 @@ options:
 """
 
 EXAMPLES = '''
-# Configure EVN BGP on Layer 2 and Layer 3 VXLAN gateways to establish EVN BGP peer relationships.
-- ce_vxlan_arp:
-    evn_bgp: enable
-    evn_source_ip: 6.6.6.6
-    evn_peer_ip: 7.7.7.7
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure a Layer 3 VXLAN gateway as a BGP RR.
-- ce_vxlan_arp:
-    evn_bgp: enable
-    evn_server: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable EVN BGP on a Layer 3 VXLAN gateway to collect host information.
-- ce_vxlan_arp:
-    vbdif_name: Vbdif100
-    arp_collect_host: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable Layer 2 and Layer 3 VXLAN gateways to use EVN BGP to advertise host information.
-- ce_vxlan_arp:
-    host_collect_protocol: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable ARP broadcast suppression on a Layer 2 VXLAN gateway.
-- ce_vxlan_arp:
-    bridge_domain_id: 100
-    arp_suppress: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+
+- name: CloudEngine vxlan arp test
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      username: admin
+      password: admin
+      transport: cli
+
+  tasks:
+
+  - name: "Configure EVN BGP on Layer 2 and Layer 3 VXLAN gateways to establish EVN BGP peer relationships"
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_source_ip: 6.6.6.6
+      evn_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+
+  - name: "Configure a Layer 3 VXLAN gateway as a BGP RR"
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_server: enable
+      provider: "{{ cli }}"
+
+  - name: "Enable EVN BGP on a Layer 3 VXLAN gateway to collect host information"
+    ce_vxlan_arp:
+      vbdif_name: Vbdif100
+      arp_collect_host: true
+      provider: "{{ cli }}"
+
+  - name: "Enable Layer 2 and Layer 3 VXLAN gateways to use EVN BGP to advertise host information"
+    ce_vxlan_arp:
+      host_collect_protocol: enable
+      provider: "{{ cli }}"
+
+  - name: "Enable ARP broadcast suppression on a Layer 2 VXLAN gateway"
+    ce_vxlan_arp:
+      bridge_domain_id: 100
+      arp_suppress: enable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -167,8 +172,9 @@ changed:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.cloudengine import get_config, load_config
+from ansible.module_utils.cloudengine import ce_argument_spec
 
 
 def is_config_exist(cmp_cfg, test_cfg):
@@ -178,6 +184,7 @@ def is_config_exist(cmp_cfg, test_cfg):
         return False
 
     return bool(test_cfg in cmp_cfg)
+
 
 def is_valid_v4addr(addr):
     """check is ipv4 addr is valid"""
@@ -195,6 +202,7 @@ def is_valid_v4addr(addr):
 
     return False
 
+
 def get_evn_peers(config):
     """get evn peer ip list"""
 
@@ -203,6 +211,7 @@ def get_evn_peers(config):
         return None
     else:
         return list(set(get))
+
 
 def get_evn_srouce(config):
     """get evn peer ip list"""
@@ -214,6 +223,7 @@ def get_evn_srouce(config):
     else:
         return get[0]
 
+
 def get_evn_reflect_client(config):
     """get evn reflect client list"""
 
@@ -223,6 +233,7 @@ def get_evn_reflect_client(config):
         return None
     else:
         return list(get)
+
 
 class VxlanArp(object):
     """
@@ -266,31 +277,29 @@ class VxlanArp(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec,
+                                    required_together=[['vbdif_name', 'arp_collect_host']],
+                                    supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
+
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
-        config = ""
 
-        exp = " | ignore-case section include evn bgp|host collect protocol bgp"
+        flags = list()
+        exp = "| ignore-case section include evn bgp|host collect protocol bgp"
         if self.vbdif_name:
             exp += "|^interface %s$" % self.vbdif_name
 
         if self.bridge_domain_id:
             exp += "|^bridge-domain %s$" % self.bridge_domain_id
 
-        config = self.module.config.get_config(
-            include_defaults=False, regular=exp)
+        flags.append(exp)
+        config = get_config(self.module, flags)
 
         return config
 
@@ -332,7 +341,6 @@ class VxlanArp(object):
 
     def config_evn_bgp(self):
         """enables EVN BGP and configure evn bgp command"""
-
 
         evn_bgp_view = False
         evn_bgp_enable = False
@@ -680,7 +688,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanArp(argument_spec)
     module.work()
 

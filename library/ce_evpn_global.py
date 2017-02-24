@@ -25,25 +25,40 @@ DOCUMENTATION = '''
 module: ce_evpn_global
 version_added: "2.3"
 short_description: Manages global configuration of EVPN.
-extends_documentation_fragment: cloudengine
 description:
     - Manages global configuration of EVPN.
 author: Zhijin Zhou (@CloudEngine-Ansible)
 notes:
-    - Before configuring evpn_overlay_enable=false, delete other EVPN configurations.
+    - Before configuring evpn_overlay_enable=disable, delete other EVPN configurations.
 options:
     evpn_overlay_enable:
         description:
             - configure EVPN as the VXLAN control plane.
         required: true
-        choices: ['true','false']
+        choices: ['enable','disable']
 '''
 
 EXAMPLES = '''
-# Configure EVPN as the VXLAN control plan
-- ce_evpn_global: evpn_overlay_enable=true
-# Unconfigure EVPN as the VXLAN control plan
-- ce_evpn_global: evpn_overlay_enable=false
+
+- name: CloudEngine evpn global test
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      username: admin
+      password: admin
+      transport: cli
+
+  tasks:
+
+  - name: "Configure EVPN as the VXLAN control plan"
+    ce_evpn_global:
+      evpn_overlay_enable: enable
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure EVPN as the VXLAN control plan"
+    ce_evpn_global:
+      evpn_overlay_enable: disable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -52,20 +67,20 @@ proposed:
     returned: always
     type: dict
     sample: {
-                "evpn_overlay_enable": "true"
+                "evpn_overlay_enable": "enable"
             }
 existing:
     description: k/v pairs of existing attributes on the device
     type: dict
     sample: {
-                "evpn_overlay_enable": "false"
+                "evpn_overlay_enable": "disable"
             }
 end_state:
     description: k/v pairs of end attributes on the interface
     returned: always
     type: dict or null
     sample: {
-                "evpn_overlay_enable": "true"
+                "evpn_overlay_enable": "enable"
             }
 updates:
     description: command list sent to the device
@@ -82,8 +97,9 @@ changed:
 '''
 
 
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.cloudengine import get_config, load_config
+from ansible.module_utils.cloudengine import ce_argument_spec
 
 
 class EvpnGlobal(object):
@@ -117,17 +133,13 @@ class EvpnGlobal(object):
 
     def init_module(self):
         """init_module"""
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -142,13 +154,14 @@ class EvpnGlobal(object):
 
     def get_evpn_global_info(self):
         """ get current EVPN global configration"""
-        self.global_info['evpnOverLay'] = 'false'
 
+        self.global_info['evpnOverLay'] = 'disable'
+        flags = list()
         exp = " | include evpn-overlay enable"
-        config = self.module.config.get_config(
-            include_defaults=False, regular=exp)
+        flags.append(exp)
+        config = get_config(self.module, flags)
         if config:
-            self.global_info['evpnOverLay'] = 'true'
+            self.global_info['evpnOverLay'] = 'enable'
 
     def get_existing(self):
         """get existing config"""
@@ -188,7 +201,7 @@ class EvpnGlobal(object):
     def config_evnp_global(self):
         """ set global EVPN configration"""
         if not self.conf_exist:
-            if self.overlay_enable == 'true':
+            if self.overlay_enable == 'enable':
                 self.cli_add_command('evpn-overlay enable')
             else:
                 self.cli_add_command('evpn-overlay enable', True)
@@ -215,9 +228,9 @@ def main():
 
     argument_spec = dict(
         evpn_overlay_enable=dict(
-            required=True, type='str', choices=['true', 'false']),
+            required=True, type='str', choices=['enable', 'disable']),
     )
-
+    argument_spec.update(ce_argument_spec)
     evpn_global = EvpnGlobal(argument_spec)
     evpn_global.work()
 

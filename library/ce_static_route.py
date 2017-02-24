@@ -27,7 +27,6 @@ short_description: Manages static route configuration.
 description:
     - Manages the static routes of Huawei CloudEngine switches.
 author: Yang yang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, vrf is set to default.
       If state=absent, the route will be removed, regardless of the
@@ -90,16 +89,61 @@ options:
 '''
 
 EXAMPLES = '''
-# Config a ipv4 static route, next hop is an address and that it has the proper description
-- ce_static_route: prefix=2.1.1.2 mask = 24 next_hop=3.1.1.2 description='Configured by Ansible' aftype=v4
-# Config a ipv4 static route ,next hop is an interface and that it has the proper description
-- ce_static_route: prefix=2.1.1.2 mask = 24 next_hop=10GE1/0/1 description='Configured by Ansible' aftype=v4
-# Config a ipv6 static route, next hop is an address and that it has the proper description
-- ce_static_route: prefix=fc00:0:0:2001::  mask = 64 next_hop=fc00:0:0:2004::1 description='Configured by Ansible' aftype=v6
-# Config a ipv4 static route, next hop is an interface and that it has the proper description
-- ce_static_route: prefix=fc00:0:0:2001:: mask = 64 next_hop=10GE1/0/1 description='Configured by Ansible' aftype=v6
-# Config a VRF and set ipv4 static route, next hop is an address and that it has the proper description
-- ce_static_route: vrf=vpna prefix=2.1.1.2 mask = 24 next_hop=3.1.1.2 description='Configured by Ansible' aftype=v4
+- name: static route module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Config a ipv4 static route, next hop is an address and that it has the proper description
+  ce_static_route:
+    prefix: 2.1.1.2
+    mask: 24
+    next_hop: 3.1.1.2
+    description: 'Configured by Ansible'
+    aftype: v4
+    provider: "{{ cli }}"
+- name: Config a ipv4 static route ,next hop is an interface and that it has the proper description
+  ce_static_route:
+    prefix: 2.1.1.2
+    mask: 24
+    next_hop: 10GE1/0/1
+    description: 'Configured by Ansible'
+    aftype: v4
+    provider: "{{ cli }}"
+- name: Config a ipv6 static route, next hop is an address and that it has the proper description
+  ce_static_route:
+    prefix: fc00:0:0:2001::1
+    mask: 64
+    next_hop: fc00:0:0:2004::1
+    description: 'Configured by Ansible'
+    aftype: v6
+    provider: "{{ cli }}"
+- name: Config a ipv4 static route, next hop is an interface and that it has the proper description
+  ce_static_route:
+    prefix: fc00:0:0:2001::1
+    mask: 64
+    next_hop: 10GE1/0/1
+    description: 'Configured by Ansible'
+    aftype: v6
+    provider: "{{ cli }}"
+- name: Config a VRF and set ipv4 static route, next hop is an address and that it has the proper description
+  ce_static_route:
+    vrf: vpna
+    prefix: 2.1.1.2
+    mask: 24
+    next_hop: 3.1.1.2
+    description: 'Configured by Ansible'
+    aftype: v4
+    provider: "{{ cli }}"
 '''
 RETURN = '''
 proposed:
@@ -135,8 +179,8 @@ changed:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -334,10 +378,9 @@ class StaticRoute(object):
             self.destvrf = "_public_"
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.changed = False
@@ -354,7 +397,7 @@ class StaticRoute(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -366,7 +409,7 @@ class StaticRoute(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: Netconf init failed')
 
@@ -832,7 +875,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = StaticRoute(argument_spec)
     interface.work()
 

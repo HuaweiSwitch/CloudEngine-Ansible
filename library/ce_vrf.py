@@ -28,7 +28,6 @@ short_description: Manages VPN instance.
 description:
     - Manages VPN instance of Huawei CloudEngine switches.
 author: Yang yang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, vrf is set to default.
       If state==absent, the route will be removed, regardless of the
@@ -52,18 +51,31 @@ options:
 '''
 
 EXAMPLES = '''
-# Config a vpn install named vpna, description is test
-- ce_vrf:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-    vrf=vpna description=test state=present
-# Delete a vpn install named vpna
-- ce_vrf:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-    vrf=vpna state=absent
+- name: vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Config a vpn install named vpna, description is test
+  ce_vrf:
+    vrf: vpna
+    description: test
+    state: present
+    provider: "{{ cli }}"
+- name: Delete a vpn install named vpna
+  ce_vrf:
+    vrf: vpna
+    state: absent
+    provider: "{{ cli }}"
 '''
 RETURN = '''
 proposed:
@@ -99,8 +111,8 @@ changed:
 
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -172,10 +184,9 @@ class Vrf(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.changed = False
@@ -191,7 +202,7 @@ class Vrf(object):
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
@@ -203,7 +214,7 @@ class Vrf(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
@@ -378,7 +389,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = Vrf(argument_spec)
     interface.work()
 

@@ -28,7 +28,6 @@ short_description: Manages global attributes of VXLAN and bridge domain.
 description:
     - Manages global attributes of VXLAN and bridge domain.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     bridge_domain_id:
         description:
@@ -90,13 +89,25 @@ options:
 """
 
 EXAMPLES = '''
-# Create bridge domain and set tunnel mode to VXLAN
-- ce_vxlan_global:
+- name: vxlan global module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Create bridge domain and set tunnel mode to VXLAN
+  ce_vxlan_global:
     bridge_domain_id: 100
     nvo3_acl_extend: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -131,8 +142,9 @@ changed:
 import re
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_netconf, get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config, get_netconf
+from ansible.module_utils.ce import ce_argument_spec
 
 HAS_NCCLIENT = False
 try:
@@ -195,9 +207,9 @@ class VxlanGlobal(object):
         self.state = self.module.params['state']
 
         # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.host = self.module.params['provider']['host']
+        self.username = self.module.params['provider']['username']
+        self.port = self.module.params['provider']['port']
 
         # state
         self.config = ""  # current config
@@ -216,8 +228,8 @@ class VxlanGlobal(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def init_netconf(self):
         """init netconf"""
@@ -228,7 +240,7 @@ class VxlanGlobal(object):
         self.netconf = get_netconf(host=self.host,
                                    port=self.port,
                                    username=self.username,
-                                   password=self.module.params['password'])
+                                   password=self.module.params['provider']['password'])
         if not self.netconf:
             self.module.fail_json(msg='Error: netconf init failed')
 
@@ -248,17 +260,15 @@ class VxlanGlobal(object):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
 
+        flags = list()
         exp = " | include vxlan|assign | exclude undo"
-        return self.module.config.get_config(include_defaults=True, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -583,7 +593,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanGlobal(argument_spec)
     module.work()
 

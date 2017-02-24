@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
+
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
                     'version': '1.0'}
@@ -27,7 +28,6 @@ short_description: Manages timeout mode of NetStream.
 description:
     - Manages timeout mode of NetStream.
 author: YangYang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     timeout_interval:
         description:
@@ -62,72 +62,74 @@ options:
 """
 
 EXAMPLES = '''
-# Configure netstream ip timeout active interval , the interval is 40 minutes.
-- ce_netstream_aging:
-    timeout_interval: 40
-    type: ip
-    timeout_type: active
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure netstream vxlan timeout active interval , the interval is 40 minutes.
-- ce_netstream_aging:
-    timeout_interval: 40
-    type: vxlan
-    timeout_type: active
-    active_state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Delete netstream ip timeout active interval , set the ip timeout interval to 30 minutes.
-- ce_netstream_aging:
-    type: ip
-    timeout_type: active
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Delete netstream vxlan timeout active interval , set the vxlan timeout interval to 30 minutes.
-- ce_netstream_aging:
-    type: vxlan
-    timeout_type: active
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable netstream ip tcp session timeout.
-- ce_netstream_aging:
-    type: ip
-    timeout_type: tcp-session
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable netstream vxlan tcp session timeout.
-- ce_netstream_aging:
-    type: vxlan
-    timeout_type: tcp-session
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Disable netstream ip tcp session timeout.
-- ce_netstream_aging:
-    type: ip
-    timeout_type: tcp-session
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Disable netstream vxlan tcp session timeout.
-- ce_netstream_aging:
-    type: vxlan
-    timeout_type: tcp-session
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+
+- name: CloudEngine netstream aging test
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      username: admin
+      password: admin
+      transport: cli
+
+  tasks:
+
+  - name: "Configure netstream ip timeout active interval , the interval is 40 minutes"
+    ce_netstream_aging:
+      timeout_interval: 40
+      type: ip
+      timeout_type: active
+      state: present
+      provider: "{{ cli }}"
+
+  - name: "Configure netstream vxlan timeout active interval , the interval is 40 minutes"
+    ce_netstream_aging:
+      timeout_interval: 40
+      type: vxlan
+      timeout_type: active
+      active_state: present
+      provider: "{{ cli }}"
+
+  - name: "Delete netstream ip timeout active interval , set the ip timeout interval to 30 minutes"
+    ce_netstream_aging:
+      type: ip
+      timeout_type: active
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Delete netstream vxlan timeout active interval , set the vxlan timeout interval to 30 minutes"
+    ce_netstream_aging:
+      type: vxlan
+      timeout_type: active
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Enable netstream ip tcp session timeout"
+    ce_netstream_aging:
+      type: ip
+      timeout_type: tcp-session
+      state: present
+      provider: "{{ cli }}"
+
+  - name: "Enable netstream vxlan tcp session timeout"
+    ce_netstream_aging:
+      type: vxlan
+      timeout_type: tcp-session
+      state: present
+      provider: "{{ cli }}"
+
+  - name: "Disable netstream ip tcp session timeout"
+    ce_netstream_aging:
+      type: ip
+      timeout_type: tcp-session
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Disable netstream vxlan tcp session timeout"
+    ce_netstream_aging:
+      type: vxlan
+      timeout_type: tcp-session
+      state: absent
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -195,8 +197,10 @@ changed:
     sample: true
 '''
 
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.cloudengine import get_config, load_config
+from ansible.module_utils.cloudengine import ce_argument_spec
 
 
 class NetStreamAging(object):
@@ -244,18 +248,13 @@ class NetStreamAging(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -281,9 +280,10 @@ class NetStreamAging(object):
         inactive_tmp["vxlan"] = "30"
         tcp_tmp["ip"] = "absent"
         tcp_tmp["vxlan"] = "absent"
+        flags = list()
         exp = " | ignore-case include netstream timeout"
-        config = self.module.config.get_config(
-            include_defaults=False, regular=exp)
+        flags.append(exp)
+        config = get_config(self.module, flags)
         if config:
             config = config.lstrip()
             config_list = config.split('\n')
@@ -320,9 +320,11 @@ class NetStreamAging(object):
         inactive_tmp["vxlan"] = "30"
         tcp_tmp["ip"] = "absent"
         tcp_tmp["vxlan"] = "absent"
+        flags = list()
         exp = " | ignore-case include netstream timeout"
-        config = self.module.config.get_config(
-            include_defaults=False, regular=exp)
+        exp = "| ignore-case include evpn-overlay enable"
+        flags.append(exp)
+        config = get_config(self.module, flags)
         if config:
             config = config.lstrip()
             config_list = config.split('\n')
@@ -506,7 +508,7 @@ def main():
         timeout_type=dict(required=False, choices=['active', 'inactive', 'tcp-session', 'manual']),
         manual_slot=dict(required=False, type='str'),
     )
-
+    argument_spec.update(ce_argument_spec)
     module = NetStreamAging(argument_spec)
     module.work()
 

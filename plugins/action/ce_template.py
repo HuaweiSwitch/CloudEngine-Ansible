@@ -20,44 +20,31 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
-import re
 import time
 import glob
+import urlparse
 
-from ansible.plugins.action.ce import ActionModule as _ActionModule
 from ansible.module_utils._text import to_text
-from ansible.module_utils.six.moves.urllib.parse import urlsplit
-from ansible.utils.vars import merge_hash
-
-
-PRIVATE_KEYS_RE = re.compile('__.+__')
-
+from ansible.plugins.action.ce import ActionModule as _ActionModule
 
 class ActionModule(_ActionModule):
 
     def run(self, tmp=None, task_vars=None):
 
-        if self._task.args.get('src'):
-            try:
-                self._handle_template()
-            except ValueError as exc:
-                return dict(failed=True, msg=exc.message)
+        try:
+            self._handle_template()
+        except (ValueError, AttributeError) as exc:
+            return dict(failed=True, msg=exc.message)
 
         result = super(ActionModule, self).run(tmp, task_vars)
 
         if self._task.args.get('backup') and result.get('__backup__'):
             # User requested backup and no error occurred in module.
-            # NOTE: If there is a parameter error, _backup key may not be in results.
-            filepath = self._write_backup(task_vars['inventory_hostname'],
-                                          result['__backup__'])
+            # NOTE: If there is a parameter error, __backup__ key may not be in results.
+            self._write_backup(task_vars['inventory_hostname'], result['__backup__'])
 
-            result['backup_path'] = filepath
-
-        # strip out any keys that have two leading and two trailing
-        # underscore characters
-        for key in result.keys():
-            if PRIVATE_KEYS_RE.match(key):
-                del result[key]
+        if '__backup__' in result:
+            del result['__backup__']
 
         return result
 
@@ -76,13 +63,15 @@ class ActionModule(_ActionModule):
         tstamp = time.strftime("%Y-%m-%d@%H:%M:%S", time.localtime(time.time()))
         filename = '%s/%s_config.%s' % (backup_path, host, tstamp)
         open(filename, 'w').write(contents)
-        return filename
 
     def _handle_template(self):
         src = self._task.args.get('src')
+        if not src:
+            raise ValueError('missing required arguments: src')
+
         working_path = self._get_working_path()
 
-        if os.path.isabs(src) or urlsplit('src').scheme:
+        if os.path.isabs(src) or urlparse.urlsplit(src).scheme:
             source = src
         else:
             source = self._loader.path_dwim_relative(working_path, 'templates', src)
@@ -90,7 +79,7 @@ class ActionModule(_ActionModule):
                 source = self._loader.path_dwim_relative(working_path, src)
 
         if not os.path.exists(source):
-            raise ValueError('path specified in src not found')
+            return
 
         try:
             with open(source, 'r') as f:

@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages advanced ACL configuration.
 description:
     - Manages advanced ACL configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -223,7 +222,7 @@ options:
         description:
             - Whether TTL Expired is matched, with the TTL value of 1.
         required: false
-        default: null
+        default: false
         choices: ['true', 'false']
     vrf_name:
         description:
@@ -247,7 +246,7 @@ options:
         description:
             - Match established connections.
         required: false
-        default: null
+        default: false
         choices: ['true', 'false']
     time_range:
         description:
@@ -270,57 +269,58 @@ options:
         description:
             - Flag of logging matched data packets.
         required: false
-        default: null
+        default: false
         choices: ['true', 'false']
 '''
 
 EXAMPLES = '''
-# config ACL
-  - name: "config ACL"
+
+- name: CloudEngine advance acl test
+  vars:
+    host: "{{ inventory_hostname }}"
+    username: admin
+    password: admin
+    transport: cli
+
+  tasks:
+
+  - name: "Config ACL"
     ce_acl:
-        state:  present
-        acl_name:  3200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL
-  - name: "undo ACL"
+      state:  present
+      acl_name:  3200
+      provider: "{{ cli }}"
+
+  - name: "Undo ACL"
     ce_acl:
-        state:  delete_acl
-        acl_name:  3200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config ACL advance rule
-  - name: "config ACL advance rule"
+      state:  delete_acl
+      acl_name:  3200
+      provider: "{{ cli }}"
+
+  - name: "Config ACL advance rule"
     ce_acl:
-        state:  present
-        acl_name:  test
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        protocol:  tcp
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL advance rule
-  - name: "undo ACL advance rule"
+      state:  present
+      acl_name:  test
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      protocol:  tcp
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      provider: "{{ cli }}"
+
+  - name: "Undo ACL advance rule"
     ce_acl:
-        state:  absent
-        acl_name:  test
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        protocol:  tcp
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      acl_name:  test
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      protocol:  tcp
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -354,8 +354,8 @@ updates:
 import socket
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_netconf, ce_argument_spec
 
 try:
     from ncclient.operations.rpc import RPCError
@@ -540,15 +540,14 @@ class AdvanceAcl(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
+        self.host = self.module.params['provider']['host']
+        self.port = self.module.params['provider']['port']
+        self.username = self.module.params['provider']['username']
+        self.password = self.module.params['provider']['password']
         self.acl_name = self.module.params['acl_name'] or None
         self.acl_num = self.module.params['acl_num'] or None
         self.acl_type = None
@@ -584,16 +583,16 @@ class AdvanceAcl(object):
         self.icmp_name = self.module.params['icmp_name'] or None
         self.icmp_type = self.module.params['icmp_type'] or None
         self.icmp_code = self.module.params['icmp_code'] or None
-        self.ttl_expired = self.module.params['ttl_expired'] or None
+        self.ttl_expired = self.module.params['ttl_expired']
         self.vrf_name = self.module.params['vrf_name'] or None
         self.syn_flag = self.module.params['syn_flag'] or None
         self.tcp_flag_mask = self.module.params['tcp_flag_mask'] or None
-        self.established = self.module.params['established'] or None
+        self.established = self.module.params['established']
         self.time_range = self.module.params['time_range'] or None
         self.rule_description = self.module.params['rule_description'] or None
         self.igmp_type = self.module.params['igmp_type'] or None
         self.igmp_type_num = None
-        self.log_flag = self.module.params['log_flag'] or None
+        self.log_flag = self.module.params['log_flag']
 
         self.precedence_name = dict()
         self.precedence_name["0"] = "routine"
@@ -1089,24 +1088,21 @@ class AdvanceAcl(object):
                     conf_str += "<aclIcmpType></aclIcmpType>"
                 if self.icmp_code:
                     conf_str += "<aclIcmpCode></aclIcmpCode>"
-                if self.ttl_expired:
-                    conf_str += "<aclTtlExpired></aclTtlExpired>"
+                conf_str += "<aclTtlExpired></aclTtlExpired>"
                 if self.vrf_name:
                     conf_str += "<vrfName></vrfName>"
                 if self.syn_flag:
                     conf_str += "<aclSynFlag></aclSynFlag>"
                 if self.tcp_flag_mask:
                     conf_str += "<aclTcpFlagMask></aclTcpFlagMask>"
-                if self.established:
-                    conf_str += "<aclEstablished></aclEstablished>"
+                conf_str += "<aclEstablished></aclEstablished>"
                 if self.time_range:
                     conf_str += "<aclTimeName></aclTimeName>"
                 if self.rule_description:
                     conf_str += "<aclRuleDescription></aclRuleDescription>"
                 if self.igmp_type:
                     conf_str += "<aclIgmpType></aclIgmpType>"
-                if self.log_flag:
-                    conf_str += "<aclLogFlag></aclLogFlag>"
+                conf_str += "<aclLogFlag></aclLogFlag>"
 
                 conf_str += CE_GET_ACL_ADVANCE_RULE_TAIL
                 con_obj = self.netconf_get_config(conf_str=conf_str)
@@ -1215,7 +1211,7 @@ class AdvanceAcl(object):
                                 find_flag = False
                             if self.icmp_code and tmp.get("aclIcmpCode") != self.icmp_code:
                                 find_flag = False
-                            if self.ttl_expired and tmp.get("aclTtlExpired") != self.ttl_expired:
+                            if tmp.get("aclTtlExpired").lower() != str(self.ttl_expired).lower():
                                 find_flag = False
                             if self.vrf_name and tmp.get("vrfName") != self.vrf_name:
                                 find_flag = False
@@ -1223,7 +1219,8 @@ class AdvanceAcl(object):
                                 find_flag = False
                             if self.tcp_flag_mask and tmp.get("aclTcpFlagMask") != self.tcp_flag_mask:
                                 find_flag = False
-                            if self.established and tmp.get("aclEstablished") != self.established:
+                            if self.protocol == "tcp" and \
+                                    tmp.get("aclEstablished").lower() != str(self.established).lower():
                                 find_flag = False
                             if self.time_range and tmp.get("aclTimeName") != self.time_range:
                                 find_flag = False
@@ -1231,7 +1228,7 @@ class AdvanceAcl(object):
                                 find_flag = False
                             if self.igmp_type and tmp.get("aclIgmpType") != self.igmp_type_num:
                                 find_flag = False
-                            if self.log_flag and tmp.get("aclLogFlag") != self.log_flag:
+                            if tmp.get("aclLogFlag").lower() != str(self.log_flag).lower():
                                 find_flag = False
 
                             if find_flag:
@@ -1319,16 +1316,14 @@ class AdvanceAcl(object):
             self.proposed["syn_flag"] = self.syn_flag
         if self.tcp_flag_mask:
             self.proposed["tcp_flag_mask"] = self.tcp_flag_mask
-        if self.established:
-            self.proposed["established"] = self.established
+        self.proposed["established"] = self.established
         if self.time_range:
             self.proposed["time_range"] = self.time_range
         if self.rule_description:
             self.proposed["rule_description"] = self.rule_description
         if self.igmp_type:
             self.proposed["igmp_type"] = self.igmp_type
-        if self.log_flag:
-            self.proposed["log_flag"] = self.log_flag
+        self.proposed["log_flag"] = self.log_flag
 
     def get_existing(self):
         """ Get existing state """
@@ -1480,24 +1475,22 @@ class AdvanceAcl(object):
             conf_str += "<aclIcmpType>%s</aclIcmpType>" % self.icmp_type
         if self.icmp_code:
             conf_str += "<aclIcmpCode>%s</aclIcmpCode>" % self.icmp_code
-        if self.ttl_expired:
-            conf_str += "<aclTtlExpired>%s</aclTtlExpired>" % self.ttl_expired
+        conf_str += "<aclTtlExpired>%s</aclTtlExpired>" % str(self.ttl_expired).lower()
         if self.vrf_name:
             conf_str += "<vrfName>%s</vrfName>" % self.vrf_name
         if self.syn_flag:
             conf_str += "<aclSynFlag>%s</aclSynFlag>" % self.syn_flag
         if self.tcp_flag_mask:
             conf_str += "<aclTcpFlagMask>%s</aclTcpFlagMask>" % self.tcp_flag_mask
-        if self.established:
-            conf_str += "<aclEstablished>%s</aclEstablished>" % self.established
+        if self.protocol == "tcp":
+            conf_str += "<aclEstablished>%s</aclEstablished>" % str(self.established).lower()
         if self.time_range:
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
         if self.igmp_type:
             conf_str += "<aclIgmpType>%s</aclIgmpType>" % self.igmp_type_num
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_MERGE_ACL_ADVANCE_RULE_TAIL
 
@@ -1571,7 +1564,7 @@ class AdvanceAcl(object):
                 cmd += " vpn-instance %s" % self.vrf_name
             if self.ttl_expired:
                 cmd += " ttl-expired"
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -1636,24 +1629,22 @@ class AdvanceAcl(object):
             conf_str += "<aclIcmpType>%s</aclIcmpType>" % self.icmp_type
         if self.icmp_code:
             conf_str += "<aclIcmpCode>%s</aclIcmpCode>" % self.icmp_code
-        if self.ttl_expired:
-            conf_str += "<aclTtlExpired>%s</aclTtlExpired>" % self.ttl_expired
+        conf_str += "<aclTtlExpired>%s</aclTtlExpired>" % str(self.ttl_expired).lower()
         if self.vrf_name:
             conf_str += "<vrfName>%s</vrfName>" % self.vrf_name
         if self.syn_flag:
             conf_str += "<aclSynFlag>%s</aclSynFlag>" % self.syn_flag
         if self.tcp_flag_mask:
             conf_str += "<aclTcpFlagMask>%s</aclTcpFlagMask>" % self.tcp_flag_mask
-        if self.established:
-            conf_str += "<aclEstablished>%s</aclEstablished>" % self.established
+        if self.protocol == "tcp":
+            conf_str += "<aclEstablished>%s</aclEstablished>" % str(self.established).lower()
         if self.time_range:
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
         if self.igmp_type:
             conf_str += "<aclIgmpType>%s</aclIgmpType>" % self.igmp_type
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_DELETE_ACL_ADVANCE_RULE_TAIL
 
@@ -1741,7 +1732,7 @@ class AdvanceAcl(object):
                 cmd += " vpn-instance %s" % self.vrf_name
             if self.ttl_expired:
                 cmd += " ttl-expired"
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -1821,18 +1812,19 @@ def main():
                                 'address-mask-reply', 'address-mask-request', 'custom']),
         icmp_type=dict(type='str'),
         icmp_code=dict(type='str'),
-        ttl_expired=dict(choices=['true', 'false']),
+        ttl_expired=dict(required=False, default=False, type='bool'),
         vrf_name=dict(type='str'),
         syn_flag=dict(type='str'),
         tcp_flag_mask=dict(type='str'),
-        established=dict(choices=['true', 'false']),
+        established=dict(required=False, default=False, type='bool'),
         time_range=dict(type='str'),
         rule_description=dict(type='str'),
         igmp_type=dict(choices=['host-query', 'mrouter-adver', 'mrouter-solic', 'mrouter-termi', 'mtrace-resp',
                                 'mtrace-route', 'v1host-report', 'v2host-report', 'v2leave-group', 'v3host-report']),
-        log_flag=dict(choices=['true', 'false'])
+        log_flag=dict(required=False, default=False, type='bool')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = AdvanceAcl(argument_spec=argument_spec)
     module.work()
 
