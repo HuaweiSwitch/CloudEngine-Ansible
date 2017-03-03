@@ -110,4 +110,4 @@ These modules require the following to be installed on the Ansible server:
 
 ## REFERENCES
 * [Ansible](http://www.ansible.com)
-* [Huawei support](http://www.huawei.com/en/)
+* [Huawei support](http://e.huawei.com/en/marketing-material/onLineView?MaterialID=%7bE9BED27C-914F-456A-9FB5-ACB1ED201190%7d)
