@@ -27,6 +27,7 @@
 import re
 import time
 
+
 from ansible.module_utils.basic import json, get_exception
 from ansible.module_utils.network import NetworkError
 from ansible.module_utils.network import add_argument,\
@@ -35,11 +36,11 @@ from ansible.module_utils.shell import CliBase, ShellError
 
 try:
     from ncclient import manager
+    from ncclient import xml_
     HAS_NCCLIENT = True
 except ImportError:
     HAS_NCCLIENT = False
     pass
-
 
 add_argument('use_ssl', dict(default=False, type='bool'))
 add_argument('validate_certs', dict(default=True, type='bool'))
@@ -76,7 +77,7 @@ class CeConfigMixin(object):
                     continue
                 if cmds[i].count('~') > 0:
                     index = cmds[i].index('~')
-                    if cmds[i][:index] == ' '*index:
+                    if cmds[i][:index] == ' ' * index:
                         cmds[i] = cmds[i].replace("~", "", 1)
             cfg = '\n'.join(cmds)
         return cfg
@@ -144,6 +145,63 @@ class CeConfigMixin(object):
                               'clear configuration commit %s '
                               'label' % match.group(1)])
 
+
+def get_nc_set_id(xml_str):
+    """get netconf set-id value"""
+
+    result = re.findall(r'<rpc-reply.+?set-id=\"(\d+)\"', xml_str)
+    if not result:
+        return None
+    return result[0]
+
+
+def get_xml_line(xml_list, index):
+    """get xml specified line valid string data"""
+
+    ele = None
+    while xml_list and not ele:
+        if index >= 0 and index >= len(xml_list):
+            return None
+        if index < 0 and abs(index) > len(xml_list):
+            return None
+
+        ele = xml_list[index]
+        if not ele.replace(" ", ""):
+            xml_list.pop(index)
+            ele = None
+    return ele
+
+
+def merge_xml(xml1, xml2):
+    """merge xml1 and xml2"""
+
+    xml1_list = xml1.split("</data>")[0].split("\n")
+    xml2_list = xml2.split("<data>")[1].split("\n")
+
+    while True:
+        xml1_ele1 = get_xml_line(xml1_list, -1)
+        xml1_ele2 = get_xml_line(xml1_list, -2)
+        xml2_ele1 = get_xml_line(xml2_list, 0)
+        xml2_ele2 = get_xml_line(xml2_list, 1)
+        if not xml1_ele1 or not xml1_ele2 or not xml2_ele1 or not xml2_ele2:
+            return xml1
+
+        if "xmlns" in xml2_ele1:
+            xml2_ele1 = xml2_ele1.lstrip().split(" ")[0] + ">"
+        if "xmlns" in xml2_ele2:
+            xml2_ele2 = xml2_ele2.lstrip().split(" ")[0] + ">"
+        if xml1_ele1.replace(" ", "").replace("/", "") == xml2_ele1.replace(" ", "").replace("/", ""):
+            if xml1_ele2.replace(" ", "").replace("/", "") == xml2_ele2.replace(" ", "").replace("/", ""):
+                xml1_list.pop()
+                xml2_list.pop(0)
+            else:
+                break
+        else:
+            break
+
+    return "\n".join(xml1_list + xml2_list)
+
+
 class Netconf(object):
     """ Netconf """
 
@@ -186,7 +244,25 @@ class Netconf(object):
 
         filterstr = kwargs["filter"]
         con_obj = self.mc.get(filter=filterstr)
+        set_id = get_nc_set_id(con_obj.xml)
+        if not set_id:
+            return con_obj
 
+        # continue to get next
+        xml_str = con_obj.xml
+        while set_id:
+            set_attr = dict()
+            set_attr["set-id"] = str(set_id)
+            xsd_fetch = xml_.new_ele_ns('get-next', "http://www.huawei.com/netconf/capability/base/1.0", set_attr)
+            # get next data
+            con_obj_next = self.mc.dispatch(xsd_fetch)
+            if "<data/>" in con_obj_next.xml:
+                break
+            # merge two xml data
+            xml_str = merge_xml(xml_str, con_obj_next.xml)
+            set_id = get_nc_set_id(con_obj_next.xml)
+
+        con_obj._raw = xml_str
         return con_obj
 
     def execute_action(self, **kwargs):
@@ -257,7 +333,7 @@ class Cli(CeConfigMixin, CliBase):
                 msg = msg.replace(str(exc.command), "")
             if "matched error in response: " in msg:
                 msg = msg.replace("matched error in response: ", "")
-            raise NetworkError(cmd+msg, commands=commands)
+            raise NetworkError(cmd + msg, commands=commands)
 
     def run_commands(self, commands):
         """ run_commands """
@@ -307,6 +383,7 @@ def prepare_commands(commands):
             cmd.output = 'json'
         yield cmd
 
+
 def get_cli_exception(exc=None):
     """ get cli exception message"""
 
@@ -341,4 +418,3 @@ def get_cli_exception(exc=None):
         msg[-1] += "."
 
     return ", ".join(msg).capitalize()
-

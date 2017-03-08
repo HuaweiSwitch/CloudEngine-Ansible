@@ -339,15 +339,15 @@ class Ntp(object):
 
         if not flag:
             if self.peer_type == "Server":
-                self.module.fail_json(msg='Illegal server ip-address.')
+                self.module.fail_json(msg='Error: Illegal server ip-address.')
             else:
-                self.module.fail_json(msg='Illegal peer ip-address.')
+                self.module.fail_json(msg='Error: Illegal peer ip-address.')
 
     def ntp_ucast_ipv4_validate(self):
         """ntp_ucast_ipv4_validate"""
         addr_list = re.findall(r'(.*)\.(.*)\.(.*)\.(.*)', self.address)
         if not addr_list:
-            self.module.fail_json(msg='Match ip-address fail.')
+            self.module.fail_json(msg='Error: Match ip-address fail.')
 
         value = ((long(addr_list[0][0])) * 0x1000000) + (long(addr_list[0][1])\
                 * 0x10000) + (long(addr_list[0][2]) * 0x100) + (long(addr_list[0][3]))
@@ -368,12 +368,12 @@ class Ntp(object):
 
         if not self.server and not self.peer:
             self.module.fail_json(
-                msg='Please supply the server or peer parameter')
+                msg='Error: Please supply the server or peer parameter')
 
         if self.vpn_name:
             if (len(self.vpn_name) < 1) or (len(self.vpn_name) > 31):
                 self.module.fail_json(
-                    msg='VPN name length is beetween 1 and 31.')
+                    msg='Error: VPN name length is beetween 1 and 31.')
 
         if self.address:
             self.check_ipaddr_validate()

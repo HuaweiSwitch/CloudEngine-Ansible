@@ -36,14 +36,12 @@ options:
         description:
             - VPN instance, the length of vrf name is 1 ~ 31,i.e. "test", but can not be _public_.
         required: true
-        default: null
     vpn_interface:
         description:
             - An interface that can binding VPN instance, i.e. 40GE1/0/22, Vlanif10.
               Must be fully qualified interface name.
               Interface types, such as 10GE, 40GE, 100GE, LoopBack, MEth, Tunnel, Vlanif....
         required: true
-        default: null
     state:
         description:
             - Manage the state of the resource.

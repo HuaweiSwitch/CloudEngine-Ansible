@@ -479,7 +479,7 @@ class Dldp(object):
             dldp_conf['auth_mode'] = 'none'
         elif auth_mode == 'dldpAuthSimple':
             dldp_conf['auth_mode'] = 'simple'
-        elif auth_mode == '?dldpAuthMD5':
+        elif auth_mode == 'dldpAuthMD5':
             dldp_conf['auth_mode'] = 'md5'
         elif auth_mode == 'dldpAuthSHA':
             dldp_conf['auth_mode'] = 'sha'
@@ -548,7 +548,7 @@ class Dldp(object):
             dldp_conf['auth_mode'] = 'none'
         elif auth_mode == 'dldpAuthSimple':
             dldp_conf['auth_mode'] = 'simple'
-        elif auth_mode == '?dldpAuthMD5':
+        elif auth_mode == 'dldpAuthMD5':
             dldp_conf['auth_mode'] = 'md5'
         elif auth_mode == 'dldpAuthSHA':
             dldp_conf['auth_mode'] = 'sha'
