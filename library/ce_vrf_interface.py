@@ -18,22 +18,22 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_vrf_interface
-version_added: "2.3"
-short_description: Manages interface specific VPN configuration.
+version_added: "2.4"
+short_description: Manages interface specific VPN configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages interface specific VPN configuration of Huawei CloudEngine switches.
+    - Manages interface specific VPN configuration of HUAWEI CloudEngine switches.
 author: Zhijin Zhou (@CloudEngine-Ansible)
 notes:
     - Ensure that a VPN instance has been created and the IPv4 address family has been enabled for the VPN instance.
 options:
     vrf:
         description:
-            - VPN instance, the length of vrf name is 1 ~ 31,i.e. "test", but can not be _public_.
+            - VPN instance, the length of vrf name is 1 ~ 31, i.e. "test", but can not be C(_public_).
         required: true
     vpn_interface:
         description:
@@ -82,7 +82,7 @@ EXAMPLES = '''
 RETURN = '''
 proposed:
     description: k/v pairs of parameters passed into module
-    returned: always
+    returned: verbose mode
     type: dict
     sample: {
                 "state": "present",
@@ -91,6 +91,7 @@ proposed:
              }
 existing:
     description: k/v pairs of existing attributes on the interface
+    returned: verbose mode
     type: dict
     sample: {
                 "vpn_interface": "40GE2/0/17",
@@ -98,8 +99,8 @@ existing:
             }
 end_state:
     description: k/v pairs of end attributes on the interface
-    returned: always
-    type: dict or null
+    returned: verbose mode
+    type: dict
     sample: {
                 "vpn_interface": "40GE2/0/17",
                 "vrf": "jss"
@@ -287,8 +288,9 @@ class VrfInterface(object):
     def init_module(self):
         """init_module"""
 
+        required_one_of = [("vrf", "vpn_interface")]
         self.module = AnsibleModule(
-            argument_spec=self.spec, supports_check_mode=True)
+            argument_spec=self.spec, required_one_of=required_one_of, supports_check_mode=True)
 
     def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
@@ -314,9 +316,6 @@ class VrfInterface(object):
 
     def check_params(self):
         """Check all input params"""
-
-        if not self.vrf or not self.vpn_interface:
-            self.module.fail_json(msg='Error: vrf and vpn_interface cannot be empty.')
 
         if not self.is_vrf_exist():
             self.module.fail_json(
