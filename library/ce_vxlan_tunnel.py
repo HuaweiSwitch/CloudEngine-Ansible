@@ -790,7 +790,7 @@ class VxlanTunnel(object):
             for peer_ip in self.peer_list_ip:
                 if not is_valid_address(peer_ip):
                     self.module.fail_json(
-                        msg='Error: The %s exist invalid ip address' % self.peer_list_ip)
+                        msg='Error: The ip address %s is invalid.' % self.peer_list_ip)
         # source_ip check
         if self.source_ip:
             if not is_valid_address(self.source_ip):
