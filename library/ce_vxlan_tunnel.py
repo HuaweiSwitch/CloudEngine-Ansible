@@ -18,16 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_vxlan_tunnel
-version_added: "2.3"
-short_description: Manages VXLAN tunnel configuration.
+version_added: "2.4"
+short_description: Manages VXLAN tunnel configuration on HUAWEI CloudEngine devices.
 description:
     - This module offers the ability to set the VNI and mapped to the BD,
-      and configure an ingress replication list on CloudEngine switch.
+      and configure an ingress replication list on HUAWEI CloudEngine devices.
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -720,7 +720,7 @@ class VxlanTunnel(object):
 
         for peer_ip in peer_ip_list:
             if not self.is_vni_peer_list_exist(nve_name, vni_id, peer_ip):
-                self.module.fail_json(msg='Error: The %s is not exist' % peer_ip)
+                self.module.fail_json(msg='Error: The %s does not exist' % peer_ip)
         config = self.get_current_config(vni_id, peer_ip_list)
         if not config:
             cfg_xml = CE_NC_DELETE_VNI_PEER_ADDRESS_IP_HEAD % (
@@ -783,7 +783,7 @@ class VxlanTunnel(object):
         if self.nve_name:
             if not self.check_nve_name():
                 self.module.fail_json(
-                    msg='Error: Error: Nve interface is invalid.')
+                    msg='Error: Error: NVE interface %s is invalid.' % self.nve_name)
 
         # peer_list_ip check
         if self.peer_list_ip:
@@ -795,7 +795,7 @@ class VxlanTunnel(object):
         if self.source_ip:
             if not is_valid_address(self.source_ip):
                 self.module.fail_json(
-                    msg='Error: The %s is not a valid ip address' % self.source_ip)
+                    msg='Error: The ip address %s is invalid.' % self.source_ip)
 
     def get_proposed(self):
         """get proposed info"""
