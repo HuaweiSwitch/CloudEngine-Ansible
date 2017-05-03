@@ -4,6 +4,12 @@
   hosts: cloudengine
   vars:
     test_intf: 40GE1/0/1
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
@@ -11,20 +17,20 @@
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "ensure that interface is layer3"
-    ce_interface: interface={{test_intf}} mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: before='interface 40GE1/0/1' lines='undo portswitch' provider="{{ cli }}"
     register: data
 
   - name: "Config mtu on interface (routed interface)"
-    ce_mtu: interface={{test_intf}} state=present mtu=1600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=1600 provider="{{ cli }}"
     register: data
     
   - name: "Config mtu on interface (routed interface)"
-    ce_mtu: interface={{test_intf}} state=present mtu=9216 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=9216 provider="{{ cli }}"
     register: data
  
   - name: "TEST 1"
@@ -33,11 +39,11 @@
         - data.changed == true 
   
   - name: "Unconfigure mtu on a given interface"
-    ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=absent provider="{{ cli }}"
     register: data
   
   - name: "interface invalid"
-    ce_mtu: interface=tunnel0 state=present mtu=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface=tunnel0 state=present mtu=abc provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -48,7 +54,7 @@
         - data | failed
        
   - name: "mtu invalid"
-    ce_mtu: interface={{test_intf}} state=present mtu=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=abc provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -59,7 +65,7 @@
         - data | failed
 
   - name: "mtu invalid"
-    ce_mtu: interface={{test_intf}} state=present mtu=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=0 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -70,7 +76,7 @@
         - data | failed
         
   - name: "mtu invalid"
-    ce_mtu: interface={{test_intf}} state=present mtu=45 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=45 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -81,7 +87,7 @@
         - data | failed
         
   - name: "mtu invalid"
-    ce_mtu: interface={{test_intf}} state=present mtu=9601 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=9601 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -92,7 +98,7 @@
         - data | failed
         
   - name: "mtu 9600"
-    ce_mtu: interface={{test_intf}} state=present mtu=9600 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=9600 provider="{{ cli }}"
     register: data
     ignore_errors: false
    
@@ -102,7 +108,7 @@
         - data.changed == true 
         
   - name: "mtu 46"
-    ce_mtu: interface={{test_intf}} state=present mtu=46 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present mtu=46 provider="{{ cli }}"
     register: data
     ignore_errors: false
    
@@ -112,7 +118,7 @@
         - data.changed == true 
 
   - name: "Config jumboframe max and min value on interface"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=8888 jumbo_min=7777 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=8888 jumbo_min=7777 provider="{{ cli }}"
     register: data
     
   - name: "TEST 9"
@@ -121,7 +127,7 @@
         - data.changed == true 
     
   - name: "Config jumboframe max value on interface (routed interface)"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=7777 jumbo_min=6666 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=7777 jumbo_min=6666 provider="{{ cli }}"
     register: data
  
   - name: "TEST 10"
@@ -130,7 +136,7 @@
         - data.changed == true 
 
   - name: "undo jumboframe"
-    ce_mtu: interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=absent provider="{{ cli }}"
     register: data
   
   - name: "TEST 11"
@@ -139,7 +145,7 @@
         - data.changed == true 
 
   - name: "interface invalid, TEST not changed"
-    ce_mtu: interface=tunnel0 state=present jumbo_max=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface=tunnel0 state=present jumbo_max=abc provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -150,7 +156,7 @@
         - data | failed
     
   - name: "jumbo_max invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=abc provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -161,7 +167,7 @@
         - data | failed
 
   - name: "jumbo_max invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=0 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=0 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -172,7 +178,7 @@
         - data | failed
         
   - name: "jumbo_max invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=45 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=45 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -183,7 +189,7 @@
         - data | failed
         
   - name: "jumbo_max invalid, TEST not changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=14000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=14000 provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -194,7 +200,7 @@
         - data | failed
         
   - name: "jumbo_max 12288, TEST changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=12288 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=12288 provider="{{ cli }}"
     register: data
     ignore_errors: false
    
@@ -204,7 +210,7 @@
         - data.changed == true 
         
   - name: "jumbo_max 1536, TEST changed"
-    ce_mtu: interface={{test_intf}} state=present jumbo_max=1536 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_mtu: interface={{test_intf}} state=present jumbo_max=1536 provider="{{ cli }}"
     register: data
     ignore_errors: false
    

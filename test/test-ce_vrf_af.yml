@@ -2,18 +2,25 @@
 
 - name: cloudengine vrf module test
   hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "Configure a vpn named vpna"
-    ce_vrf: vrf=vpna state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -23,7 +30,7 @@
         - data.changed == true
 
   - name: "Config EVPN overlay enable is enabled"
-    ce_evpn_global: evpn_overlay_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_global: evpn_overlay_enable=enable provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -33,7 +40,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -43,7 +50,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,the change shoule be false"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -53,7 +60,7 @@
         - data.changed == false
 
   - name: "Configure vpna, delete address family is ipv4"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -63,7 +70,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv6,the change shoule be false"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -73,7 +80,7 @@
         - data.changed == false
 
   - name: "Configure vpna, set address family is ipv6"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -83,7 +90,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv6"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -93,7 +100,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:3 provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -103,7 +110,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:3,set vpn_target_type=export_extcommunity,vpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:3 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:3 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -113,7 +120,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -123,7 +130,7 @@
         - data | failed
 
   - name: "Configure vpna, set address family is ipv4,delete rd=1:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -133,7 +140,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,configure vpn_target_type=export_extcommunity,vpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -143,7 +150,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,set vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -153,7 +160,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -163,7 +170,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -173,7 +180,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -183,7 +190,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -193,7 +200,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv6,rd=1:1,delete vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -203,7 +210,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv6,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -213,7 +220,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,configure evpn, vpn_target_type=export_extcommunity,evpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -223,7 +230,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,set evpn ,vpn_target_type=import_extcommunity,evpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -233,7 +240,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete evpn, vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -243,7 +250,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete evpn ,vpn_target_type=export_extcommunity,vpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -253,7 +260,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set evpn, vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -263,7 +270,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set evpn vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -273,7 +280,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,delete evpn vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -283,7 +290,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,delete evpn vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=absent state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -293,7 +300,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv4"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -303,7 +310,7 @@
         - data.changed == true
 
   - name: "Configure vpna, delete address family is ipv6"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -313,7 +320,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,set vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -323,7 +330,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,delete vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -333,7 +340,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -343,7 +350,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -353,7 +360,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,configure evpn, vpn_target_type=export_extcommunity,evpn_target_value=2:2"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=2:2 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -363,7 +370,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv4,rd=1:1,set evpn ,vpn_target_type=import_extcommunity,evpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v4 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -373,7 +380,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set evpn, vpn_target_type=import_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=import_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -383,7 +390,7 @@
         - data.changed == true
 
   - name: "Configure vpna, set address family is ipv6,rd=1:1,set evpn vpn_target_type=export_extcommunity,vpn_target_value=3:3"
-    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=true vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf_af: vrf=vpna vrf_aftype=v6 route_distinguisher=1:1 evpn=True vpn_target_type=export_extcommunity vpn_target_value=3:3 vpn_target_state=present state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -393,7 +400,7 @@
         - data.changed == true
 
   - name: "Delete a vpn named vpna"
-    ce_vrf: vrf=vpna state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -403,7 +410,7 @@
         - data.changed == true
 
   - name: "EVPN overlay enable is disable"
-    ce_evpn_global: evpn_overlay_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_global: evpn_overlay_enable=disable provider="{{ cli }}"
     register: data
     ignore_errors: false
 

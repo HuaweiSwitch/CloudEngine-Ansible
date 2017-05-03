@@ -1,38 +1,21 @@
 ---
 
-- hosts: ce128
+- name: vxlan global module test
+  hosts: ce128
+  connection: local
   gather_facts: no
   vars:
-    bd_id: 100
-  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
   tasks:
 
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: tunnel_mode_vxlan=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: tunnel_mode_vxlan=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_prevent_loops=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_prevent_loops=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_vxlan_global: nvo3_acl_extend=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_acl_extend=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_gw_enhanced=l2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_gw_enhanced=l3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_service_extend=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_service_extend=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_eth_trunk_hash=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_eth_trunk_hash=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_ecmp_hash=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: nvo3_ecmp_hash=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Create bridge domain and set tunnel mode to VXLAN
+    ce_vxlan_global:
+      bridge_domain_id: 100
+      nvo3_acl_extend: enable
+      provider: "{{ cli }}"

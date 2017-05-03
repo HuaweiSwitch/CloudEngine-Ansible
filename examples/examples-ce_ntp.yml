@@ -3,9 +3,15 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   
   tasks:  
-  - ce_ntp: server=192.8.5.6 source_int=vlanif4002 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp: peer=192.8.5.3  source_int=vlanif4002 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp: server=192.8.5.6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp: peer=192.8.5.3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_ntp: server=192.8.5.6 source_int=vlanif4002 provider="{{ cli }}"
+  - ce_ntp: peer=192.8.5.3  source_int=vlanif4002 provider="{{ cli }}"
+  - ce_ntp: server=192.8.5.6 state=absent provider="{{ cli }}"
+  - ce_ntp: peer=192.8.5.3 state=absent provider="{{ cli }}"

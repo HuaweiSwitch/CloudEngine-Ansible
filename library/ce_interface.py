@@ -25,7 +25,6 @@ DOCUMENTATION = '''
 module: ce_interface
 version_added: "2.3"
 short_description: Manages physical attributes of interfaces.
-extends_documentation_fragment: cloudengine
 description:
     - Manages physical attributes of interfaces of Huawei CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
@@ -53,7 +52,7 @@ options:
               down, An interface is in the administrative Down state.
         required: false
         default: null
-        choices: ['up','down']
+        choices: ['up', 'down']
     description:
         description:
             - Specifies an interface description.
@@ -66,61 +65,91 @@ options:
             - Manage Layer 2 or Layer 3 state of the interface.
         required: false
         default: null
-        choices: ['layer2','layer3']
+        choices: ['layer2', 'layer3']
     l2sub:
         description:
             - Specifies whether the interface is a Layer 2 sub-interface.
         required: false
-        default: null
-        choices: ['true','false']
+        default: false
     state:
         description:
             - Specify desired state of the resource.
         required: true
         default: present
-        choices: ['present','absent','default']
+        choices: ['present', 'absent', 'default']
 '''
 
 EXAMPLES = '''
-# Ensure an interface is a Layer 3 port and that it has the proper description
-- ce_interface: interface=40GE1/0/22 description='Configured by Ansible' mode=layer3 host=68.170.147.165
-# Admin down an interface
-- ce_interface: interface=40GE1/0/22 host=68.170.147.165 admin_state=down
-# Remove all tunnel interfaces
-- ce_interface: interface_type=tunnel state=absent host=68.170.147.165
-# Remove all logical interfaces
-- ce_interface: interface_type={{ item }} state=absent host={{ inventory_hostname }}
-  with_items:
-    - loopback
-    - eth-trunk
-    - vlanif
-    - nve
-    - tunnel
-# Admin up all 40GE interfaces
-- ce_interface: interface_type=40GE host=68.170.147.165 admin_state=up
+- name: interface module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Ensure an interface is a Layer 3 port and that it has the proper description
+    ce_interface:
+      interface: 10GE1/0/22
+      description: 'Configured by Ansible'
+      mode: layer3
+      provider: '{{ cli }}'
+
+  - name: Admin down an interface
+    ce_interface:
+      interface: 10GE1/0/22
+      admin_state: down
+      provider: '{{ cli }}'
+
+  - name: Remove all tunnel interfaces
+    ce_interface:
+      interface_type: tunnel
+      state: absent
+      provider: '{{ cli }}'
+
+  - name: Remove all logical interfaces
+    ce_interface:
+      interface_type: '{{ item }}'
+      state: absent
+      provider: '{{ cli }}'
+    with_items:
+      - loopback
+      - eth-trunk
+      - nve
+
+  - name: Admin up all 10GE interfaces
+    ce_interface:
+      interface_type: 10GE
+      admin_state: up
+      provider: '{{ cli }}'
 '''
 RETURN = '''
 proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"interface": "40GE1/0/10", "admin_state": "down"}
+    sample: {"interface": "10GE1/0/10", "admin_state": "down"}
 existing:
     description: k/v pairs of existing switchport
     type: dict
     sample:  {"admin_state": "up", "description": "None",
-              "interface": "40GE1/0/10", "mode": "layer2"}
+              "interface": "10GE1/0/10", "mode": "layer2"}
 end_state:
     description: k/v pairs of switchport after module execution
     returned: always
     type: dict or null
     sample:  {"admin_state": "down", "description": "None",
-              "interface": "40GE1/0/10", "mode": "layer2"}
+              "interface": "10GE1/0/10", "mode": "layer2"}
 updates:
     description: command list sent to the device
     returned: always
     type: list
-    sample: ["interface 40GE1/0/10", "shutdown"]
+    sample: ["interface 10GE1/0/10", "shutdown"]
 changed:
     description: check to see if a change was made on the device
     returned: always
@@ -130,15 +159,8 @@ changed:
 
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 CE_NC_GET_INTFS = """
@@ -251,6 +273,7 @@ ADMIN_STATE_TYPE = ('ge', '10ge', '25ge', '4x10ge', '40ge', '100ge',
 SWITCH_PORT_TYPE = ('ge', '10ge', '25ge',
                     '4x10ge', '40ge', '100ge', 'eth-trunk')
 
+
 def get_interface_type(interface):
     """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
 
@@ -300,10 +323,12 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
+
 def is_admin_state_enable(iftype):
     """admin state disable: loopback nve"""
 
     return bool(iftype in ADMIN_STATE_TYPE)
+
 
 def is_portswitch_enalbe(iftype):
     """"is portswitch? """
@@ -317,7 +342,6 @@ class Interface(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # interface info
@@ -328,12 +352,6 @@ class Interface(object):
         self.mode = self.module.params['mode']
         self.l2sub = self.module.params['l2sub']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -346,29 +364,15 @@ class Interface(object):
         self.intf_info = dict()         # one interface info
         self.intf_type = None           # loopback tunnel ...
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init_netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host, port=self.port, username=self.username, password=self.password)
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -377,20 +381,16 @@ class Interface(object):
 
         intfs_info = dict()
         conf_str = CE_NC_GET_INTFS
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in recv_xml:
             return intfs_info
 
         intf = re.findall(
             r'.*<ifName>(.*)</ifName>.*\s*<ifPhyType>(.*)</ifPhyType>.*\s*'
             r'<ifNumber>(.*)</ifNumber>.*\s*<ifDescr>(.*)</ifDescr>.*\s*'
             r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*\s*<ifAdminStatus>'
-            r'(.*)</ifAdminStatus>.*\s*<ifMtu>(.*)</ifMtu>.*', con_obj.xml)
+            r'(.*)</ifAdminStatus>.*\s*<ifMtu>(.*)</ifMtu>.*', recv_xml)
 
         for tmp in intf:
             if tmp[1]:
@@ -408,13 +408,9 @@ class Interface(object):
 
         intf_info = dict()
         conf_str = CE_NC_GET_INTF % ifname
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in recv_xml:
             return intf_info
 
         intf = re.findall(
@@ -424,7 +420,7 @@ class Interface(object):
             r'<ifDescr>(.*)</ifDescr>.*\s*'
             r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*\s*'
             r'<ifAdminStatus>(.*)</ifAdminStatus>.*\s*'
-            r'<ifMtu>(.*)</ifMtu>.*', con_obj.xml)
+            r'<ifMtu>(.*)</ifMtu>.*', recv_xml)
 
         if intf:
             intf_info = dict(ifName=intf[0][0], ifPhyType=intf[0][1],
@@ -437,7 +433,7 @@ class Interface(object):
     def create_interface(self, ifname, description, admin_state, mode, l2sub):
         """Create interface."""
 
-        if l2sub == "true":
+        if l2sub:
             self.updates_cmd.append("interface %s mode l2" % ifname)
         else:
             self.updates_cmd.append("interface %s" % ifname)
@@ -447,7 +443,7 @@ class Interface(object):
         else:
             self.updates_cmd.append("description %s" % description)
 
-        if l2sub == "true":
+        if l2sub:
             xmlstr = CE_NC_XML_CREATE_INTF_L2SUB % (ifname, description)
         else:
             xmlstr = CE_NC_XML_CREATE_INTF % (ifname, description)
@@ -466,13 +462,9 @@ class Interface(object):
                 self.updates_cmd.append('undo portswitch')
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "CREATE_INTF")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "CREATE_INTF")
+        self.changed = True
 
     def delete_interface(self, ifname):
         """ Delete interface."""
@@ -480,14 +472,9 @@ class Interface(object):
         xmlstr = CE_NC_XML_DELETE_INTF % ifname
         conf_str = '<config> ' + xmlstr + ' </config>'
         self.updates_cmd.append('undo interface %s' % ifname)
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "DELETE_INTF")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "DELETE_INTF")
+        self.changed = True
 
     def delete_interfaces(self, iftype):
         """ Delete interfaces with type."""
@@ -502,13 +489,9 @@ class Interface(object):
             self.updates_cmd.append('undo interface %s' % intf['ifName'])
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "DELETE_INTFS")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "DELETE_INTFS")
+        self.changed = True
 
     def merge_interface(self, ifname, description, admin_state, mode):
         """ Merge interface attributes."""
@@ -545,14 +528,9 @@ class Interface(object):
             return
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_INTF_ATTR")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "MERGE_INTF_ATTR")
+        self.changed = True
 
     def merge_interfaces(self, iftype, description, admin_state, mode):
         """ Merge interface attributes by type."""
@@ -604,14 +582,9 @@ class Interface(object):
             return
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_INTFS_ATTR")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "MERGE_INTFS_ATTR")
+        self.changed = True
 
     def default_interface(self, ifname):
         """default_interface"""
@@ -643,13 +616,9 @@ class Interface(object):
             return
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "SET_INTF_DEFAULT")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "SET_INTF_DEFAULT")
+        self.changed = True
 
     def default_interfaces(self, iftype):
         """ Set interface config to default by type."""
@@ -691,13 +660,9 @@ class Interface(object):
             return
 
         conf_str = '<config> ' + xmlstr + ' </config>'
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "SET_INTFS_DEFAULT")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "SET_INTFS_DEFAULT")
+        self.changed = True
 
     def check_params(self):
         """Check all input params"""
@@ -751,7 +716,7 @@ class Interface(object):
                     msg='Error: interface description '
                         'is not in the range from 1 to 242.')
         # check l2sub flag
-        if self.l2sub and self.l2sub == "true":
+        if self.l2sub:
             if not self.interface:
                 self.module.fail_json(msg='Error: L2sub flag can not be set when there no interface set with.')
             if self.interface.count(".") != 1:
@@ -773,8 +738,7 @@ class Interface(object):
                 self.proposed["mode"] = self.mode
             if self.admin_state:
                 self.proposed["admin_state"] = self.admin_state
-            if self.l2sub:
-                self.proposed["l2sub"] = self.l2sub
+            self.proposed["l2sub"] = self.l2sub
 
         elif self.state == 'default':
             if self.description:
@@ -903,11 +867,12 @@ def main():
         description=dict(required=False, default=None),
         mode=dict(choices=['layer2', 'layer3'], required=False),
         interface_type=dict(required=False),
-        l2sub=dict(choices=['true', 'false'], required=False),
+        l2sub=dict(required=False, default=False, type='bool'),
         state=dict(choices=['absent', 'present', 'default'],
                    default='present', required=False),
     )
 
+    argument_spec.update(ce_argument_spec)
     interface = Interface(argument_spec)
     interface.work()
 

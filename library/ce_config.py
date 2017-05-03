@@ -16,29 +16,29 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'version': '1.0'}
+ANSIBLE_METADATA = {
+    'status': ['preview'],
+    'supported_by': 'community',
+    'version': '1.0'
+}
 
 DOCUMENTATION = """
 ---
 module: ce_config
 version_added: "2.3"
 author: "QijunPan (@CloudEngine-Ansible)"
-short_description: Manage Huawei CloudEngine configuration sections
+short_description: Manage Huawei CloudEngine configuration sections.
 description:
   - Huawei CloudEngine configurations use a simple block indent file syntax
     for segmenting configuration into sections.  This module provides
     an implementation for working with CloudEngine configuration sections in
-    a deterministic way.  This module works with CLI
-    transports.
-extends_documentation_fragment: cloudengine
+    a deterministic way.  This module works with CLI transports.
 options:
   lines:
     description:
       - The ordered set of commands that should be configured in the
         section.  The commands must be the exact same commands as found
-        in the device running-config.  Be sure to note the configuration
+        in the device current-configuration.  Be sure to note the configuration
         command syntax as some commands are automatically modified by the
         device config parser.
     required: false
@@ -87,7 +87,7 @@ options:
         to position.  If match is set to I(exact), command lines
         must be an equal match.  Finally, if match is set to I(none), the
         module will not attempt to compare the source configuration with
-        the running configuration on the remote device.
+        the current-configuration on the remote device.
     required: false
     default: line
     choices: ['line', 'strict', 'exact', 'none']
@@ -102,6 +102,18 @@ options:
     required: false
     default: line
     choices: ['line', 'block']
+  force:
+    description:
+      - The force argument instructs the module to not consider the
+        current devices current-configuration.  When set to true, this will
+        cause the module to push the contents of I(src) into the device
+        without first checking if already configured.
+      - Note this argument should be considered deprecated.  To achieve
+        the equivalent, set the C(match=none) which is idempotent.  This argument
+        will be removed in a future release.
+    required: false
+    default: false
+    choices: [ "true", "false" ]
   backup:
     description:
       - This argument will cause the module to create a full backup of
@@ -115,9 +127,9 @@ options:
   config:
     description:
       - The module, by default, will connect to the remote device and
-        retrieve the current running-config to use as a base for comparing
+        retrieve the current current-configuration to use as a base for comparing
         against the contents of source.  There are times when it is not
-        desirable to have the task get the current running-config for
+        desirable to have the task get the current-configuration for
         every task in a playbook.  The I(config) argument allows the
         implementer to pass in the configuration to use as the base
         config for comparison.
@@ -125,17 +137,17 @@ options:
     default: null
   defaults:
     description:
-      - The I(defaults) argument will influence how the running-config
+      - The I(defaults) argument will influence how the current-configuration
         is collected from the device.  When the value is set to true,
-        the command used to collect the running-config is append with
+        the command used to collect the current-configuration is append with
         the all keyword.  When the value is set to false, the command
-        is issued without the all keyword
+        is issued without the all keyword.
     required: false
     default: false
   save:
     description:
       - The C(save) argument instructs the module to save the
-        running-config to startup-config.  This operation is performed
+        current-configuration to saved-configuration.  This operation is performed
         after any changes are made to the current running config.  If
         no changes are made, the configuration is still saved to the
         startup config.  This option will always cause the module to
@@ -147,41 +159,50 @@ options:
 EXAMPLES = """
 # Note: examples below use the following provider dict to handle
 #       transport and authentication to the node.
-vars:
-  cli:
-    host: "{{ inventory_hostname }}"
-    username: admin
-    password: admin
-    transport: cli
 
-- name: configure top level configuration and save it
-  ce_config:
-    lines: sysname {{ inventory_hostname }}
-    save: yes
-    provider: "{{ cli }}"
+- name: CloudEngine config test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-- ce_config:
-    lines:
-      - rule 10 permit source 1.1.1.1 32
-      - rule 20 permit source 2.2.2.2 32
-      - rule 30 permit source 3.3.3.3 32
-      - rule 40 permit source 4.4.4.4 32
-      - rule 50 permit source 5.5.5.5 32
-    parents: acl 2000
-    before: undo acl 2000
-    match: exact
-    provider: "{{ cli }}"
+  tasks:
+  - name: "Configure top level configuration and save it"
+    ce_config:
+      lines: sysname {{ inventory_hostname }}
+      save: yes
+      provider: "{{ cli }}"
 
-- ce_config:
-    lines:
-      - rule 10 permit source 1.1.1.1 32
-      - rule 20 permit source 2.2.2.2 32
-      - rule 30 permit source 3.3.3.3 32
-      - rule 40 permit source 4.4.4.4 32
-    parents: acl 2000
-    before: undo acl 2000
-    replace: block
-    provider: "{{ cli }}"
+  - name: "Configure acl configuration and save it"
+    ce_config:
+      lines:
+        - rule 10 permit source 1.1.1.1 32
+        - rule 20 permit source 2.2.2.2 32
+        - rule 30 permit source 3.3.3.3 32
+        - rule 40 permit source 4.4.4.4 32
+        - rule 50 permit source 5.5.5.5 32
+      parents: acl 2000
+      before: undo acl 2000
+      match: exact
+      provider: "{{ cli }}"
+
+  - name: "Configure acl configuration and save it"
+    ce_config:
+      lines:
+        - rule 10 permit source 1.1.1.1 32
+        - rule 20 permit source 2.2.2.2 32
+        - rule 30 permit source 3.3.3.3 32
+        - rule 40 permit source 4.4.4.4 32
+      parents: acl 2000
+      before: undo acl 2000
+      replace: block
+      provider: "{{ cli }}"
 """
 
 RETURN = """
@@ -196,49 +217,29 @@ backup_path:
   type: path
   sample: /playbooks/ansible/backup/ce_config.2016-07-16@22:28:34
 """
-
-from ansible.module_utils.cloudengine import get_cli_exception
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.network import NetworkModule, NetworkError
+from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.netcfg import NetworkConfig, dumps
-from ansible.module_utils.basic import remove_values
+from ansible.module_utils.ce import get_config, load_config, run_commands
+from ansible.module_utils.ce import ce_argument_spec
+from ansible.module_utils.ce import check_args as ce_check_args
 
-try:
-    from ansible.errors import AnsibleModuleExit
-    HAS_ANSIBLE_MODULE_EXIT = True
-except ImportError:
-    HAS_ANSIBLE_MODULE_EXIT = False
+def check_args(module, warnings):
+    ce_check_args(module, warnings)
+    if module.params['force']:
+        warnings.append('The force argument is deprecated, please use '
+                        'match=none instead.  This argument will be '
+                        'removed in the future')
 
-
-def config_exit(module, **result):
-    """ return from the module, without error """
-
-    if HAS_ANSIBLE_MODULE_EXIT:
-        if 'changed' not in result:
-            result['changed'] = False
-        if 'invocation' not in result:
-            result['invocation'] = {'module_args': module.params}
-        result = remove_values(result, module.no_log_values)
-        raise AnsibleModuleExit(result)
-    else:
-        module.exit_json(**result)
-
-def config_fail(module, **result):
-    """ return from the module, with an error message """
-
-    if HAS_ANSIBLE_MODULE_EXIT:
-        assert 'msg' in result, "implementation error -- msg to explain the error is required"
-        result['failed'] = True
-        if 'invocation' not in result:
-            result['invocation'] = {'module_args': module.params}
-        result = remove_values(result, module.no_log_values)
-        raise AnsibleModuleExit(result)
-    else:
-        module.fail_json(**result)
-
+def get_running_config(module):
+    contents = module.params['config']
+    if not contents:
+        flags = []
+        if module.params['defaults']:
+            flags.append('include-default')
+        contents = get_config(module, flags=flags)
+    return NetworkConfig(indent=1, contents=contents)
 
 def get_candidate(module):
-    """ get candidat info. """
     candidate = NetworkConfig(indent=1)
     if module.params['src']:
         candidate.load(module.params['src'])
@@ -247,35 +248,22 @@ def get_candidate(module):
         candidate.add(module.params['lines'], parents=parents)
     return candidate
 
-
-def get_config(module):
-    """ get current configuration. """
-
-    contents = module.params['config']
-    if not contents:
-        defaults = module.params['defaults']
-        contents = module.config.get_config(include_defaults=defaults)
-    return NetworkConfig(indent=1, contents=contents)
-
-
 def run(module, result):
-    """ module run. """
-
     match = module.params['match']
     replace = module.params['replace']
 
     candidate = get_candidate(module)
 
     if match != 'none':
-        config = get_config(module)
+        config = get_running_config(module)
         path = module.params['parents']
-        configobjs = candidate.difference(config, path=path, match=match,
-                                          replace=replace)
+        configobjs = candidate.difference(config, match=match, replace=replace, path=path)
     else:
         configobjs = candidate.items
 
     if configobjs:
         commands = dumps(configobjs, 'commands').split('\n')
+
         if module.params['lines']:
             if module.params['before']:
                 commands[:0] = module.params['before']
@@ -283,23 +271,17 @@ def run(module, result):
             if module.params['after']:
                 commands.extend(module.params['after'])
 
-            result['updates'] = commands
+        result['commands'] = commands
+        result['updates'] = commands
 
         if not module.check_mode:
-            module.config.load_config(commands)
+            load_config(module, commands)
 
         result['changed'] = True
-
-    if module.params['save']:
-        if not module.check_mode:
-            module.config.save_config()
-        result['changed'] = True
-
 
 def main():
     """ main entry point for module execution
     """
-
     argument_spec = dict(
         src=dict(type='path'),
 
@@ -309,9 +291,13 @@ def main():
         before=dict(type='list'),
         after=dict(type='list'),
 
-        match=dict(default='line',
-                   choices=['line', 'strict', 'exact', 'none']),
+        match=dict(default='line', choices=['line', 'strict', 'exact', 'none']),
         replace=dict(default='line', choices=['line', 'block']),
+
+        # this argument is deprecated in favor of setting match: none
+        # it will be removed in a future version
+        force=dict(default=False, type='bool'),
+
         config=dict(),
         defaults=dict(type='bool', default=False),
 
@@ -319,32 +305,39 @@ def main():
         save=dict(type='bool', default=False),
     )
 
+    argument_spec.update(ce_argument_spec)
+
     mutually_exclusive = [('lines', 'src')]
 
     required_if = [('match', 'strict', ['lines']),
                    ('match', 'exact', ['lines']),
                    ('replace', 'block', ['lines'])]
 
-    module = NetworkModule(argument_spec=argument_spec,
-                           connect_on_load=False,
+    module = AnsibleModule(argument_spec=argument_spec,
                            mutually_exclusive=mutually_exclusive,
                            required_if=required_if,
                            supports_check_mode=True)
 
+    if module.params['force'] is True:
+        module.params['match'] = 'none'
+
     warnings = list()
+    check_args(module, warnings)
 
     result = dict(changed=False, warnings=warnings)
 
     if module.params['backup']:
-        result['__backup__'] = module.config.get_config()
+        result['__backup__'] = get_config(module)
 
-    try:
+    if any((module.params['src'], module.params['lines'])):
         run(module, result)
-    except NetworkError:
-        exc = get_exception()
-        config_fail(module, msg=get_cli_exception(exc), **exc.kwargs)
 
-    config_exit(module, **result)
+    if module.params['save']:
+        if not module.check_mode:
+            run_commands(module, ['save'])
+        result['changed'] = True
+
+    module.exit_json(**result)
 
 
 if __name__ == '__main__':

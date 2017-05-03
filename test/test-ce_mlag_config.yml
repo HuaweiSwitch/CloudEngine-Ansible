@@ -1,0 +1,313 @@
+---
+
+- name: cloudengine mlag config module test
+  hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "set ip vpn-instance 20"
+    ce_config: lines='ip vpn-instance 20' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure interface Eth-Trunk100"
+    ce_config: lines='interface Eth-Trunk 100, portswitch' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "create dfs group id"
+    ce_mlag_config: dfs_group_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete dfs group id"
+    ce_mlag_config: dfs_group_id=1 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "create dfs group id, set priority"
+    ce_mlag_config: dfs_group_id=1 priority_id=3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set priority and nickname"
+    ce_mlag_config: dfs_group_id=1 priority_id=3 nickname=3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo priority"
+    ce_mlag_config: dfs_group_id=1 priority_id=3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo dfs_group_id"
+    ce_mlag_config: dfs_group_id=1 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set pseudo nickname"
+    ce_mlag_config: dfs_group_id=1 pseudo_nickname=3 pseudo_priority=130 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "pseudo priority is invalid"
+    ce_mlag_config: dfs_group_id=1 pseudo_nickname=3 pseudo_priority=100 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "undo pseudo nickname"
+    ce_mlag_config: dfs_group_id=1 pseudo_nickname=3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set ip invalid"
+    ce_mlag_config: dfs_group_id=1 ip_address=3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "set nickname"
+    ce_mlag_config: dfs_group_id=1 nickname=3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vpn is exist, nickname is exist"
+    ce_mlag_config: dfs_group_id=1 ip_address=11.1.1.2 vpn_instance_name=20 provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "undo nickname"
+    ce_mlag_config: dfs_group_id=1 nickname=3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vpn is not exist"
+    ce_mlag_config: dfs_group_id=1 ip_address=11.1.1.2 vpn_instance_name=6 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "vpn is exist"
+    ce_mlag_config: dfs_group_id=1 ip_address=11.1.1.2 vpn_instance_name=20 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set nickname"
+    ce_mlag_config: dfs_group_id=1 nickname=3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "undo ip"
+    ce_mlag_config: dfs_group_id=1 ip_address=11.1.1.2 vpn_instance_name=20 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo ip again"
+    ce_mlag_config: dfs_group_id=1 ip_address=11.1.1.2 vpn_instance_name=20 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "eth-trunk is not exist"
+    ce_mlag_config: dfs_group_id=1 eth_trunk_id=3 peer_link_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "eth-trunk is exist, peer-link is invalid"
+    ce_mlag_config: dfs_group_id=1 eth_trunk_id=100 peer_link_id=2 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "set peer-link"
+    ce_mlag_config: dfs_group_id=1 eth_trunk_id=100 peer_link_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set peer-link"
+    ce_mlag_config: dfs_group_id=1 eth_trunk_id=100 peer_link_id=1 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo dfs_group_id"
+    ce_mlag_config: dfs_group_id=1 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "set peer-link"
+    ce_mlag_config: eth_trunk_id=100 peer_link_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "dfs_group_id is invalid"
+    ce_mlag_config: dfs_group_id=2 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "set eth_trunk_id only"
+    ce_mlag_config: eth_trunk_id=100 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "set peer-link only"
+    ce_mlag_config: peer_link_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed

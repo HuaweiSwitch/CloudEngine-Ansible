@@ -1,25 +1,51 @@
 ---
 
-- hosts: cloudengine
+- name: switchport module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    test_intf: 40GE2/0/22
-    clear_cmd: 'interface 40ge2/0/22, clear config this'
-    setup_cmd: 'vlan batch 10 20'
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure 10GE1/0/22 is in its default switchport state
+    ce_switchport:
+      interface: 10GE1/0/22
+      state: unconfigured
+      provider: '{{ cli }}'
 
-  - ce_config: lines={{setup_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure 10GE1/0/22 is configured for access vlan 20
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: access
+      access_vlan: 20
+      provider: '{{ cli }}'
 
-  - ce_switchport: interface={{test_intf}} state=unconfigured host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure 10GE1/0/22 only has vlans 5-10 as trunk vlans
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      native_vlan: 10
+      trunk_vlans: 5-10
+      provider: '{{ cli }}'
 
-  - ce_switchport: interface={{test_intf}} mode=access access_vlan=20 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure 10GE1/0/22 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      native_vlan: 10
+      trunk_vlans: 2-50
+      provider: '{{ cli }}'
 
-  - ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=5-10 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_switchport: interface={{test_intf}} mode=trunk native_vlan=10 trunk_vlans=2-50 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_switchport: interface={{test_intf}} mode=trunk trunk_vlans=51-4000  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure these VLANs are not being tagged on the trunk
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      trunk_vlans: 51-4000
+      state: absent
+      provider: '{{ cli }}'

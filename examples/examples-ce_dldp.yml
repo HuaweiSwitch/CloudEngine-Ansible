@@ -3,12 +3,18 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+      cli:
+        host: "{{ inventory_hostname }}"
+        port: "{{ ansible_ssh_port }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+        transport: cli
   
   tasks:  
-  - ce_dldp: enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: work_mode=normal host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: time_interval=6 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: reset=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: auth_mode=md5 auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: enable=true work_mode=normal time_interval=6 reset=true auth_mode=md5 auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp: enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_dldp: enable=enable provider="{{ cli }}"
+  - ce_dldp: work_mode=normal provider="{{ cli }}"
+  - ce_dldp: time_interval=6 provider="{{ cli }}"
+  - ce_dldp: reset=enable provider="{{ cli }}"
+  - ce_dldp: auth_mode=md5 auth_pwd=abc provider="{{ cli }}"
+  - ce_dldp: enable=enable work_mode=normal time_interval=6 reset=enable auth_mode=md5 auth_pwd=abc provider="{{ cli }}"
+  - ce_dldp: enable=disable provider="{{ cli }}"

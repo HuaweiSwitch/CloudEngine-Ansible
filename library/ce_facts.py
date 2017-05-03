@@ -25,7 +25,7 @@ DOCUMENTATION = """
 module: ce_facts
 version_added: "2.3"
 author: "wangdezhuang (@CloudEngine-Ansible)"
-short_description: Gets facts about HUAWEI CloudEngine switches
+short_description: Gets facts about HUAWEI CloudEngine switches.
 description:
   - Collects facts from CloudEngine devices running the CloudEngine
     operating system.  Fact collection is supported over Cli
@@ -33,7 +33,6 @@ description:
     with C(ansible_net_<fact>).  The facts module will always collect a
     base set of facts from the device and can enable or disable
     collection of additional facts.
-extends_documentation_fragment: cloudengine
 
 options:
   gather_subset:
@@ -51,25 +50,35 @@ options:
 EXAMPLES = """
 # Note: examples below use the following provider dict to handle
 #       transport and authentication to the node.
-vars:
-  cli:
-    host: "{{ inventory_hostname }}"
-    username: admin
-    password: admin
-    transport: cli
 
-- ce_facts:
-    gather_subset: all
+- name: CloudEngine facts test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Collect only the config facts
-- ce_facts:
-    gather_subset:
-      - config
+  tasks:
 
-# Do not collect hardware facts
-- ce_facts:
-    gather_subset:
-      - "!hardware"
+  - name: "Gather_subset is all"
+    ce_facts:
+      gather_subset: all
+      provider: "{{ cli }}"
+
+  - name: "Collect only the config facts"
+    ce_facts:
+      gather_subset:  config
+      provider: "{{ cli }}"
+
+  - name: "Do not collect hardware facts"
+    ce_facts:
+      gather_subset:  "!hardware"
+      provider: "{{ cli }}"
 """
 
 RETURN = """
@@ -160,71 +169,40 @@ neighbors:
 """
 
 import re
-from ansible.module_utils.cloudengine import get_cli_exception
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.netcli import CommandRunner, AddCommandError
-from ansible.module_utils.network import NetworkModule, NetworkError
+
+from ansible.module_utils.ce import run_commands
+from ansible.module_utils.ce import ce_argument_spec, check_args
+from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.six import iteritems
 
 
-def add_command(runner, command, output=None):
-    """ Add command operation """
-
-    try:
-        runner.add_command(command, output)
-    except AddCommandError:
-        # AddCommandError is raised for any issue adding a command to
-        # the runner.  Silently ignore the exception in this case
-        raise AddCommandError
-
-
-def transform_dict(data, keymap):
-    """ Get transform dict """
-
-    transform = dict()
-    for key, fact in keymap:
-        if key in data:
-            transform[fact] = data[key]
-    return transform
-
-
-def transform_iterable(iterable, keymap):
-    """ Transform iterable """
-
-    for item in iterable:
-        yield transform_dict(item, keymap)
-
-
 class FactsBase(object):
-    """ Class FactsBase """
 
-    def __init__(self, module, runner):
-        self.ipv4 = False
-        self.lldp_enabled = False
+    COMMANDS = frozenset()
+
+    def __init__(self, module):
         self.module = module
-        self.runner = runner
         self.facts = dict()
-        self.commands()
+        self.responses = None
 
-    def commands(self):
-        """ Commands method """
-
-        raise NotImplementedError
+    def populate(self):
+        self.responses = run_commands(self.module, list(self.COMMANDS))
 
 
 class Default(FactsBase):
     """ Class default """
 
-    def commands(self):
-        """ Commands method """
-
-        add_command(self.runner, 'display version')
-        add_command(self.runner, 'display current-configuration | include sysname')
+    COMMANDS = [
+        'display version',
+        'display current-configuration | include sysname'
+    ]
 
     def populate(self):
         """ Populate method """
 
-        data = self.runner.get_command('display version')
+        super(Default, self).populate()
+
+        data = self.responses[0]
         if data:
             version = data.split("\n")
             tmp_version = version[11:]
@@ -233,7 +211,7 @@ class Default(FactsBase):
                 tmp_key = tmp_item[1] + " " + tmp_item[2]
                 self.facts[tmp_key] = tmp_item[4]
 
-        data = self.runner.get_command('display current-configuration | include sysname')
+        data = self.responses[1]
         if data:
             tmp_value = re.findall(r'sysname (.*)', data)
             self.facts['hostname'] = tmp_value[0]
@@ -242,17 +220,16 @@ class Default(FactsBase):
 class Config(FactsBase):
     """ Class config """
 
-    def commands(self):
-        """ Commands method """
-
-        add_command(self.runner,
-                    'display current-configuration configuration system')
+    COMMANDS = [
+        'display current-configuration configuration system'
+    ]
 
     def populate(self):
         """ Populate method """
 
-        data = self.runner.get_command(
-            'display current-configuration configuration system')
+        super(Config, self).populate()
+
+        data = self.responses[0]
         if data:
             self.facts['config'] = data.split("\n")
 
@@ -260,23 +237,24 @@ class Config(FactsBase):
 class Hardware(FactsBase):
     """ Class hardware """
 
-    def commands(self):
-        """ Commands method """
-
-        add_command(self.runner, 'dir')
-        add_command(self.runner, 'display memory')
-        add_command(self.runner, 'display device')
+    COMMANDS = [
+        'dir',
+        'display memory',
+        'display device'
+    ]
 
     def populate(self):
         """ Populate method """
 
-        data = self.runner.get_command('dir')
+        super(Hardware, self).populate()
+
+        data = self.responses[0]
         if data:
             self.facts['filesystems'] = re.findall(r'^Directory of (.*)/', data)[0]
             self.facts['flash_total'] = re.findall(r'(.*) total', data)[0].replace(",", "")
             self.facts['flash_free'] = re.findall(r'total \((.*) free\)', data)[0].replace(",", "")
 
-        data = self.runner.get_command('display memory')
+        data = self.responses[1]
         if data:
             memory_total = re.findall(r'Total Memory Used: (.*) Kbytes', data)[0]
             use_percent = re.findall(r'Memory Using Percentage: (.*)%', data)[0]
@@ -284,7 +262,7 @@ class Hardware(FactsBase):
             self.facts['memory_total'] = memory_total + " Kb"
             self.facts['memory_free'] = memory_free + " Kb"
 
-        data = self.runner.get_command('display device')
+        data = self.responses[2]
         if data:
             device_info = data.split("\n")
             tmp_device_info = device_info[4:-1]
@@ -299,22 +277,11 @@ class Hardware(FactsBase):
 class Interfaces(FactsBase):
     """ Class interfaces """
 
-    def commands(self):
-        """ Commands method """
-
-        add_command(self.runner, 'display interface brief')
-
-        try:
-            add_command(self.runner, 'display ip interface brief')
-            self.ipv4 = True
-        except NetworkError:
-            self.ipv4 = False
-
-        try:
-            add_command(self.runner, 'display lldp neighbor brief')
-            self.lldp_enabled = True
-        except NetworkError:
-            self.lldp_enabled = False
+    COMMANDS = [
+        'display interface brief',
+        'display ip interface brief',
+        'display lldp neighbor brief'
+    ]
 
     def populate(self):
         """ Populate method"""
@@ -323,7 +290,9 @@ class Interfaces(FactsBase):
         ipv4_addr_dict = dict()
         neighbors_dict = dict()
 
-        data = self.runner.get_command('display interface brief')
+        super(Interfaces, self).populate()
+
+        data = self.responses[0]
         if data:
             interface_info = data.split("\n")
             tmp_interface = interface_info[12:]
@@ -332,25 +301,23 @@ class Interfaces(FactsBase):
                 interface_dict[tmp_item[0]] = tmp_item[1]
             self.facts['interfaces'] = interface_dict
 
-        if self.ipv4:
-            data = self.runner.get_command('display ip interface brief')
-            if data:
-                ipv4_addr = data.split("\n")
-                tmp_ipv4 = ipv4_addr[11:]
-                for item in tmp_ipv4:
-                    tmp_item = item.split()
-                    ipv4_addr_dict[tmp_item[0]] = tmp_item[1]
-                self.facts['all_ipv4_addresses'] = ipv4_addr_dict
+        data = self.responses[1]
+        if data:
+            ipv4_addr = data.split("\n")
+            tmp_ipv4 = ipv4_addr[11:]
+            for item in tmp_ipv4:
+                tmp_item = item.split()
+                ipv4_addr_dict[tmp_item[0]] = tmp_item[1]
+            self.facts['all_ipv4_addresses'] = ipv4_addr_dict
 
-        if self.lldp_enabled:
-            data = self.runner.get_command('display lldp neighbor brief')
-            if data:
-                neighbors = data.split("\n")
-                tmp_neighbors = neighbors[2:]
-                for item in tmp_neighbors:
-                    tmp_item = item.split()
-                    neighbors_dict[tmp_item[0]] = tmp_item[3]
-                self.facts['neighbors'] = neighbors_dict
+        data = self.responses[2]
+        if data:
+            neighbors = data.split("\n")
+            tmp_neighbors = neighbors[2:]
+            for item in tmp_neighbors:
+                tmp_item = item.split()
+                neighbors_dict[tmp_item[0]] = tmp_item[3]
+            self.facts['neighbors'] = neighbors_dict
 
 
 FACT_SUBSETS = dict(
@@ -370,7 +337,12 @@ def main():
         gather_subset=dict(default=['!config'], type='list')
     )
 
-    module = NetworkModule(argument_spec=spec, supports_check_mode=True)
+    spec.update(ce_argument_spec)
+
+    module = AnsibleModule(argument_spec=spec, supports_check_mode=True)
+
+    warnings = list()
+    check_args(module, warnings)
 
     gather_subset = module.params['gather_subset']
 
@@ -403,37 +375,28 @@ def main():
         runable_subsets.update(VALID_SUBSETS)
 
     runable_subsets.difference_update(exclude_subsets)
+    runable_subsets.add('default')
 
     facts = dict()
     facts['gather_subset'] = list(runable_subsets)
 
-    runner = CommandRunner(module)
-
     instances = list()
     for key in runable_subsets:
-        instances.append(FACT_SUBSETS[key](module, runner))
+        instances.append(FACT_SUBSETS[key](module))
 
-    try:
-        runner.run()
-    except NetworkError:
-        exc = get_exception()
-        module.fail_json(msg=get_cli_exception(exc), **exc.kwargs)
-
-    try:
-        for inst in instances:
-            inst.populate()
-            facts.update(inst.facts)
-    except Exception:
-        raise
+    for inst in instances:
+        inst.populate()
+        facts.update(inst.facts)
 
     ansible_facts = dict()
     for key, value in iteritems(facts):
+        # this is to maintain capability with nxos_facts 2.1
         if key.startswith('_'):
             ansible_facts[key[1:]] = value
         else:
             ansible_facts[key] = value
 
-    module.exit_json(ansible_facts=ansible_facts)
+    module.exit_json(ansible_facts=ansible_facts, warnings=warnings)
 
 
 if __name__ == '__main__':

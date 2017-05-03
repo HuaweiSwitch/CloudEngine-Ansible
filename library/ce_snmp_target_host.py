@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages SNMP target host configuration.
 description:
     - Manages SNMP target host configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -94,8 +93,8 @@ options:
         description:
             - To enable or disable Public Net-manager for target Host.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     interface_name:
         description:
             - Name of the interface to send the trap message.
@@ -104,35 +103,37 @@ options:
 '''
 
 EXAMPLES = '''
-# config SNMP version
-  - name: "config SNMP version"
+
+- name: CloudEngine snmp target host test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config SNMP version"
     ce_snmp_target_host:
-        state:  present
-        version:  v2cv3
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config SNMP connect port
-  - name: "config SNMP connect port"
+      state:  present
+      version:  v2cv3
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP target host"
     ce_snmp_target_host:
-        state:  present
-        connect_port:  12345
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config SNMP target host
-  - name: "config SNMP target host"
-    ce_snmp_target_host:
-        state:  present
-        host_name:  test1
-        address:  1.1.1.1
-        notify_type:  trap
-        vpn_name:  js
-        security_model:  v2c
-        security_name:  wdz
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      host_name:  test1
+      address:  1.1.1.1
+      notify_type:  trap
+      vpn_name:  js
+      security_model:  v2c
+      security_name:  wdz
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -172,14 +173,9 @@ updates:
 import sys
 import socket
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, \
+    ce_argument_spec, get_config, load_config
 
 
 # get snmp version
@@ -295,15 +291,10 @@ class SnmpTargetHost(object):
         # module
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
         self.version = self.module.params['version']
         self.connect_port = self.module.params['connect_port']
         self.host_name = self.module.params['host_name']
@@ -332,40 +323,19 @@ class SnmpTargetHost(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # netconf
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
     def netconf_get_config(self, conf_str):
         """ Get configure by netconf """
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, conf_str):
         """ Set configure by netconf """
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_cli_args(self):
         """ Check invalid cli args """
@@ -404,7 +374,7 @@ class SnmpTargetHost(object):
                     self.module.fail_json(
                         msg='Error: Please input security_name_v3 when use security_model [%s].' % self.security_model)
 
-            if self.vpn_name and self.is_public_net:
+            if self.vpn_name and self.is_public_net != 'no_use':
                 if self.is_public_net == "true":
                     self.module.fail_json(
                         msg='Error: Do not support vpn_name and is_public_net at the same time.')
@@ -453,7 +423,7 @@ class SnmpTargetHost(object):
             if self.security_level:
                 conf_str += "<securityLevel></securityLevel>"
 
-            if self.is_public_net:
+            if self.is_public_net != 'no_use':
                 conf_str += "<isPublicNet></isPublicNet>"
 
             if self.interface_name:
@@ -473,15 +443,15 @@ class SnmpTargetHost(object):
                 conf_str += "<interface-name></interface-name>"
 
             conf_str += CE_GET_SNMP_TARGET_HOST_TAIL
-            con_obj = self.netconf_get_config(conf_str=conf_str)
+            recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 if self.state == "present":
                     same_flag = False
                 else:
                     delete_flag = False
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -572,20 +542,20 @@ class SnmpTargetHost(object):
         """ Load configure by cli """
 
         if not self.module.check_mode:
-            self.module.config.load_config(commands)
+            load_config(self.module, commands)
 
     def get_snmp_version(self):
         """ Get snmp version """
 
         version = None
         conf_str = CE_GET_SNMP_VERSION
-        con_obj = self.netconf_get_config(conf_str=conf_str)
+        recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in recv_xml:
             pass
 
         else:
-            xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+            xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                 replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                 replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -602,8 +572,9 @@ class SnmpTargetHost(object):
         """ Get connect port by cli """
 
         regular = "| include snmp | include snmp-agent udp-port"
-        tmp_cfg = self.module.config.get_config(
-            include_all=True, regular=regular)
+        flags = list()
+        flags.append(regular)
+        tmp_cfg = get_config(self.module, flags)
 
         return tmp_cfg
 
@@ -634,7 +605,7 @@ class SnmpTargetHost(object):
             self.proposed["security_name_v3"] = self.security_name_v3
         if self.security_level:
             self.proposed["security_level"] = self.security_level
-        if self.is_public_net:
+        if self.is_public_net != 'no_use':
             self.proposed["is_public_net"] = self.is_public_net
         if self.interface_name:
             self.proposed["interface_name"] = self.interface_name
@@ -684,7 +655,10 @@ class SnmpTargetHost(object):
             cmd = "snmp-agent sys-info version %s" % self.version
             self.updates_cmd.append(cmd)
 
-            self.cli_load_config(cmd)
+            cmds = list()
+            cmds.append(cmd)
+
+            self.cli_load_config(cmds)
             self.changed = True
 
         else:
@@ -695,7 +669,10 @@ class SnmpTargetHost(object):
                 cmd = "snmp-agent sys-info version  %s" % self.version
                 self.updates_cmd.append(cmd)
 
-                self.cli_load_config(cmd)
+                cmds = list()
+                cmds.append(cmd)
+
+                self.cli_load_config(cmds)
                 self.changed = True
 
     def undo_config_version_cli(self):
@@ -706,8 +683,12 @@ class SnmpTargetHost(object):
         else:
             cmd = "snmp-agent sys-info version  %s disable" % self.cur_cli_cfg[
                 "version"]
+
+            cmds = list()
+            cmds.append(cmd)
+
             self.updates_cmd.append(cmd)
-            self.cli_load_config(cmd)
+            self.cli_load_config(cmds)
             self.changed = True
 
     def config_connect_port_cli(self):
@@ -718,13 +699,21 @@ class SnmpTargetHost(object):
                 pass
             else:
                 cmd = "snmp-agent udp-port %s" % self.connect_port
+
+                cmds = list()
+                cmds.append(cmd)
+
                 self.updates_cmd.append(cmd)
-                self.cli_load_config(cmd)
+                self.cli_load_config(cmds)
                 self.changed = True
         else:
             cmd = "snmp-agent udp-port %s" % self.connect_port
+
+            cmds = list()
+            cmds.append(cmd)
+
             self.updates_cmd.append(cmd)
-            self.cli_load_config(cmd)
+            self.cli_load_config(cmds)
             self.changed = True
 
     def undo_config_connect_port_cli(self):
@@ -735,8 +724,12 @@ class SnmpTargetHost(object):
                 pass
             else:
                 cmd = "undo snmp-agent udp-port"
+
+                cmds = list()
+                cmds.append(cmd)
+
                 self.updates_cmd.append(cmd)
-                self.cli_load_config(cmd)
+                self.cli_load_config(cmds)
                 self.changed = True
 
     def merge_snmp_target_host(self):
@@ -762,16 +755,16 @@ class SnmpTargetHost(object):
             conf_str += "<securityNameV3>%s</securityNameV3>" % self.security_name_v3
         if self.security_level:
             conf_str += "<securityLevel>%s</securityLevel>" % self.security_level
-        if self.is_public_net:
+        if self.is_public_net != 'no_use':
             conf_str += "<isPublicNet>%s</isPublicNet>" % self.is_public_net
         if self.interface_name:
             conf_str += "<interface-name>%s</interface-name>" % self.interface_name
 
         conf_str += CE_MERGE_SNMP_TARGET_HOST_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge snmp target host failed.')
 
         cmd = "snmp-agent target-host host-name %s " % self.host_name
@@ -784,7 +777,7 @@ class SnmpTargetHost(object):
             cmd += "source %s " % self.interface_name
         if self.vpn_name:
             cmd += "vpn-instance %s " % self.vpn_name
-        if self.is_public_net and self.is_public_net == "true":
+        if self.is_public_net == "true":
             cmd += "public-net "
         if self.security_model in ["v1", "v2c"] and self.security_name:
             cmd += "params securityname %s %s " % (
@@ -821,16 +814,16 @@ class SnmpTargetHost(object):
             conf_str += "<securityNameV3>%s</securityNameV3>" % self.security_name_v3
         if self.security_level:
             conf_str += "<securityLevel>%s</securityLevel>" % self.security_level
-        if self.is_public_net:
+        if self.is_public_net != 'no_use':
             conf_str += "<isPublicNet>%s</isPublicNet>" % self.is_public_net
         if self.interface_name:
             conf_str += "<interface-name>%s</interface-name>" % self.interface_name
 
         conf_str += CE_DELETE_SNMP_TARGET_HOST_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Delete snmp target host failed.')
 
         if not self.address:
@@ -844,7 +837,7 @@ class SnmpTargetHost(object):
                 cmd += "source %s " % self.interface_name
             if self.vpn_name:
                 cmd += "vpn-instance %s " % self.vpn_name
-            if self.is_public_net and self.is_public_net == "true":
+            if self.is_public_net == "true":
                 cmd += "public-net "
             if self.security_model in ["v1", "v2c"] and self.security_name:
                 cmd += "params securityname %s" % "******"
@@ -858,9 +851,9 @@ class SnmpTargetHost(object):
         """ Merge snmp version operation """
 
         conf_str = CE_MERGE_SNMP_VERSION % self.version
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge snmp version failed.')
 
         if self.version == "none":
@@ -941,10 +934,11 @@ def main():
         security_name_v3=dict(type='str'),
         security_level=dict(
             choices=['noAuthNoPriv', 'authentication', 'privacy']),
-        is_public_net=dict(choices=['true', 'false']),
+        is_public_net=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         interface_name=dict(type='str')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = SnmpTargetHost(argument_spec=argument_spec)
     module.work()
 

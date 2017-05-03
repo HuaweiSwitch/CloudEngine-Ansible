@@ -4,13 +4,19 @@
   gather_facts: no
   vars:
     test_intf: 40GE2/0/22
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   
   tasks:  
-  - ce_dldp: enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} enable=true  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} mode_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-aa state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} reset=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} enable=true mode_enable=true local_mac=aa-aa-ab reset=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} state=absent local_mac=aa-aa-ab host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_dldp_interface: interface={{test_intf}} enable=false  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_dldp: enable=enable provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} enable=enable  state=present provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} mode_enable=enable state=present provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} local_mac=aa-aa-aa state=present provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} reset=enable state=present provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} enable=enable mode_enable=enable local_mac=aa-aa-ab reset=enable state=present provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} state=absent local_mac=aa-aa-ab provider="{{ cli }}"
+  - ce_dldp_interface: interface={{test_intf}} enable=disable  state=present provider="{{ cli }}"

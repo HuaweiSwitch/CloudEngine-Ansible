@@ -3,25 +3,31 @@
 - name: cloudengine file_copy module test
   hosts: cloudengine
   vars:
-      local_file: /usr/zzj.cfg
-      remote_file: /zzj.cfg
+    local_file: /usr/zzj.cfg
+    remote_file: /zzj.cfg
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
 
   tasks:
   - name: "delete zzj.cfg file on the device"
-    ce_command: commands='delete /unreserved zzj.cfg' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: before='return' commands='delete /unreserved zzj.cfg' provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "configure scp server disabled"
-    ce_config: lines='undo scp  server enable' save=yes host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='undo scp  server enable' save=yes provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "copy small file"
-    ce_file_copy: local_file={{local_file}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file={{local_file}} provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -32,12 +38,12 @@
         - data | failed
   
   - name: "configure scp server enabled"
-    ce_config: lines='scp server enable' save=yes host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='scp server enable' save=yes provider="{{ cli }}"
     register: data
   
   
   - name: "copy small file"
-    ce_file_copy: local_file={{local_file}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file={{local_file}} provider="{{ cli }}"
     register: data
 
   - name: "TEST 2"
@@ -46,7 +52,7 @@
         - data.changed == true 
 
   - name: "copy small file again"
-    ce_file_copy: local_file={{local_file}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file={{local_file}} provider="{{ cli }}"
     register: data
 
   - name: "TEST 3"
@@ -55,7 +61,7 @@
         - data.changed == false 
 
   - name: "copy super big file to make device space not enough"
-    ce_file_copy: local_file=/usr/12800.cc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file=/usr/12800.cc provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -66,7 +72,7 @@
         - data | failed
 
   - name: "copy a unexisted local file"
-    ce_file_copy: local_file=/usr/123.cc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file=/usr/123.cc provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -77,7 +83,7 @@
         - data | failed
 
   - name: "copy a unexisted remote file path"
-    ce_file_copy: local_file={{local_file}} remote_file=/tool/zzj2.cfg host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file={{local_file}} remote_file=/tool/zzj2.cfg provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -88,7 +94,7 @@
         - data | failed
 
   - name: "wrong filesystem"
-    ce_file_copy: local_file={{local_file}} remote_file={{remote_file}} file_system='bootfalsh:' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_file_copy: local_file={{local_file}} remote_file={{remote_file}} file_system='bootfalsh:' provider="{{ cli }}"
     register: data
     ignore_errors: true
 

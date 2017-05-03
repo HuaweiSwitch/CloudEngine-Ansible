@@ -28,11 +28,10 @@ version_added: "2.3"
 short_description: Manages interface DLDP configuration.
 description:
     - Manages interface DLDP configuration.
-extends_documentation_fragment: cloudengine
 author:
     - Zhou Zhijin (@CloudEngine-Ansible)
 notes:
-    - If C(state=present, enable=false), interface DLDP enable will be turned off and
+    - If C(state=present, enable=disable), interface DLDP enable will be turned off and
       related interface DLDP confuration will be cleared.
     - If C(state=absent), only local_mac is supported to configure.
 options:
@@ -45,13 +44,13 @@ options:
             - Set interface DLDP enable state.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
     mode_enable:
         description:
             - Set DLDP compatible-mode enable state.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
     local_mac:
         description:
             - Set the source MAC address for DLDP packets sent in the DLDP-compatible mode.
@@ -63,7 +62,7 @@ options:
             - Specify whether reseting interface DLDP state.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
     state:
         description:
             - Manage the state of the resource.
@@ -73,21 +72,55 @@ options:
 '''
 
 EXAMPLES = '''
-# Configure interface DLDP enable state and ensure global dldp enable is turned on
-- ce_dldp_interface: enable=true host=68.170.147.165 username=huawei password=huawei
+- name: DLDP interface test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Configuire interface DLDP compatible-mode enable state  and ensure interface DLDP state is already enabled
-- ce_dldp_interface: enable=true mode_enable=true host=68.170.147.165 username=huawei password=huawei
+  tasks:
 
-# Configuire the source MAC address for DLDP packets sent in the DLDP-compatible mode  and
-  ensure interface DLDP state and compatible-mode enable state  is already enabled
-- ce_dldp_interface: enable=true mode_enable=true local_mac=aa-aa-aa host=68.170.147.165 username=huawei password=huawei
+  - name: "Configure interface DLDP enable state and ensure global dldp enable is turned on"
+    ce_dldp_interface:
+      interface: 40GE2/0/1
+      enable: enable
+      provider: "{{ cli }}"
 
-# Reset DLDP state of specified interface and ensure interface DLDP state is already enabled
-- ce_dldp_interface: enable=true reset=true host=68.170.147.165 username=huawei password=huawei
+  - name: "Configuire interface DLDP compatible-mode enable state  and ensure interface DLDP state is already enabled"
+    ce_dldp_interface:
+      interface: 40GE2/0/1
+      enable: enable
+      mode_enable: enable
+      provider: "{{ cli }}"
 
-# Unconfigure interface DLDP local mac addreess when C(state=absent)
-- ce_dldp_interface: state=absent local_mac=aa-aa-aa host=68.170.147.165 username=huawei password=huawei
+  - name: "Configuire the source MAC address for DLDP packets sent in the DLDP-compatible mode  and
+           ensure interface DLDP state and compatible-mode enable state  is already enabled"
+    ce_dldp_interface:
+      interface: 40GE2/0/1
+      enable: enable
+      mode_enable: enable
+      local_mac: aa-aa-aa
+      provider: "{{ cli }}"
+
+  - name: "Reset DLDP state of specified interface and ensure interface DLDP state is already enabled"
+    ce_dldp_interface:
+      interface: 40GE2/0/1
+      enable: enable
+      reset: enable
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure interface DLDP local mac addreess when C(state=absent)"
+    ce_dldp_interface:
+      interface: 40GE2/0/1
+      state: absent
+      local_mac: aa-aa-aa
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -96,33 +129,33 @@ proposed:
     returned: always
     type: dict
     sample: {
-                "enable": "true",
+                "enable": "enalbe",
                 "interface": "40GE2/0/22",
                 "local_mac": "aa-aa-aa",
-                "mode_enable": "true",
-                "reset": "true"
+                "mode_enable": "enable",
+                "reset": "enable"
             }
 existing:
     description:
         - k/v pairs of existing interface DLDP configration
     type: dict
     sample: {
-                "enable": "false",
+                "enable": "disable",
                 "interface": "40GE2/0/22",
                 "local_mac": null,
                 "mode_enable": null,
-                "reset": "false"
+                "reset": "disable"
             }
 end_state:
     description: k/v pairs of interface DLDP configration after module execution
     returned: always
     type: dict
     sample: {
-                "enable": "true",
+                "enable": "enable",
                 "interface": "40GE2/0/22",
                 "local_mac": "00aa-00aa-00aa",
-                "mode_enable": "true",
-                "reset": "true"
+                "mode_enable": "enable",
+                "reset": "enable"
             }
 updates:
     description: command sent to the device
@@ -141,18 +174,11 @@ changed:
     sample: true
 '''
 
-import sys
 import copy
 import re
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, set_nc_config, get_nc_config, execute_nc_action
 
 
 CE_NC_ACTION_RESET_INTF_DLDP = """
@@ -224,7 +250,7 @@ CE_NC_DELETE_DLDP_INTF_CONFIG = """
 
 
 def judge_is_mac_same(mac1, mac2):
-    """judge whether two macs are the same"""
+    """Judge whether two macs are the same"""
 
     if mac1 == mac2:
         return True
@@ -297,10 +323,9 @@ class DldpInterface(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
-        # dldp interface configration info
+        # DLDP interface configration info
         self.interface = self.module.params['interface']
         self.enable = self.module.params['enable'] or None
         self.reset = self.module.params['reset'] or None
@@ -311,11 +336,6 @@ class DldpInterface(object):
         self.dldp_intf_conf = dict()
         self.same_conf = False
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -324,11 +344,8 @@ class DldpInterface(object):
         self.existing = list()
         self.end_state = list()
 
-        # init netconf connect
-        self.init_netconf()
-
     def check_config_if_same(self):
-        """judge whether current config is the same as what we excepted"""
+        """Judge whether current config is the same as what we excepted"""
 
         if self.state == 'absent':
             return False
@@ -345,12 +362,12 @@ class DldpInterface(object):
                 if not flag:
                     return False
 
-            if self.reset and self.reset == 'true':
+            if self.reset and self.reset == 'enable':
                 return False
         return True
 
     def check_macaddr(self):
-        """check mac-address whether valid"""
+        """Check mac-address whether valid"""
 
         valid_char = '0123456789abcdef-'
         mac = self.local_mac
@@ -395,20 +412,20 @@ class DldpInterface(object):
                 msg="Error: Please specify local_mac parameter.")
 
         if self.state == 'present':
-            if (self.dldp_intf_conf['dldpEnable'] == 'false' and not self.enable and
+            if (self.dldp_intf_conf['dldpEnable'] == 'disable' and not self.enable and
                     (self.mode_enable or self.local_mac or self.reset)):
                 self.module.fail_json(msg="Error: when DLDP is already disabled on this port, "
                                       "mode_enable, local_mac and reset parameters are not "
                                       "expected to configure.")
 
-            if self.enable == 'false' and (self.mode_enable or self.local_mac or self.reset):
-                self.module.fail_json(msg="Error: when using enable=false, "
+            if self.enable == 'disable' and (self.mode_enable or self.local_mac or self.reset):
+                self.module.fail_json(msg="Error: when using enable=disable, "
                                       "mode_enable, local_mac and reset parameters "
                                       "are not expected to configure.")
 
-        if self.local_mac and (self.mode_enable == 'false' or
-                               (self.dldp_intf_conf['dldpCompatibleEnable'] == 'false'
-                                and self.mode_enable != 'true')):
+        if self.local_mac and (self.mode_enable == 'disable' or
+                               (self.dldp_intf_conf['dldpCompatibleEnable'] == 'disable'
+                                and self.mode_enable != 'enable')):
             self.module.fail_json(msg="Error: when DLDP compatible-mode is disabled on this port, "
                                       "Configuring local_mac is not allowed.")
 
@@ -418,83 +435,34 @@ class DldpInterface(object):
                     msg="Error: local_mac has invalid value %s." % self.local_mac)
 
     def init_module(self):
-        """init module object"""
+        """Init module object"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init netconf interface"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-            if not self.netconf:
-                self.module.fail_json(msg='Error: netconf init failed')
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed"""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """netconf set action"""
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def get_dldp_intf_exist_config(self):
-        """get current dldp existed config"""
+        """Get current dldp existed config"""
 
         dldp_conf = dict()
         xml_str = CE_NC_GET_INTF_DLDP_CONFIG % self.interface
-        con_obj = self.netconf_get_config(xml_str)
-        if "<data/>" in con_obj.xml:
-            dldp_conf['dldpEnable'] = 'false'
+        con_obj = get_nc_config(self.module, xml_str)
+        if "<data/>" in con_obj:
+            dldp_conf['dldpEnable'] = 'disable'
             dldp_conf['dldpCompatibleEnable'] = ""
             dldp_conf['dldpLocalMac'] = ""
             return dldp_conf
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = con_obj.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
-        # get global dldp info
+        # get global DLDP info
         root = ElementTree.fromstring(xml_str)
         topo = root.find("data/dldp/dldpInterfaces/dldpInterface")
         if topo is None:
@@ -505,12 +473,19 @@ class DldpInterface(object):
                 if not eles.text:
                     dldp_conf[eles.tag] = ""
                 else:
-                    dldp_conf[eles.tag] = eles.text
+                    if eles.tag == "dldpEnable" or eles.tag == "dldpCompatibleEnable":
+                        if eles.text == 'true':
+                            value = 'enable'
+                        else:
+                            value = 'disable'
+                    else:
+                        value = eles.text
+                    dldp_conf[eles.tag] = value
 
         return dldp_conf
 
     def config_intf_dldp(self):
-        """config global dldp"""
+        """Config global dldp"""
 
         if self.same_conf:
             return
@@ -519,44 +494,63 @@ class DldpInterface(object):
             enable = self.enable
             if not self.enable:
                 enable = self.dldp_intf_conf['dldpEnable']
+            if enable == 'enable':
+                enable = 'true'
+            else:
+                enable = 'false'
 
             mode_enable = self.mode_enable
             if not self.mode_enable:
                 mode_enable = self.dldp_intf_conf['dldpCompatibleEnable']
+            if mode_enable == 'enable':
+                mode_enable = 'true'
+            else:
+                mode_enable = 'false'
 
             local_mac = self.local_mac
             if not self.local_mac:
                 local_mac = self.dldp_intf_conf['dldpLocalMac']
 
-            if self.enable == 'false' and self.enable != self.dldp_intf_conf['dldpEnable']:
+            if self.enable == 'disable' and self.enable != self.dldp_intf_conf['dldpEnable']:
                 xml_str = CE_NC_DELETE_DLDP_INTF_CONFIG % self.interface
-                self.netconf_set_config(xml_str, "DELETE_DLDP_INTF_CONFIG")
-            elif self.dldp_intf_conf['dldpEnable'] == 'false' and self.enable == 'true':
+                ret_xml = set_nc_config(self.module, xml_str)
+                self.check_response(ret_xml, "DELETE_DLDP_INTF_CONFIG")
+            elif self.dldp_intf_conf['dldpEnable'] == 'disable' and self.enable == 'enable':
                 xml_str = CE_NC_CREATE_DLDP_INTF_CONFIG % (
-                    self.interface, self.enable, mode_enable, local_mac)
-                self.netconf_set_config(xml_str, "CREATE_DLDP_INTF_CONFIG")
-            elif self.dldp_intf_conf['dldpEnable'] == 'true':
+                    self.interface, 'true', mode_enable, local_mac)
+                ret_xml = set_nc_config(self.module, xml_str)
+                self.check_response(ret_xml, "CREATE_DLDP_INTF_CONFIG")
+            elif self.dldp_intf_conf['dldpEnable'] == 'enable':
                 if mode_enable == 'false':
                     local_mac = ''
                 xml_str = CE_NC_MERGE_DLDP_INTF_CONFIG % (
                     self.interface, enable, mode_enable, local_mac)
-                self.netconf_set_config(xml_str, "MERGE_DLDP_INTF_CONFIG")
+                ret_xml = set_nc_config(self.module, xml_str)
+                self.check_response(ret_xml, "MERGE_DLDP_INTF_CONFIG")
 
-            if self.reset == 'true':
+            if self.reset == 'enable':
                 xml_str = CE_NC_ACTION_RESET_INTF_DLDP % self.interface
-                self.netconf_set_action(xml_str, "ACTION_RESET_INTF_DLDP")
+                ret_xml = execute_nc_action(self.module, xml_str)
+                self.check_response(ret_xml, "ACTION_RESET_INTF_DLDP")
 
             self.changed = True
         else:
             if self.local_mac and judge_is_mac_same(self.local_mac, self.dldp_intf_conf['dldpLocalMac']):
-                xml_str = CE_NC_MERGE_DLDP_INTF_CONFIG % (self.interface, self.dldp_intf_conf[
-                    'dldpEnable'], self.dldp_intf_conf['dldpCompatibleEnable'], '')
-                self.netconf_set_config(
-                    xml_str, "UNDO_DLDP_INTF_LOCAL_MAC_CONFIG")
+                if self.dldp_intf_conf['dldpEnable'] == 'enable':
+                    dldp_enable = 'true'
+                else:
+                    dldp_enable = 'false'
+                if self.dldp_intf_conf['dldpCompatibleEnable'] == 'enable':
+                    dldp_compat_enable = 'true'
+                else:
+                    dldp_compat_enable = 'false'
+                xml_str = CE_NC_MERGE_DLDP_INTF_CONFIG % (self.interface, dldp_enable, dldp_compat_enable, '')
+                ret_xml = set_nc_config(self.module, xml_str)
+                self.check_response(ret_xml, "UNDO_DLDP_INTF_LOCAL_MAC_CONFIG")
                 self.changed = True
 
     def get_existing(self):
-        """get existing info"""
+        """Get existing info"""
 
         dldp_conf = dict()
 
@@ -565,32 +559,32 @@ class DldpInterface(object):
         dldp_conf['mode_enable'] = self.dldp_intf_conf.get(
             'dldpCompatibleEnable', None)
         dldp_conf['local_mac'] = self.dldp_intf_conf.get('dldpLocalMac', None)
-        dldp_conf['reset'] = 'false'
+        dldp_conf['reset'] = 'disable'
 
         self.existing = copy.deepcopy(dldp_conf)
 
     def get_proposed(self):
-        """get proposed result """
+        """Get proposed result """
 
         self.proposed = dict(interface=self.interface, enable=self.enable,
                              mode_enable=self.mode_enable, local_mac=self.local_mac,
                              reset=self.reset, state=self.state)
 
     def get_update_cmd(self):
-        """get updatede commands"""
+        """Get updatede commands"""
 
         if self.same_conf:
             return
 
         if self.state == "present":
             if self.enable and self.enable != self.dldp_intf_conf['dldpEnable']:
-                if self.enable == 'true':
+                if self.enable == 'enable':
                     self.updates_cmd.append("dldp enable")
-                elif self.enable == 'false':
+                elif self.enable == 'disable':
                     self.updates_cmd.append("undo dldp enable")
 
             if self.mode_enable and self.mode_enable != self.dldp_intf_conf['dldpCompatibleEnable']:
-                if self.mode_enable == 'true':
+                if self.mode_enable == 'enable':
                     self.updates_cmd.append("dldp compatible-mode enable")
                 else:
                     self.updates_cmd.append("undo dldp compatible-mode enable")
@@ -602,14 +596,14 @@ class DldpInterface(object):
                     self.updates_cmd.append(
                         "dldp compatible-mode local-mac %s" % self.local_mac)
 
-            if self.reset and self.reset == 'true':
+            if self.reset and self.reset == 'enable':
                 self.updates_cmd.append('dldp reset')
         else:
             if self.changed:
                 self.updates_cmd.append("undo dldp compatible-mode local-mac")
 
     def get_end_state(self):
-        """get end state info"""
+        """Get end state info"""
 
         dldp_conf = dict()
         self.dldp_intf_conf = self.get_dldp_intf_exist_config()
@@ -619,14 +613,14 @@ class DldpInterface(object):
         dldp_conf['mode_enable'] = self.dldp_intf_conf.get(
             'dldpCompatibleEnable', None)
         dldp_conf['local_mac'] = self.dldp_intf_conf.get('dldpLocalMac', None)
-        dldp_conf['reset'] = 'false'
-        if self.reset == 'true':
-            dldp_conf['reset'] = 'true'
+        dldp_conf['reset'] = 'disable'
+        if self.reset == 'enable':
+            dldp_conf['reset'] = 'enable'
 
         self.end_state = copy.deepcopy(dldp_conf)
 
     def show_result(self):
-        """show result"""
+        """Show result"""
 
         self.results['changed'] = self.changed
         self.results['proposed'] = self.proposed
@@ -640,7 +634,7 @@ class DldpInterface(object):
         self.module.exit_json(**self.results)
 
     def work(self):
-        """excute task"""
+        """Excute task"""
 
         self.dldp_intf_conf = self.get_dldp_intf_exist_config()
         self.check_params()
@@ -654,17 +648,17 @@ class DldpInterface(object):
 
 
 def main():
-    """main function entry"""
+    """Main function entry"""
 
     argument_spec = dict(
         interface=dict(required=True, type='str'),
-        enable=dict(choices=['true', 'false'], type='str'),
-        reset=dict(choices=['true', 'false'], type='str'),
-        mode_enable=dict(choices=['true', 'false'], type='str'),
+        enable=dict(choices=['enable', 'disable'], type='str'),
+        reset=dict(choices=['enable', 'disable'], type='str'),
+        mode_enable=dict(choices=['enable', 'disable'], type='str'),
         local_mac=dict(type='str'),
         state=dict(choices=['absent', 'present'], default='present'),
     )
-
+    argument_spec.update(ce_argument_spec)
     dldp_intf_obj = DldpInterface(argument_spec)
     dldp_intf_obj.work()
 

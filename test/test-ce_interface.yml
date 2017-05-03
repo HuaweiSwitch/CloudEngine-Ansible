@@ -4,6 +4,9 @@
   hosts: cloudengine
   connection: local
   gather_facts: no
+  vars:
+    test_intf_sw: 10GE1/0/7
+    test_intf_l2sub: 10GE1/0/7.1
 
 
   tasks:
@@ -14,12 +17,12 @@
     ignore_errors: false
 
   - name: "Ensure an interface is a Layer 3 port and that it has the proper description"
-    ce_interface: interface="40GE1/0/3"  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_interface: interface={{test_intf_sw}}  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
     ignore_errors: true
 
   - name: "Admin down an interface"
-    ce_interface: interface="40GE1/0/3"  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_interface: interface={{test_intf_sw}}  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
 
   - name: "TEST 2"
@@ -117,4 +120,39 @@
   - name: "Admin up all 40GE interfaces"
     ce_interface: interface_type=40ge admin_state=up host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
     register: data
+    ignore_errors: false
+
+  - name: "Ensure l2 sub interface not exist"
+    ce_interface: interface={{ test_intf_l2sub }} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
     ignore_errors: true
+
+  - name: "Create l2 sub interface"
+    ce_interface: interface={{ test_intf_l2sub }} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete l2 sub interface"
+    ce_interface: interface={{ test_intf_l2sub }} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "Delete l2 sub interface, again"
+    ce_interface: interface={{ test_intf_l2sub }} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false

@@ -4,23 +4,29 @@
   hosts: cloudengine
   connection: local
   gather_facts: no
-
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
 # normal argument test
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=2200 provider="{{ cli }}"
     register: data
 
   - name: "config acl"
-    ce_acl: state=present acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=2200 provider="{{ cli }}"
     register: data
 
   - name: "TEST 1"
@@ -29,7 +35,7 @@
         - data.changed == true
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=2200 provider="{{ cli }}"
     register: data
 
   - name: "TEST 2"
@@ -38,11 +44,11 @@
         - data.changed == true
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "config acl"
-    ce_acl: state=present acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "TEST 3"
@@ -51,7 +57,7 @@
         - data.changed == true
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "TEST 4"
@@ -60,7 +66,7 @@
         - data.changed == true
 
   - name: "config acl"
-    ce_acl: state=present acl_name=wdz_basic acl_step=10 acl_num=2200 acl_description=wangdezhuang host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_step=10 acl_num=2200 acl_description=wangdezhuang provider="{{ cli }}"
     register: data
 
   - name: "TEST 5"
@@ -69,7 +75,7 @@
         - data.changed == true
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "TEST 6"
@@ -78,7 +84,7 @@
         - data.changed == true
 
   - name: "config acl base rule"
-    ce_acl: state=present acl_name=wdz_basic rule_name=wdz_basic_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic rule_name=wdz_basic_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment provider="{{ cli }}"
     register: data
 
   - name: "TEST 7"
@@ -87,7 +93,7 @@
         - data.changed == true
 
   - name: "undo acl base rule"
-    ce_acl: state=delete_acl acl_name=wdz_basic rule_name=wdz_basic_rule host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic rule_name=wdz_basic_rule provider="{{ cli }}"
     register: data
 
   - name: "TEST 8"
@@ -96,7 +102,7 @@
         - data.changed == true
 
   - name: "config acl base rule"
-    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=wdz_basic_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=wdz_basic_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment provider="{{ cli }}"
     register: data
 
   - name: "TEST 9"
@@ -105,7 +111,7 @@
         - data.changed == true
 
   - name: "undo acl base rule"
-    ce_acl: state=absent acl_name=wdz_basic rule_name=wdz_basic_rule rule_id=111 rule_action=permit host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=absent acl_name=wdz_basic rule_name=wdz_basic_rule rule_id=111 rule_action=permit provider="{{ cli }}"
     register: data
 
   - name: "TEST 10"
@@ -114,7 +120,7 @@
         - data.changed == true
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "TEST 11"
@@ -123,7 +129,7 @@
         - data.changed == true
 
   - name: "abnormal para"
-    ce_acl: state=present acl_name=30006 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=30006 provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -133,7 +139,7 @@
         - data | failed
 
   - name: "abnormal para"
-    ce_acl: state=present acl_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -143,7 +149,7 @@
         - data | failed
 
   - name: "config acl"
-    ce_acl: state=present acl_name=wdz_basic acl_step=30 acl_num=2200 acl_description=wangdezhuang host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_step=30 acl_num=2200 acl_description=wangdezhuang provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -153,7 +159,7 @@
         - data | failed
 
   - name: "config acl"
-    ce_acl: state=present acl_name=wdz_basic acl_step=30 acl_num=2200 acl_description='' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_step=30 acl_num=2200 acl_description='' provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -163,7 +169,7 @@
         - data | failed
 
   - name: "config acl base rule"
-    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=wdz_basic_rule rule_id=-23 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=wdz_basic_rule rule_id=-23 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -173,7 +179,7 @@
         - data | failed
 
   - name: "config acl base rule"
-    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa rule_id=111 rule_action=permit source_ip=10.10.10.10 src_mask=24 frag_type=fragment provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -183,7 +189,7 @@
         - data | failed
 
   - name: "config acl base rule"
-    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=aaaaa rule_id=111 rule_action=permit source_ip=10.10.10 src_mask=24 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=present acl_name=wdz_basic acl_description=wdz_basic_acl rule_name=aaaaa rule_id=111 rule_action=permit source_ip=10.10.10 src_mask=24 frag_type=fragment provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -193,7 +199,7 @@
         - data | failed
 
   - name: "undo acl"
-    ce_acl: state=delete_acl acl_name=wdz_basic host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_acl: state=delete_acl acl_name=wdz_basic provider="{{ cli }}"
     register: data
 
   - name: "TEST 19"

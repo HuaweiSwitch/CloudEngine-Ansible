@@ -13,42 +13,48 @@
     vpn2: vxlan_gw_vpn2
     clear_cmd: 'undo ip vpn-instance vxlan_gw_vpn1,undo ip vpn-instance vxlan_gw_vpn2,undo interface vbdif100,undo bridge-domain 100,undo dfs-group 1'
     setup_cmd: 'ip vpn-instance vxlan_gw_vpn1,quit,ip vpn-instance vxlan_gw_vpn2,quit,bridge-domain 100,quit,interface vbdif100,quit'
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   gather_facts: no
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "ensure vpn1 exist"
-    ce_config: lines='ip vpn-instance vxlan_gw_vpn1' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='ip vpn-instance vxlan_gw_vpn1' provider="{{ cli }}"
     register: data
     ignore_errors: false
         
   - name: "ensure vpn2 exist"
-    ce_config: lines='ip vpn-instance vxlan_gw_vpn2' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='ip vpn-instance vxlan_gw_vpn2' provider="{{ cli }}"
     register: data
     ignore_errors: false
         
   - name: "ensure bridge-domain exist"
-    ce_config: lines='bridge-domain 100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='bridge-domain 100' provider="{{ cli }}"
     register: data
     ignore_errors: true
         
   - name: "ensure vbdif exist"
-    ce_config: lines='interface vbdif100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='interface vbdif100' provider="{{ cli }}"
     register: data
     ignore_errors: false
     
   - name: "ensure dfs-group not exist"
-    ce_vxlan_gateway: dfs_id=1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: true
         
   - name: "create dfs-group"
-    ce_vxlan_gateway: dfs_id=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -58,7 +64,7 @@
         - data.changed == true
         
   - name: "set dfs source ip"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -68,7 +74,7 @@
         - data.changed == true
         
   - name: "set dfs source ip vpn"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -78,7 +84,7 @@
         - data.changed == true
 
   - name: "set dfs source ip vpn, again"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -88,7 +94,7 @@
         - data.changed == false
    
   - name: "merge dfs source ip vpn"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip2}} dfs_source_vpn={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip2}} dfs_source_vpn={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -98,7 +104,7 @@
         - data.changed == true
         
   - name: "unset dfs source"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip2}} dfs_source_vpn={{vpn1}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip2}} dfs_source_vpn={{vpn1}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -108,7 +114,7 @@
         - data.changed == true
         
   - name: "set dfs udp port"
-    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2000  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2000  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -118,7 +124,7 @@
         - data.changed == true
         
   - name: "merge dfs udp port"
-    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -128,7 +134,7 @@
         - data.changed == true
         
   - name: "unset dfs udp port"
-    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -138,7 +144,7 @@
         - data.changed == true
         
   - name: "unset dfs udp port, agian"
-    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2001  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -148,7 +154,7 @@
         - data.changed == false
         
   - name: "set dfs gw all acive"
-    ce_vxlan_gateway: dfs_id=1 dfs_all_active=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_all_active=enable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -158,7 +164,7 @@
         - data.changed == true
         
   - name: "set dfs peer1"
-    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}}  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -168,7 +174,7 @@
         - data.changed == true
         
   - name: "set dfs peer2"
-    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip2}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip2}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -178,7 +184,7 @@
         - data.changed == true
         
   - name: "unset dfs peer1"
-    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}}  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -188,7 +194,7 @@
         - data.changed == true
         
   - name: "unset dfs peer2"
-    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip2}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip2}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -198,7 +204,7 @@
         - data.changed == true
         
   - name: "set dfs all active disable"
-    ce_vxlan_gateway: dfs_id=1 dfs_all_active=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_all_active=disable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -208,7 +214,7 @@
         - data.changed == true
         
   - name: "delete dfs group"
-    ce_vxlan_gateway: dfs_id=1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -219,7 +225,7 @@
         - data.changed == true
         
   - name: "set vpn vni"
-    ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -229,7 +235,7 @@
         - data.changed == true
         
   - name: "unset vpn vni"
-    ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -239,7 +245,7 @@
         - data.changed == true
         
   - name: "set vbdif mac"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -249,7 +255,7 @@
         - data.changed == true
 
   - name: "merge vbdif mac"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-101  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-101  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -259,7 +265,7 @@
         - data.changed == true
         
   - name: "unset vbdif mac"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0-5e00-101  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0-5e00-101  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -269,7 +275,7 @@
         - data.changed == true
         
   - name: "set vbdif bind vpn"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -279,7 +285,7 @@
         - data.changed == true
         
   - name: "unset vbdif bind vpn"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -289,7 +295,7 @@
         - data.changed == true
         
   - name: "set vbdif arp distribute gateway enable"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=enable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -299,7 +305,7 @@
         - data.changed == true
         
   - name: "set vbdif arp distribute gateway disable"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=disable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -309,7 +315,7 @@
         - data.changed == true
         
   - name: "set vbdif direct route enable"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=enable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -319,7 +325,7 @@
         - data.changed == true
         
   - name: "set vbdif direct route disable"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=disable  state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -329,7 +335,7 @@
         - data.changed == true
         
   - name: "check dfs_id 1"
-    ce_vxlan_gateway:  dfs_id=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=abc state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -340,7 +346,7 @@
         - data | failed 
         
   - name: "check dfs_id 2"
-    ce_vxlan_gateway:  dfs_id=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=0 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -351,7 +357,7 @@
         - data | failed 
         
   - name: "check dfs_id 3"
-    ce_vxlan_gateway:  dfs_id=2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=2 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -362,7 +368,7 @@
         - data | failed 
         
   - name: "check dfs_source_ip 1"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=abc state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -373,7 +379,7 @@
         - data | failed 
         
   - name: "check dfs_source_ip 2"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=192.256.2.1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=192.256.2.1 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -384,7 +390,7 @@
         - data | failed 
         
   - name: "check dfs_source_ip 3"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip=100 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -395,7 +401,7 @@
         - data | failed 
         
   - name: "check dfs_source_vpn 1"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn=nonono state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn=nonono state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -406,7 +412,7 @@
         - data | failed 
         
   - name: "check dfs_source_vpn 2"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn="a012345678901234567890123456789b" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn="a012345678901234567890123456789b" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -417,7 +423,7 @@
         - data | failed 
         
   - name: "check dfs_source_vpn 3"
-    ce_vxlan_gateway:  dfs_id=1 dfs_source_vpn={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_source_vpn={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -428,7 +434,7 @@
         - data | failed 
         
   - name: "check dfs_udp_port 1"
-    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=1024 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=1024 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -439,7 +445,7 @@
         - data | failed 
         
   - name: "check dfs_udp_port 2"
-    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=65536 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=65536 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -450,7 +456,7 @@
         - data | failed 
         
   - name: "check dfs_udp_port 3"
-    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_udp_port=abc state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -461,7 +467,7 @@
         - data | failed 
         
   - name: "check dfs_peer_ip 1"
-    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip=abc state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -472,7 +478,7 @@
         - data | failed 
         
   - name: "check dfs_peer_ip 2"
-    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip=1.2.333.3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip=1.2.333.3 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -483,7 +489,7 @@
         - data | failed 
         
   - name: "check dfs_peer_vpn 1"
-    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn=nonono state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn=nonono state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -494,7 +500,7 @@
         - data | failed 
         
   - name: "check dfs_peer_vpn 2"
-    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn=a012345678901234567890123456789b state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway:  dfs_id=1 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn=a012345678901234567890123456789b state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -505,7 +511,7 @@
         - data | failed 
        
   - name: "check vpn_instance 1"
-    ce_vxlan_gateway: vpn_vni={{vni_id}} vpn_instance=nonono state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_vni={{vni_id}} vpn_instance=nonono state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -516,7 +522,7 @@
         - data | failed 
        
   - name: "check vpn_instance 2"
-    ce_vxlan_gateway: vpn_vni={{vni_id}} vpn_instance=a012345678901234567890123456789b state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_vni={{vni_id}} vpn_instance=a012345678901234567890123456789b state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -527,7 +533,7 @@
         - data | failed 
         
   - name: "check vpn_vni 1"
-    ce_vxlan_gateway: vpn_vni=abc vpn_instance={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_vni=abc vpn_instance={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -538,7 +544,7 @@
         - data | failed 
         
   - name: "check vpn_vni 2"
-    ce_vxlan_gateway: vpn_vni=16000001 vpn_instance={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_vni=16000001 vpn_instance={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -549,7 +555,7 @@
         - data | failed 
         
   - name: "check vpn_vni 3"
-    ce_vxlan_gateway: vpn_vni=0 vpn_instance={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vpn_vni=0 vpn_instance={{vpn1}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -560,7 +566,7 @@
         - data | failed 
         
   - name: "check vbdif_name 1"
-    ce_vxlan_gateway: vbdif_name=tunnel1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name=tunnel1 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -571,7 +577,7 @@
         - data | failed 
         
   - name: "check vbdif_name 2"
-    ce_vxlan_gateway: vbdif_name=vbdif0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name=vbdif0 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -582,7 +588,7 @@
         - data | failed 
         
   - name: "check vbdif_mac 1"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=abc state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=abc state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -593,7 +599,7 @@
         - data | failed 
         
   - name: "check vbdif_mac 2"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000.5e00.0100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000.5e00.0100 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -604,7 +610,7 @@
         - data | failed 
         
   - name: "check vbdif_mac 3"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=00005e000100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=00005e000100 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -615,7 +621,7 @@
         - data | failed 
         
   - name: "check vbdif_mac 4"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-00100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-00100 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -626,7 +632,7 @@
         - data | failed  
         
   - name: "check vbdif_mac 5"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-gggg state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-gggg state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -637,7 +643,7 @@
         - data | failed  
         
   - name: "check vbdif_bind_vpn 1"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn=nononono state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn=nononono state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -648,7 +654,7 @@
         - data | failed  
         
   - name: "check vbdif_bind_vpn 1"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn=a012345678901234567890123456789b state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn=a012345678901234567890123456789b state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -659,7 +665,7 @@
         - data | failed  
         
   - name: "config all active gw"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} dfs_udp_port=2000 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} dfs_udp_port=2000 dfs_all_active=enable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -669,7 +675,7 @@
         - data.changed == true 
         
   - name: "undo config all active gw"
-    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} dfs_udp_port=2000 dfs_all_active=disable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip1}} dfs_source_vpn={{vpn1}} dfs_udp_port=2000 dfs_all_active=disable dfs_peer_ip={{peer_ip1}} dfs_peer_vpn={{vpn2}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -679,7 +685,7 @@
         - data.changed == true 
 
   - name: "config Distributed gw"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100 vbdif_bind_vpn={{vpn1}} arp_distribute_gateway=enable arp_direct_route=enable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100 vbdif_bind_vpn={{vpn1}} arp_distribute_gateway=enable arp_direct_route=enable state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -689,7 +695,7 @@
         - data.changed == true 
         
   - name: "undo config Distributed gw"
-    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100 vbdif_bind_vpn={{vpn1}} arp_distribute_gateway=disable arp_direct_route=disable state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100 vbdif_bind_vpn={{vpn1}} arp_distribute_gateway=disable arp_direct_route=disable state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
     
@@ -699,6 +705,6 @@
         - data.changed == true 
         
   - name: "clear config"
-    ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines={{clear_cmd}} provider="{{ cli }}"
     register: data
     ignore_errors: true

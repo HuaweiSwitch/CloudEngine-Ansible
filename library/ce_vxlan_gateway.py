@@ -28,7 +28,6 @@ short_description: Manages gateway for the VXLAN network.
 description:
     - Configuring Centralized All-Active Gateways or Distributed Gateway for the VXLAN Network.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - Ensure All-Active Gateways or Distributed Gateway for the VXLAN Network can not configure at the same time.
 options:
@@ -136,31 +135,39 @@ options:
 """
 
 EXAMPLES = '''
-# Configuring Centralized All-Active Gateways for the VXLAN Network
-- ce_vxlan_gateway:
-    dfs_id: 1
-    dfs_source_ip: 6.6.6.6
-    dfs_all_active: enable
-    dfs_peer_ip: 7.7.7.7
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Bind the VPN instance to a Layer 3 gateway, enable distributed gateway, and configure host route advertisement.
-- ce_vxlan_gateway:
-    vbdif_name: Vbdif100
-    vbdif_bind_vpn: vpn1
-    arp_distribute_gateway: enable
-    arp_direct_route: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Assign a VNI to a VPN instance.
-- ce_vxlan_gateway:
-    vpn_instance: vpn1
-    vpn_vni: 100
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan gateway module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configuring Centralized All-Active Gateways for the VXLAN Network
+    ce_vxlan_gateway:
+      dfs_id: 1
+      dfs_source_ip: 6.6.6.6
+      dfs_all_active: enable
+      dfs_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+  - name: Bind the VPN instance to a Layer 3 gateway, enable distributed gateway, and configure host route advertisement.
+    ce_vxlan_gateway:
+      vbdif_name: Vbdif100
+      vbdif_bind_vpn: vpn1
+      arp_distribute_gateway: enable
+      arp_direct_route: enable
+      provider: "{{ cli }}"
+  - name: Assign a VNI to a VPN instance.
+    ce_vxlan_gateway:
+      vpn_instance: vpn1
+      vpn_vni: 100
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -196,8 +203,10 @@ changed:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
+
 
 def is_config_exist(cmp_cfg, test_cfg):
     """is configuration exist?"""
@@ -341,6 +350,7 @@ def get_vbdif_mac(config):
     else:
         return get[0]
 
+
 class VxlanGateway(object):
     """
     Manages Gateway for the VXLAN Network.
@@ -386,29 +396,26 @@ class VxlanGateway(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
 
+        flags = list()
         exp = " | ignore-case section include dfs-group"
         if self.vpn_instance:
             exp += "|^ip vpn-instance %s$" % self.vpn_instance
         if self.vbdif_name:
             exp += "|^interface %s$" % self.vbdif_name
-
-        return self.module.config.get_config(include_defaults=False, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -930,7 +937,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanGateway(argument_spec)
     module.work()
 

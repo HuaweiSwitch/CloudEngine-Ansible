@@ -3,31 +3,24 @@
 - name: cloudengine rollback module test
   hosts: cloudengine
   vars:
-    checkpoint_1: 1000000784
-    checkpoint_2: 1000000783
-    checkpoint_3: 1000000781
-    checkpoint_4: 1000000780
-    checkpoint_5: 1000000779
-    label_1: user1
-    label_2: user2
-    label_3: user3
-    label_4: 1aaa
-    label_5: abc-
-    file_name1: a.cfg
-    file_name2: vrpcfg.zip
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
-
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "Set the user label of a specified configuration checkpoint 1"
-    ce_rollback: commit_id={{checkpoint_1}} label={{label_1}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: commit_id=1000102746 label=user7 action=set provider="{{ cli }}"
     register: data
 
   - name: "TEST 1"
@@ -35,8 +28,8 @@
       that:
         - data.changed == true
 
-  - name: "Set the user label of a specified configuration checkpoint 2"
-    ce_rollback: commit_id={{checkpoint_2}} label={{label_2}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Set the user label of a specified configuration checkpoint 3"
+    ce_rollback: commit_id=1000102733 label=user3 action=set provider="{{ cli }}"
     register: data
 
   - name: "TEST 2"
@@ -44,28 +37,21 @@
       that:
         - data.changed == true
 
-  - name: "Set the user label of a specified configuration checkpoint 3"
-    ce_rollback: commit_id={{checkpoint_3}} label={{label_3}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Set the same user label of a specified configuration checkpoint"
+    ce_rollback: commit_id=1000102733 label=user1 action=set provider="{{ cli }}"
     register: data
+    ignore_errors: true
 
   - name: "TEST 3"
     assert:
       that:
-        - data.changed == true
-
-  - name: "Set the same user label of a specified configuration checkpoint"
-    ce_rollback: commit_id={{checkpoint_3}} label={{label_1}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 4"
-    assert:
-      that:
-        - data | failed
+        - data.changed == false
+        - data | failed 
 
   - name: "Roll back the system configuration to a specified checkpoint"
-    ce_rollback: commit_id={{checkpoint_1}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: commit_id=1000102748 action=rollback provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 5"
     assert:
@@ -73,9 +59,9 @@
         - data.changed == true
 
   - name: "Roll back the system configuration to a specified checkpoint by user label"
-    ce_rollback: label={{label_2}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: label=user1 action=rollback provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 6"
     assert:
@@ -83,9 +69,9 @@
         - data.changed == true
 
   - name: "Roll back the configurations of several checkpoints"
-    ce_rollback: last=1 action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: last=1 action=rollback provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 7"
     assert:
@@ -93,29 +79,31 @@
         - data.changed == true
 
   - name: "Check several checkpoints value"
-    ce_rollback: last=0 action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: last=0 action=rollback provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "TEST 8"
     assert:
       that:
-        - data | failed
+        - data.changed == false
+        - data | failed 
 
   - name: "Check several checkpoints value"
-    ce_rollback: last=81 action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: last=81 action=rollback provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "TEST 9"
     assert:
       that:
-        - data | failed
+        - data.changed == false
+        - data | failed 
 
   - name: "Configure an existing configuration file as the startup file of a specified slot, file types are *.cfg, *.zip, and *.dat"
-    ce_rollback: filename={{file_name1}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: filename=fcoe_vm.cfg action=rollback provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 9"
     assert:
@@ -123,7 +111,7 @@
         - data.changed == true
 
   - name: "Display configuration"
-    ce_rollback: action=display host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: action=display provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -133,9 +121,9 @@
         - data.changed == false
 
   - name: "Delete the oldest checkpoints"
-    ce_rollback: oldest=1 action=clear host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: oldest=1 action=clear provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 11"
     assert:
@@ -143,59 +131,22 @@
         - data.changed == true
 
   - name: "Delete the oldest checkpoints, number is invalid"
-    ce_rollback: oldest=81 action=clear host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: oldest=81 action=clear provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "TEST 12"
     assert:
       that:
-        - data | failed
+        - data.changed == false
+        - data | failed 
 
   - name: "Reset the user label of a specified configuration checkpoint"
-    ce_rollback: commit_id={{checkpoint_3}} action=clear host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_rollback: commit_id=1000102733 action=clear provider="{{ cli }}"
     register: data
-    ignore_errors: true
+    ignore_errors: false
 
   - name: "TEST 13"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "Set the same user label of a specified configuration checkpoint, label is invalid"
-    ce_rollback: commit_id={{checkpoint_4}} label={{label_4}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 14"
-    assert:
-      that:
-        - data | failed
-
-  - name: "Set the same user label of a specified configuration checkpoint, label is invalid"
-    ce_rollback: commit_id={{checkpoint_5}} label={{label_5}} action=set host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-
-  - name: "TEST 15"
-    assert:
-      that:
-        - data | failed
-
-  - name: "Configure an existing configuration file as the startup file of a specified slot, file types are *.cfg, *.zip, and *.dat"
-    ce_rollback: filename={{file_name2}} action=rollback host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-    ignore_errors: true
-
-  - name: "TEST 16"
-    assert:
-      that:
-        - data.changed == true
-
-  - name: "Commit with label"
-    ce_rollback: label={{label_5}} action=commit host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
-    ignore_errors: true
-
-  - name: "TEST 17"
     assert:
       that:
         - data.changed == true

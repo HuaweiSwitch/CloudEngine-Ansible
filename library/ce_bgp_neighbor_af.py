@@ -22,12 +22,11 @@ ANSIBLE_METADATA = {'status': ['preview'],
 
 DOCUMENTATION = '''
 ---
-module: ce_bgp_af
+module: ce_bgp_neighbor_af
 version_added: "2.3"
 short_description: Manages BGP neighbor Address-family configuration.
 description:
     - Manages BGP neighbor Address-family configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -50,50 +49,50 @@ options:
             - If the value is true, advertised IRB routes are distinguished.
               If the value is false, advertised IRB routes are not distinguished.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     advertise_arp:
         description:
             - If the value is true, advertised ARP routes are distinguished.
               If the value is false, advertised ARP routes are not distinguished.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     advertise_remote_nexthop:
         description:
             - If the value is true, the remote next-hop attribute is advertised to peers.
               If the value is false, the remote next-hop attribute is not advertised to any peers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     advertise_community:
         description:
             - If the value is true, the community attribute is advertised to peers.
               If the value is false, the community attribute is not advertised to peers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     advertise_ext_community:
         description:
             - If the value is true, the extended community attribute is advertised to peers.
               If the value is false, the extended community attribute is not advertised to peers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     discard_ext_community:
         description:
             - If the value is true, the extended community attribute in the peer route information is discarded.
               If the value is false, the extended community attribute in the peer route information is not discarded.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     allow_as_loop_enable:
         description:
             - If the value is true, repetitive local AS numbers are allowed.
               If the value is false, repetitive local AS numbers are not allowed.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     allow_as_loop_limit:
         description:
             - Set the maximum number of repetitive local AS number.
@@ -107,8 +106,8 @@ options:
               If the value is false, the system stores only BGP update messages that are received from peers
               and pass the configured import policy.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     nexthop_configure:
         description:
             - null, The next hop is not changed.
@@ -130,34 +129,34 @@ options:
               private AS numbers.
               If the value is false, sent BGP update messages can carry private AS numbers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     public_as_only_force:
         description:
             - If the value is true, sent BGP update messages carry only the public AS number but do not carry
               private AS numbers.
               If the value is false, sent BGP update messages can carry private AS numbers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     public_as_only_limited:
         description:
-            - limited use public as number.
+            - Limited use public as number.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     public_as_only_replace:
         description:
-            - private as replaced by public as number.
+            - Private as replaced by public as number.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     public_as_only_skip_peer_as:
         description:
-            - public as only skip peer as.
+            - Public as only skip peer as.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     route_limit:
         description:
             - Configure the maximum number of routes that can be accepted from a peer.
@@ -172,13 +171,13 @@ options:
         default: null
     route_limit_type:
         description:
-            - noparameter, After the number of received routes exceeds the threshold and the timeout
+            - Noparameter, After the number of received routes exceeds the threshold and the timeout
               timer expires,no action.
-              alertOnly, An alarm is generated and no additional routes will be accepted if the maximum
+              AlertOnly, An alarm is generated and no additional routes will be accepted if the maximum
               number of routes allowed have been received.
-              idleForever, The connection that is interrupted is not automatically re-established if the
+              IdleForever, The connection that is interrupted is not automatically re-established if the
               maximum number of routes allowed have been received.
-              idleTimeout, After the number of received routes exceeds the threshold and the timeout timer
+              IdleTimeout, After the number of received routes exceeds the threshold and the timeout timer
               expires, the connection that is interrupted is automatically re-established.
         required: false
         default: null
@@ -198,33 +197,33 @@ options:
         default: null
     redirect_ip:
         description:
-            - redirect ip.
+            - Redirect ip.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     redirect_ip_vaildation:
         description:
-            - redirect ip vaildation.
+            - Redirect ip vaildation.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     reflect_client:
         description:
             - If the value is true, the local device functions as the route reflector and a peer functions
               as a client of the route reflector.
               If the value is false, the route reflector and client functions are not configured.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     substitute_as_enable:
         description:
             - If the value is true, the function to replace a specified peer's AS number in the AS-Path attribute with
               the local AS number is enabled.
               If the value is false, the function to replace a specified peer's AS number in the AS-Path attribute with
-              the local AS number is disabled
+              the local AS number is disabled.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     import_rt_policy_name:
         description:
             - Specify the filtering policy applied to the routes learned from a peer.
@@ -290,14 +289,15 @@ options:
               If the value is false, the address prefix-based Outbound Route Filter (ORF) capability is
               disabled for peers.
         required: false
-        default: null
+        default: no_use
+        choices: ['no_use','true','false']
     is_nonstd_ipprefix_mod:
         description:
             - If the value is true, Non-standard capability codes are used during capability negotiation.
               If the value is false, RFC-defined standard ORF capability codes are used during capability negotiation.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     orftype:
         description:
             - ORF Type.
@@ -306,7 +306,8 @@ options:
         default: null
     orf_mode:
         description:
-            - null, Default value.
+            - ORF mode.
+              null, Default value.
               receive, ORF for incoming packets.
               send, ORF for outgoing packets.
               both, ORF for incoming and outgoing packets.
@@ -324,8 +325,8 @@ options:
             - If the value is true, the function to advertise default routes to peers is enabled.
               If the value is false, the function to advertise default routes to peers is disabled.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     default_rt_adv_policy:
         description:
             - Specify the name of a used policy. The value is a string.
@@ -360,22 +361,22 @@ options:
             - If the value is true, Application results of route announcement.
               If the value is false, Routing application results are not notified.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     vpls_enable:
         description:
             - If the value is true, vpls enable.
               If the value is false, vpls disable.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     vpls_ad_disable:
         description:
             - If the value is true, enable vpls-ad.
               If the value is false, disable vpls-ad.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     update_pkt_standard_compatible:
         description:
             - If the value is true, When the vpnv4 multicast neighbor receives and updates the message,
@@ -383,33 +384,43 @@ options:
               If the value is false, When the vpnv4 multicast neighbor receives and updates the message,
               the message has label.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
 '''
 
 EXAMPLES = '''
-# config BGP peer Address_Family
-  - name: "config BGP peer Address_Family"
+
+- name: CloudEngine BGP neighbor address family test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config BGP peer Address_Family"
     ce_bgp_neighbor_af:
-        state:  present
-        vrf_name:  js
-        af_type:  ipv4uni
-        remote_address:  192.168.10.10
-        nexthop_configure:  null
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo BGP peer Address_Family
-  - name: "undo BGP peer Address_Family"
+      state:  present
+      vrf_name:  js
+      af_type:  ipv4uni
+      remote_address:  192.168.10.10
+      nexthop_configure:  local
+      provider: "{{ cli }}"
+
+  - name: "Undo BGP peer Address_Family"
     ce_bgp_neighbor_af:
-        state:  absent
-        vrf_name:  js
-        af_type:  ipv4uni
-        remote_address:  192.168.10.10
-        nexthop_configure:  null
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      vrf_name:  js
+      af_type:  ipv4uni
+      remote_address:  192.168.10.10
+      nexthop_configure:  local
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -451,14 +462,8 @@ updates:
 import re
 import sys
 import socket
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 # get bgp peer af
@@ -590,24 +595,15 @@ def check_ip_addr(**kwargs):
 class BgpNeighborAf(object):
     """ Manages BGP neighbor Address-family configuration """
 
-    def __init__(self, **kwargs):
-        """ __init__ """
-
-        self.netconf = get_netconf(**kwargs)
-
     def netconf_get_config(self, **kwargs):
         """ netconf_get_config """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, **kwargs):
         """ netconf_set_config """
@@ -615,13 +611,9 @@ class BgpNeighborAf(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_bgp_neighbor_af_args(self, **kwargs):
         """ check_bgp_neighbor_af_args """
@@ -646,14 +638,14 @@ class BgpNeighborAf(object):
 
         conf_str = CE_GET_BGP_PEER_AF_HEADER % (
             vrf_name, af_type) + CE_GET_BGP_PEER_AF_TAIL
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
         if state == "present":
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<remoteAddress>(.*)</remoteAddress>.*', con_obj.xml)
+                    r'.*<remoteAddress>(.*)</remoteAddress>.*', recv_xml)
 
                 if re_find:
                     result["remote_address"] = re_find
@@ -664,11 +656,11 @@ class BgpNeighborAf(object):
                 else:
                     need_cfg = True
         else:
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 pass
             else:
                 re_find = re.findall(
-                    r'.*<remoteAddress>(.*)</remoteAddress>.*', con_obj.xml)
+                    r'.*<remoteAddress>(.*)</remoteAddress>.*', recv_xml)
 
                 if re_find:
                     result["remote_address"] = re_find
@@ -696,17 +688,17 @@ class BgpNeighborAf(object):
             return result
 
         advertise_irb = module.params['advertise_irb']
-        if advertise_irb:
+        if advertise_irb != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advertiseIrb></advertiseIrb>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advertiseIrb>(.*)</advertiseIrb>.*', con_obj.xml)
+                    r'.*<advertiseIrb>(.*)</advertiseIrb>.*', recv_xml)
 
                 if re_find:
                     result["advertise_irb"] = re_find
@@ -718,17 +710,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         advertise_arp = module.params['advertise_arp']
-        if advertise_arp:
+        if advertise_arp != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advertiseArp></advertiseArp>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advertiseArp>(.*)</advertiseArp>.*', con_obj.xml)
+                    r'.*<advertiseArp>(.*)</advertiseArp>.*', recv_xml)
 
                 if re_find:
                     result["advertise_arp"] = re_find
@@ -740,17 +732,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         advertise_remote_nexthop = module.params['advertise_remote_nexthop']
-        if advertise_remote_nexthop:
+        if advertise_remote_nexthop != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advertiseRemoteNexthop></advertiseRemoteNexthop>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advertiseRemoteNexthop>(.*)</advertiseRemoteNexthop>.*', con_obj.xml)
+                    r'.*<advertiseRemoteNexthop>(.*)</advertiseRemoteNexthop>.*', recv_xml)
 
                 if re_find:
                     result["advertise_remote_nexthop"] = re_find
@@ -762,17 +754,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         advertise_community = module.params['advertise_community']
-        if advertise_community:
+        if advertise_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advertiseCommunity></advertiseCommunity>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advertiseCommunity>(.*)</advertiseCommunity>.*', con_obj.xml)
+                    r'.*<advertiseCommunity>(.*)</advertiseCommunity>.*', recv_xml)
 
                 if re_find:
                     result["advertise_community"] = re_find
@@ -784,17 +776,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         advertise_ext_community = module.params['advertise_ext_community']
-        if advertise_ext_community:
+        if advertise_ext_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advertiseExtCommunity></advertiseExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advertiseExtCommunity>(.*)</advertiseExtCommunity>.*', con_obj.xml)
+                    r'.*<advertiseExtCommunity>(.*)</advertiseExtCommunity>.*', recv_xml)
 
                 if re_find:
                     result["advertise_ext_community"] = re_find
@@ -806,17 +798,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         discard_ext_community = module.params['discard_ext_community']
-        if discard_ext_community:
+        if discard_ext_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<discardExtCommunity></discardExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<discardExtCommunity>(.*)</discardExtCommunity>.*', con_obj.xml)
+                    r'.*<discardExtCommunity>(.*)</discardExtCommunity>.*', recv_xml)
 
                 if re_find:
                     result["discard_ext_community"] = re_find
@@ -828,17 +820,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         allow_as_loop_enable = module.params['allow_as_loop_enable']
-        if allow_as_loop_enable:
+        if allow_as_loop_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<allowAsLoopEnable></allowAsLoopEnable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<allowAsLoopEnable>(.*)</allowAsLoopEnable>.*', con_obj.xml)
+                    r'.*<allowAsLoopEnable>(.*)</allowAsLoopEnable>.*', recv_xml)
 
                 if re_find:
                     result["allow_as_loop_enable"] = re_find
@@ -857,13 +849,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<allowAsLoopLimit></allowAsLoopLimit>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<allowAsLoopLimit>(.*)</allowAsLoopLimit>.*', con_obj.xml)
+                    r'.*<allowAsLoopLimit>(.*)</allowAsLoopLimit>.*', recv_xml)
 
                 if re_find:
                     result["allow_as_loop_limit"] = re_find
@@ -875,17 +867,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         keep_all_routes = module.params['keep_all_routes']
-        if keep_all_routes:
+        if keep_all_routes != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<keepAllRoutes></keepAllRoutes>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<keepAllRoutes>(.*)</keepAllRoutes>.*', con_obj.xml)
+                    r'.*<keepAllRoutes>(.*)</keepAllRoutes>.*', recv_xml)
 
                 if re_find:
                     result["keep_all_routes"] = re_find
@@ -901,13 +893,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<nextHopConfigure></nextHopConfigure>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<nextHopConfigure>(.*)</nextHopConfigure>.*', con_obj.xml)
+                    r'.*<nextHopConfigure>(.*)</nextHopConfigure>.*', recv_xml)
 
                 if re_find:
                     result["nexthop_configure"] = re_find
@@ -926,13 +918,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<preferredValue></preferredValue>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<preferredValue>(.*)</preferredValue>.*', con_obj.xml)
+                    r'.*<preferredValue>(.*)</preferredValue>.*', recv_xml)
 
                 if re_find:
                     result["preferred_value"] = re_find
@@ -944,17 +936,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         public_as_only = module.params['public_as_only']
-        if public_as_only:
+        if public_as_only != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<publicAsOnly></publicAsOnly>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<publicAsOnly>(.*)</publicAsOnly>.*', con_obj.xml)
+                    r'.*<publicAsOnly>(.*)</publicAsOnly>.*', recv_xml)
 
                 if re_find:
                     result["public_as_only"] = re_find
@@ -966,17 +958,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         public_as_only_force = module.params['public_as_only_force']
-        if public_as_only_force:
+        if public_as_only_force != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<publicAsOnlyForce></publicAsOnlyForce>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<publicAsOnlyForce>(.*)</publicAsOnlyForce>.*', con_obj.xml)
+                    r'.*<publicAsOnlyForce>(.*)</publicAsOnlyForce>.*', recv_xml)
 
                 if re_find:
                     result["public_as_only_force"] = re_find
@@ -988,17 +980,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         public_as_only_limited = module.params['public_as_only_limited']
-        if public_as_only_limited:
+        if public_as_only_limited != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<publicAsOnlyLimited></publicAsOnlyLimited>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<publicAsOnlyLimited>(.*)</publicAsOnlyLimited>.*', con_obj.xml)
+                    r'.*<publicAsOnlyLimited>(.*)</publicAsOnlyLimited>.*', recv_xml)
 
                 if re_find:
                     result["public_as_only_limited"] = re_find
@@ -1010,17 +1002,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         public_as_only_replace = module.params['public_as_only_replace']
-        if public_as_only_replace:
+        if public_as_only_replace != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<publicAsOnlyReplace></publicAsOnlyReplace>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<publicAsOnlyReplace>(.*)</publicAsOnlyReplace>.*', con_obj.xml)
+                    r'.*<publicAsOnlyReplace>(.*)</publicAsOnlyReplace>.*', recv_xml)
 
                 if re_find:
                     result["public_as_only_replace"] = re_find
@@ -1033,17 +1025,17 @@ class BgpNeighborAf(object):
 
         public_as_only_skip_peer_as = module.params[
             'public_as_only_skip_peer_as']
-        if public_as_only_skip_peer_as:
+        if public_as_only_skip_peer_as != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<publicAsOnlySkipPeerAs></publicAsOnlySkipPeerAs>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<publicAsOnlySkipPeerAs>(.*)</publicAsOnlySkipPeerAs>.*', con_obj.xml)
+                    r'.*<publicAsOnlySkipPeerAs>(.*)</publicAsOnlySkipPeerAs>.*', recv_xml)
 
                 if re_find:
                     result["public_as_only_skip_peer_as"] = re_find
@@ -1063,13 +1055,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimit></routeLimit>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<routeLimit>(.*)</routeLimit>.*', con_obj.xml)
+                    r'.*<routeLimit>(.*)</routeLimit>.*', recv_xml)
 
                 if re_find:
                     result["route_limit"] = re_find
@@ -1089,13 +1081,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimitPercent></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<routeLimitPercent>(.*)</routeLimitPercent>.*', con_obj.xml)
+                    r'.*<routeLimitPercent>(.*)</routeLimitPercent>.*', recv_xml)
 
                 if re_find:
                     result["route_limit_percent"] = re_find
@@ -1111,13 +1103,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimitType></routeLimitType>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<routeLimitType>(.*)</routeLimitType>.*', con_obj.xml)
+                    r'.*<routeLimitType>(.*)</routeLimitType>.*', recv_xml)
 
                 if re_find:
                     result["route_limit_type"] = re_find
@@ -1138,13 +1130,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<routeLimitIdleTimeout></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<routeLimitIdleTimeout>(.*)</routeLimitIdleTimeout>.*', con_obj.xml)
+                    r'.*<routeLimitIdleTimeout>(.*)</routeLimitIdleTimeout>.*', recv_xml)
 
                 if re_find:
                     result["route_limit_idle_timeout"] = re_find
@@ -1164,13 +1156,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<rtUpdtInterval></rtUpdtInterval>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<rtUpdtInterval>(.*)</rtUpdtInterval>.*', con_obj.xml)
+                    r'.*<rtUpdtInterval>(.*)</rtUpdtInterval>.*', recv_xml)
 
                 if re_find:
                     result["rt_updt_interval"] = re_find
@@ -1182,17 +1174,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         redirect_ip = module.params['redirect_ip']
-        if redirect_ip:
+        if redirect_ip != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<redirectIP></redirectIP>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<redirectIP>(.*)</redirectIP>.*', con_obj.xml)
+                    r'.*<redirectIP>(.*)</redirectIP>.*', recv_xml)
 
                 if re_find:
                     result["redirect_ip"] = re_find
@@ -1204,17 +1196,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         redirect_ip_vaildation = module.params['redirect_ip_vaildation']
-        if redirect_ip_vaildation:
+        if redirect_ip_vaildation != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<redirectIPVaildation></redirectIPVaildation>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<redirectIPVaildation>(.*)</redirectIPVaildation>.*', con_obj.xml)
+                    r'.*<redirectIPVaildation>(.*)</redirectIPVaildation>.*', recv_xml)
 
                 if re_find:
                     result["redirect_ip_vaildation"] = re_find
@@ -1226,17 +1218,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         reflect_client = module.params['reflect_client']
-        if reflect_client:
+        if reflect_client != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<reflectClient></reflectClient>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<reflectClient>(.*)</reflectClient>.*', con_obj.xml)
+                    r'.*<reflectClient>(.*)</reflectClient>.*', recv_xml)
 
                 if re_find:
                     result["reflect_client"] = re_find
@@ -1248,17 +1240,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         substitute_as_enable = module.params['substitute_as_enable']
-        if substitute_as_enable:
+        if substitute_as_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<substituteAsEnable></substituteAsEnable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<substituteAsEnable>(.*)</substituteAsEnable>.*', con_obj.xml)
+                    r'.*<substituteAsEnable>(.*)</substituteAsEnable>.*', recv_xml)
 
                 if re_find:
                     result["substitute_as_enable"] = re_find
@@ -1278,13 +1270,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importRtPolicyName></importRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<importRtPolicyName>(.*)</importRtPolicyName>.*', con_obj.xml)
+                    r'.*<importRtPolicyName>(.*)</importRtPolicyName>.*', recv_xml)
 
                 if re_find:
                     result["import_rt_policy_name"] = re_find
@@ -1304,13 +1296,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportRtPolicyName></exportRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<exportRtPolicyName>(.*)</exportRtPolicyName>.*', con_obj.xml)
+                    r'.*<exportRtPolicyName>(.*)</exportRtPolicyName>.*', recv_xml)
 
                 if re_find:
                     result["export_rt_policy_name"] = re_find
@@ -1330,13 +1322,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importPrefFiltName></importPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<importPrefFiltName>(.*)</importPrefFiltName>.*', con_obj.xml)
+                    r'.*<importPrefFiltName>(.*)</importPrefFiltName>.*', recv_xml)
 
                 if re_find:
                     result["import_pref_filt_name"] = re_find
@@ -1356,13 +1348,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportPrefFiltName></exportPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<exportPrefFiltName>(.*)</exportPrefFiltName>.*', con_obj.xml)
+                    r'.*<exportPrefFiltName>(.*)</exportPrefFiltName>.*', recv_xml)
 
                 if re_find:
                     result["export_pref_filt_name"] = re_find
@@ -1382,13 +1374,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAsPathFilter></importAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<importAsPathFilter>(.*)</importAsPathFilter>.*', con_obj.xml)
+                    r'.*<importAsPathFilter>(.*)</importAsPathFilter>.*', recv_xml)
 
                 if re_find:
                     result["import_as_path_filter"] = re_find
@@ -1408,13 +1400,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAsPathFilter></exportAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<exportAsPathFilter>(.*)</exportAsPathFilter>.*', con_obj.xml)
+                    r'.*<exportAsPathFilter>(.*)</exportAsPathFilter>.*', recv_xml)
 
                 if re_find:
                     result["export_as_path_filter"] = re_find
@@ -1436,13 +1428,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAsPathNameOrNum></importAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<importAsPathNameOrNum>(.*)</importAsPathNameOrNum>.*', con_obj.xml)
+                    r'.*<importAsPathNameOrNum>(.*)</importAsPathNameOrNum>.*', recv_xml)
 
                 if re_find:
                     result["import_as_path_name_or_num"] = re_find
@@ -1464,13 +1456,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAsPathNameOrNum></exportAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<exportAsPathNameOrNum>(.*)</exportAsPathNameOrNum>.*', con_obj.xml)
+                    r'.*<exportAsPathNameOrNum>(.*)</exportAsPathNameOrNum>.*', recv_xml)
 
                 if re_find:
                     result["export_as_path_name_or_num"] = re_find
@@ -1490,13 +1482,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<importAclNameOrNum></importAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<importAclNameOrNum>(.*)</importAclNameOrNum>.*', con_obj.xml)
+                    r'.*<importAclNameOrNum>(.*)</importAclNameOrNum>.*', recv_xml)
 
                 if re_find:
                     result["import_acl_name_or_num"] = re_find
@@ -1516,13 +1508,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<exportAclNameOrNum></exportAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<exportAclNameOrNum>(.*)</exportAclNameOrNum>.*', con_obj.xml)
+                    r'.*<exportAclNameOrNum>(.*)</exportAclNameOrNum>.*', recv_xml)
 
                 if re_find:
                     result["export_acl_name_or_num"] = re_find
@@ -1534,17 +1526,16 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         ipprefix_orf_enable = module.params['ipprefix_orf_enable']
-        if ipprefix_orf_enable:
-
+        if ipprefix_orf_enable != 'no_use':
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<ipprefixOrfEnable></ipprefixOrfEnable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<ipprefixOrfEnable>(.*)</ipprefixOrfEnable>.*', con_obj.xml)
+                    r'.*<ipprefixOrfEnable>(.*)</ipprefixOrfEnable>.*', recv_xml)
 
                 if re_find:
                     result["ipprefix_orf_enable"] = re_find
@@ -1556,17 +1547,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         is_nonstd_ipprefix_mod = module.params['is_nonstd_ipprefix_mod']
-        if is_nonstd_ipprefix_mod:
+        if is_nonstd_ipprefix_mod != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<isNonstdIpprefixMod></isNonstdIpprefixMod>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<isNonstdIpprefixMod>(.*)</isNonstdIpprefixMod>.*', con_obj.xml)
+                    r'.*<isNonstdIpprefixMod>(.*)</isNonstdIpprefixMod>.*', recv_xml)
 
                 if re_find:
                     result["is_nonstd_ipprefix_mod"] = re_find
@@ -1586,13 +1577,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<orftype></orftype>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<orftype>(.*)</orftype>.*', con_obj.xml)
+                    r'.*<orftype>(.*)</orftype>.*', recv_xml)
 
                 if re_find:
                     result["orftype"] = re_find
@@ -1608,13 +1599,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<orfMode></orfMode>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<orfMode>(.*)</orfMode>.*', con_obj.xml)
+                    r'.*<orfMode>(.*)</orfMode>.*', recv_xml)
 
                 if re_find:
                     result["orf_mode"] = re_find
@@ -1634,13 +1625,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<soostring></soostring>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<soostring>(.*)</soostring>.*', con_obj.xml)
+                    r'.*<soostring>(.*)</soostring>.*', recv_xml)
 
                 if re_find:
                     result["soostring"] = re_find
@@ -1652,17 +1643,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         default_rt_adv_enable = module.params['default_rt_adv_enable']
-        if default_rt_adv_enable:
+        if default_rt_adv_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<defaultRtAdvEnable></defaultRtAdvEnable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<defaultRtAdvEnable>(.*)</defaultRtAdvEnable>.*', con_obj.xml)
+                    r'.*<defaultRtAdvEnable>(.*)</defaultRtAdvEnable>.*', recv_xml)
 
                 if re_find:
                     result["default_rt_adv_enable"] = re_find
@@ -1682,13 +1673,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<defaultRtAdvPolicy></defaultRtAdvPolicy>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<defaultRtAdvPolicy>(.*)</defaultRtAdvPolicy>.*', con_obj.xml)
+                    r'.*<defaultRtAdvPolicy>(.*)</defaultRtAdvPolicy>.*', recv_xml)
 
                 if re_find:
                     result["default_rt_adv_policy"] = re_find
@@ -1704,13 +1695,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<defaultRtMatchMode></defaultRtMatchMode>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<defaultRtMatchMode>(.*)</defaultRtMatchMode>.*', con_obj.xml)
+                    r'.*<defaultRtMatchMode>(.*)</defaultRtMatchMode>.*', recv_xml)
 
                 if re_find:
                     result["default_rt_match_mode"] = re_find
@@ -1726,13 +1717,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<addPathMode></addPathMode>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<addPathMode>(.*)</addPathMode>.*', con_obj.xml)
+                    r'.*<addPathMode>(.*)</addPathMode>.*', recv_xml)
 
                 if re_find:
                     result["add_path_mode"] = re_find
@@ -1752,13 +1743,13 @@ class BgpNeighborAf(object):
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<advAddPathNum></advAddPathNum>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<advAddPathNum>(.*)</advAddPathNum>.*', con_obj.xml)
+                    r'.*<advAddPathNum>(.*)</advAddPathNum>.*', recv_xml)
 
                 if re_find:
                     result["adv_add_path_num"] = re_find
@@ -1770,17 +1761,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         origin_as_valid = module.params['origin_as_valid']
-        if origin_as_valid:
+        if origin_as_valid != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<originAsValid></originAsValid>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<originAsValid>(.*)</originAsValid>.*', con_obj.xml)
+                    r'.*<originAsValid>(.*)</originAsValid>.*', recv_xml)
 
                 if re_find:
                     result["origin_as_valid"] = re_find
@@ -1792,17 +1783,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         vpls_enable = module.params['vpls_enable']
-        if vpls_enable:
+        if vpls_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<vplsEnable></vplsEnable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<vplsEnable>(.*)</vplsEnable>.*', con_obj.xml)
+                    r'.*<vplsEnable>(.*)</vplsEnable>.*', recv_xml)
 
                 if re_find:
                     result["vpls_enable"] = re_find
@@ -1814,17 +1805,17 @@ class BgpNeighborAf(object):
                     need_cfg = True
 
         vpls_ad_disable = module.params['vpls_ad_disable']
-        if vpls_ad_disable:
+        if vpls_ad_disable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<vplsAdDisable></vplsAdDisable>" + CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<vplsAdDisable>(.*)</vplsAdDisable>.*', con_obj.xml)
+                    r'.*<vplsAdDisable>(.*)</vplsAdDisable>.*', recv_xml)
 
                 if re_find:
                     result["vpls_ad_disable"] = re_find
@@ -1837,18 +1828,18 @@ class BgpNeighborAf(object):
 
         update_pkt_standard_compatible = module.params[
             'update_pkt_standard_compatible']
-        if update_pkt_standard_compatible:
+        if update_pkt_standard_compatible != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
                 vrf_name, af_type) + "<updatePktStandardCompatible></updatePktStandardCompatible>" + \
                 CE_GET_BGP_PEER_AF_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<updatePktStandardCompatible>(.*)</updatePktStandardCompatible>.*', con_obj.xml)
+                    r'.*<updatePktStandardCompatible>(.*)</updatePktStandardCompatible>.*', recv_xml)
 
                 if re_find:
                     result["update_pkt_standard_compatible"] = re_find
@@ -1874,9 +1865,9 @@ class BgpNeighborAf(object):
         conf_str = CE_MERGE_BGP_PEER_AF_HEADER % (
             vrf_name, af_type, remote_address) + CE_MERGE_BGP_PEER_AF_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp peer address family failed.')
 
         cmds = []
@@ -1903,9 +1894,9 @@ class BgpNeighborAf(object):
 
         conf_str = CE_CREATE_BGP_PEER_AF % (vrf_name, af_type, remote_address)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create bgp peer address family failed.')
 
         cmds = []
@@ -1932,9 +1923,9 @@ class BgpNeighborAf(object):
 
         conf_str = CE_DELETE_BGP_PEER_AF % (vrf_name, af_type, remote_address)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete bgp peer address family failed.')
 
         cmds = []
@@ -1965,7 +1956,7 @@ class BgpNeighborAf(object):
         cmds = []
 
         advertise_irb = module.params['advertise_irb']
-        if advertise_irb:
+        if advertise_irb != 'no_use':
             conf_str += "<advertiseIrb>%s</advertiseIrb>" % advertise_irb
 
             if advertise_irb == "ture":
@@ -1975,7 +1966,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         advertise_arp = module.params['advertise_arp']
-        if advertise_arp:
+        if advertise_arp != 'no_use':
             conf_str += "<advertiseArp>%s</advertiseArp>" % advertise_arp
 
             if advertise_arp == "ture":
@@ -1985,7 +1976,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         advertise_remote_nexthop = module.params['advertise_remote_nexthop']
-        if advertise_remote_nexthop:
+        if advertise_remote_nexthop != 'no_use':
             conf_str += "<advertiseRemoteNexthop>%s</advertiseRemoteNexthop>" % advertise_remote_nexthop
 
             if advertise_remote_nexthop == "true":
@@ -1995,7 +1986,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         advertise_community = module.params['advertise_community']
-        if advertise_community:
+        if advertise_community != 'no_use':
             conf_str += "<advertiseCommunity>%s</advertiseCommunity>" % advertise_community
 
             if advertise_community == "true":
@@ -2005,7 +1996,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         advertise_ext_community = module.params['advertise_ext_community']
-        if advertise_ext_community:
+        if advertise_ext_community != 'no_use':
             conf_str += "<advertiseExtCommunity>%s</advertiseExtCommunity>" % advertise_ext_community
 
             if advertise_ext_community == "true":
@@ -2015,7 +2006,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         discard_ext_community = module.params['discard_ext_community']
-        if discard_ext_community:
+        if discard_ext_community != 'no_use':
             conf_str += "<discardExtCommunity>%s</discardExtCommunity>" % discard_ext_community
 
             if discard_ext_community == "true":
@@ -2025,7 +2016,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         allow_as_loop_enable = module.params['allow_as_loop_enable']
-        if allow_as_loop_enable:
+        if allow_as_loop_enable != 'no_use':
             conf_str += "<allowAsLoopEnable>%s</allowAsLoopEnable>" % allow_as_loop_enable
 
             if allow_as_loop_enable == "true":
@@ -2045,7 +2036,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         keep_all_routes = module.params['keep_all_routes']
-        if keep_all_routes:
+        if keep_all_routes != 'no_use':
             conf_str += "<keepAllRoutes>%s</keepAllRoutes>" % keep_all_routes
 
             if keep_all_routes == "true":
@@ -2073,7 +2064,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         public_as_only = module.params['public_as_only']
-        if public_as_only:
+        if public_as_only != 'no_use':
             conf_str += "<publicAsOnly>%s</publicAsOnly>" % public_as_only
 
             if public_as_only == "true":
@@ -2083,7 +2074,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         public_as_only_force = module.params['public_as_only_force']
-        if public_as_only_force:
+        if public_as_only_force != 'no_use':
             conf_str += "<publicAsOnlyForce>%s</publicAsOnlyForce>" % public_as_only_force
 
             if public_as_only_force == "true":
@@ -2093,7 +2084,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         public_as_only_limited = module.params['public_as_only_limited']
-        if public_as_only_limited:
+        if public_as_only_limited != 'no_use':
             conf_str += "<publicAsOnlyLimited>%s</publicAsOnlyLimited>" % public_as_only_limited
 
             if public_as_only_limited == "true":
@@ -2103,7 +2094,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         public_as_only_replace = module.params['public_as_only_replace']
-        if public_as_only_replace:
+        if public_as_only_replace != 'no_use':
             conf_str += "<publicAsOnlyReplace>%s</publicAsOnlyReplace>" % public_as_only_replace
 
             if public_as_only_replace == "true":
@@ -2114,7 +2105,7 @@ class BgpNeighborAf(object):
 
         public_as_only_skip_peer_as = module.params[
             'public_as_only_skip_peer_as']
-        if public_as_only_skip_peer_as:
+        if public_as_only_skip_peer_as != 'no_use':
             conf_str += "<publicAsOnlySkipPeerAs>%s</publicAsOnlySkipPeerAs>" % public_as_only_skip_peer_as
 
             if public_as_only_skip_peer_as == "true":
@@ -2167,15 +2158,15 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         redirect_ip = module.params['redirect_ip']
-        if redirect_ip:
+        if redirect_ip != 'no_use':
             conf_str += "<redirectIP>%s</redirectIP>" % redirect_ip
 
         redirect_ip_vaildation = module.params['redirect_ip_vaildation']
-        if redirect_ip_vaildation:
+        if redirect_ip_vaildation != 'no_use':
             conf_str += "<redirectIPVaildation>%s</redirectIPVaildation>" % redirect_ip_vaildation
 
         reflect_client = module.params['reflect_client']
-        if reflect_client:
+        if reflect_client != 'no_use':
             conf_str += "<reflectClient>%s</reflectClient>" % reflect_client
 
             if reflect_client == "true":
@@ -2185,7 +2176,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         substitute_as_enable = module.params['substitute_as_enable']
-        if substitute_as_enable:
+        if substitute_as_enable != 'no_use':
             conf_str += "<substituteAsEnable>%s</substituteAsEnable>" % substitute_as_enable
 
         import_rt_policy_name = module.params['import_rt_policy_name']
@@ -2261,7 +2252,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         ipprefix_orf_enable = module.params['ipprefix_orf_enable']
-        if ipprefix_orf_enable:
+        if ipprefix_orf_enable != 'no_use':
             conf_str += "<ipprefixOrfEnable>%s</ipprefixOrfEnable>" % ipprefix_orf_enable
 
             if ipprefix_orf_enable == "true":
@@ -2271,7 +2262,7 @@ class BgpNeighborAf(object):
             cmds.append(cmd)
 
         is_nonstd_ipprefix_mod = module.params['is_nonstd_ipprefix_mod']
-        if is_nonstd_ipprefix_mod:
+        if is_nonstd_ipprefix_mod != 'no_use':
             conf_str += "<isNonstdIpprefixMod>%s</isNonstdIpprefixMod>" % is_nonstd_ipprefix_mod
 
             if is_nonstd_ipprefix_mod == "true":
@@ -2310,7 +2301,7 @@ class BgpNeighborAf(object):
 
         cmd = ""
         default_rt_adv_enable = module.params['default_rt_adv_enable']
-        if default_rt_adv_enable:
+        if default_rt_adv_enable != 'no_use':
             conf_str += "<defaultRtAdvEnable>%s</defaultRtAdvEnable>" % default_rt_adv_enable
 
             if default_rt_adv_enable == "true":
@@ -2345,27 +2336,27 @@ class BgpNeighborAf(object):
             conf_str += "<advAddPathNum>%s</advAddPathNum>" % adv_add_path_num
 
         origin_as_valid = module.params['origin_as_valid']
-        if origin_as_valid:
+        if origin_as_valid != 'no_use':
             conf_str += "<originAsValid>%s</originAsValid>" % origin_as_valid
 
         vpls_enable = module.params['vpls_enable']
-        if vpls_enable:
+        if vpls_enable != 'no_use':
             conf_str += "<vplsEnable>%s</vplsEnable>" % vpls_enable
 
         vpls_ad_disable = module.params['vpls_ad_disable']
-        if vpls_ad_disable:
+        if vpls_ad_disable != 'no_use':
             conf_str += "<vplsAdDisable>%s</vplsAdDisable>" % vpls_ad_disable
 
         update_pkt_standard_compatible = module.params[
             'update_pkt_standard_compatible']
-        if update_pkt_standard_compatible:
+        if update_pkt_standard_compatible != 'no_use':
             conf_str += "<updatePktStandardCompatible>%s</updatePktStandardCompatible>" % update_pkt_standard_compatible
 
         conf_str += CE_MERGE_BGP_PEER_AF_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp peer address family other failed.')
 
         return cmds
@@ -2380,32 +2371,32 @@ def main():
         af_type=dict(choices=['ipv4uni', 'ipv4multi', 'ipv4vpn',
                               'ipv6uni', 'ipv6vpn', 'evpn'], required=True),
         remote_address=dict(type='str', required=True),
-        advertise_irb=dict(choices=['true', 'false']),
-        advertise_arp=dict(choices=['true', 'false']),
-        advertise_remote_nexthop=dict(choices=['true', 'false']),
-        advertise_community=dict(choices=['true', 'false']),
-        advertise_ext_community=dict(choices=['true', 'false']),
-        discard_ext_community=dict(choices=['true', 'false']),
-        allow_as_loop_enable=dict(choices=['true', 'false']),
+        advertise_irb=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        advertise_arp=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        advertise_remote_nexthop=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        advertise_community=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        advertise_ext_community=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        discard_ext_community=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        allow_as_loop_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         allow_as_loop_limit=dict(type='str'),
-        keep_all_routes=dict(choices=['true', 'false']),
+        keep_all_routes=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         nexthop_configure=dict(choices=['null', 'local', 'invariable']),
         preferred_value=dict(type='str'),
-        public_as_only=dict(choices=['true', 'false']),
-        public_as_only_force=dict(choices=['true', 'false']),
-        public_as_only_limited=dict(choices=['true', 'false']),
-        public_as_only_replace=dict(choices=['true', 'false']),
-        public_as_only_skip_peer_as=dict(choices=['true', 'false']),
+        public_as_only=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        public_as_only_force=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        public_as_only_limited=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        public_as_only_replace=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        public_as_only_skip_peer_as=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         route_limit=dict(type='str'),
         route_limit_percent=dict(type='str'),
         route_limit_type=dict(
             choices=['noparameter', 'alertOnly', 'idleForever', 'idleTimeout']),
         route_limit_idle_timeout=dict(type='str'),
         rt_updt_interval=dict(type='str'),
-        redirect_ip=dict(choices=['true', 'false']),
-        redirect_ip_vaildation=dict(choices=['true', 'false']),
-        reflect_client=dict(choices=['true', 'false']),
-        substitute_as_enable=dict(choices=['true', 'false']),
+        redirect_ip=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        redirect_ip_vaildation=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        reflect_client=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        substitute_as_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         import_rt_policy_name=dict(type='str'),
         export_rt_policy_name=dict(type='str'),
         import_pref_filt_name=dict(type='str'),
@@ -2416,26 +2407,23 @@ def main():
         export_as_path_name_or_num=dict(type='str'),
         import_acl_name_or_num=dict(type='str'),
         export_acl_name_or_num=dict(type='str'),
-        ipprefix_orf_enable=dict(choices=['true', 'false']),
-        is_nonstd_ipprefix_mod=dict(choices=['true', 'false']),
+        ipprefix_orf_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        is_nonstd_ipprefix_mod=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         orftype=dict(type='str'),
         orf_mode=dict(choices=['null', 'receive', 'send', 'both']),
         soostring=dict(type='str'),
-        default_rt_adv_enable=dict(choices=['true', 'false']),
+        default_rt_adv_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         default_rt_adv_policy=dict(type='str'),
         default_rt_match_mode=dict(choices=['null', 'matchall', 'matchany']),
         add_path_mode=dict(choices=['null', 'receive', 'send', 'both']),
         adv_add_path_num=dict(type='str'),
-        origin_as_valid=dict(choices=['true', 'false']),
-        vpls_enable=dict(choices=['true', 'false']),
-        vpls_ad_disable=dict(choices=['true', 'false']),
-        update_pkt_standard_compatible=dict(choices=['true', 'false']))
+        origin_as_valid=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        vpls_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        vpls_ad_disable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        update_pkt_standard_compatible=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']))
 
-    if not HAS_NCCLIENT:
-        raise Exception("Error: The ncclient library is required")
-
-    module = NetworkModule(argument_spec=argument_spec,
-                           supports_check_mode=True)
+    argument_spec.update(ce_argument_spec)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     changed = False
     proposed = dict()
@@ -2444,10 +2432,6 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     vrf_name = module.params['vrf_name']
     af_type = module.params['af_type']
     remote_address = module.params['remote_address']
@@ -2502,7 +2486,7 @@ def main():
     update_pkt_standard_compatible = module.params[
         'update_pkt_standard_compatible']
 
-    ce_bgp_peer_af_obj = BgpNeighborAf(host=host, port=port, username=username, password=password)
+    ce_bgp_peer_af_obj = BgpNeighborAf()
 
     # get proposed
     proposed["state"] = state
@@ -2512,37 +2496,37 @@ def main():
         proposed["af_type"] = af_type
     if remote_address:
         proposed["remote_address"] = remote_address
-    if advertise_irb:
+    if advertise_irb != 'no_use':
         proposed["advertise_irb"] = advertise_irb
-    if advertise_arp:
+    if advertise_arp != 'no_use':
         proposed["advertise_arp"] = advertise_arp
-    if advertise_remote_nexthop:
+    if advertise_remote_nexthop != 'no_use':
         proposed["advertise_remote_nexthop"] = advertise_remote_nexthop
-    if advertise_community:
+    if advertise_community != 'no_use':
         proposed["advertise_community"] = advertise_community
-    if advertise_ext_community:
+    if advertise_ext_community != 'no_use':
         proposed["advertise_ext_community"] = advertise_ext_community
-    if discard_ext_community:
+    if discard_ext_community != 'no_use':
         proposed["discard_ext_community"] = discard_ext_community
-    if allow_as_loop_enable:
+    if allow_as_loop_enable != 'no_use':
         proposed["allow_as_loop_enable"] = allow_as_loop_enable
     if allow_as_loop_limit:
         proposed["allow_as_loop_limit"] = allow_as_loop_limit
-    if keep_all_routes:
+    if keep_all_routes != 'no_use':
         proposed["keep_all_routes"] = keep_all_routes
     if nexthop_configure:
         proposed["nexthop_configure"] = nexthop_configure
     if preferred_value:
         proposed["preferred_value"] = preferred_value
-    if public_as_only:
+    if public_as_only != 'no_use':
         proposed["public_as_only"] = public_as_only
-    if public_as_only_force:
+    if public_as_only_force != 'no_use':
         proposed["public_as_only_force"] = public_as_only_force
-    if public_as_only_limited:
+    if public_as_only_limited != 'no_use':
         proposed["public_as_only_limited"] = public_as_only_limited
-    if public_as_only_replace:
+    if public_as_only_replace != 'no_use':
         proposed["public_as_only_replace"] = public_as_only_replace
-    if public_as_only_skip_peer_as:
+    if public_as_only_skip_peer_as != 'no_use':
         proposed["public_as_only_skip_peer_as"] = public_as_only_skip_peer_as
     if route_limit:
         proposed["route_limit"] = route_limit
@@ -2554,13 +2538,13 @@ def main():
         proposed["route_limit_idle_timeout"] = route_limit_idle_timeout
     if rt_updt_interval:
         proposed["rt_updt_interval"] = rt_updt_interval
-    if redirect_ip:
+    if redirect_ip != 'no_use':
         proposed["redirect_ip"] = redirect_ip
-    if redirect_ip_vaildation:
+    if redirect_ip_vaildation != 'no_use':
         proposed["redirect_ip_vaildation"] = redirect_ip_vaildation
-    if reflect_client:
+    if reflect_client != 'no_use':
         proposed["reflect_client"] = reflect_client
-    if substitute_as_enable:
+    if substitute_as_enable != 'no_use':
         proposed["substitute_as_enable"] = substitute_as_enable
     if import_rt_policy_name:
         proposed["import_rt_policy_name"] = import_rt_policy_name
@@ -2582,9 +2566,9 @@ def main():
         proposed["import_acl_name_or_num"] = import_acl_name_or_num
     if export_acl_name_or_num:
         proposed["export_acl_name_or_num"] = export_acl_name_or_num
-    if ipprefix_orf_enable:
+    if ipprefix_orf_enable != 'no_use':
         proposed["ipprefix_orf_enable"] = ipprefix_orf_enable
-    if is_nonstd_ipprefix_mod:
+    if is_nonstd_ipprefix_mod != 'no_use':
         proposed["is_nonstd_ipprefix_mod"] = is_nonstd_ipprefix_mod
     if orftype:
         proposed["orftype"] = orftype
@@ -2592,7 +2576,7 @@ def main():
         proposed["orf_mode"] = orf_mode
     if soostring:
         proposed["soostring"] = soostring
-    if default_rt_adv_enable:
+    if default_rt_adv_enable != 'no_use':
         proposed["default_rt_adv_enable"] = default_rt_adv_enable
     if default_rt_adv_policy:
         proposed["default_rt_adv_policy"] = default_rt_adv_policy
@@ -2602,13 +2586,13 @@ def main():
         proposed["add_path_mode"] = add_path_mode
     if adv_add_path_num:
         proposed["adv_add_path_num"] = adv_add_path_num
-    if origin_as_valid:
+    if origin_as_valid != 'no_use':
         proposed["origin_as_valid"] = origin_as_valid
-    if vpls_enable:
+    if vpls_enable != 'no_use':
         proposed["vpls_enable"] = vpls_enable
-    if vpls_ad_disable:
+    if vpls_ad_disable != 'no_use':
         proposed["vpls_ad_disable"] = vpls_ad_disable
-    if update_pkt_standard_compatible:
+    if update_pkt_standard_compatible != 'no_use':
         proposed["update_pkt_standard_compatible"] = update_pkt_standard_compatible
 
     if not ce_bgp_peer_af_obj:

@@ -28,7 +28,6 @@ short_description: Manages VPN instance.
 description:
     - Manages VPN instance of Huawei CloudEngine switches.
 author: Yang yang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, vrf is set to default.
       If state==absent, the route will be removed, regardless of the
@@ -52,18 +51,31 @@ options:
 '''
 
 EXAMPLES = '''
-# Config a vpn install named vpna, description is test
-- ce_vrf:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-    vrf=vpna description=test state=present
-# Delete a vpn install named vpna
-- ce_vrf:
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-    vrf=vpna state=absent
+- name: vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Config a vpn install named vpna, description is test
+    ce_vrf:
+      vrf: vpna
+      description: test
+      state: present
+      provider: "{{ cli }}"
+  - name: Delete a vpn install named vpna
+    ce_vrf:
+      vrf: vpna
+      state: absent
+      provider: "{{ cli }}"
 '''
 RETURN = '''
 proposed:
@@ -97,17 +109,9 @@ changed:
     sample: true
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 CE_NC_GET_VRF = """
@@ -163,19 +167,12 @@ class Vrf(object):
     def __init__(self, argument_spec, ):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # vpn instance info
         self.vrf = self.module.params['vrf']
         self.description = self.module.params['description']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -185,32 +182,15 @@ class Vrf(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init_netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -229,14 +209,8 @@ class Vrf(object):
         """ check if vrf is need to change"""
 
         getxmlstr = CE_NC_GET_VRF
-
-        try:
-            get_obj = self.netconf.get_config(filter=getxmlstr)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        xml_str = get_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = get_nc_config(self.module, getxmlstr)
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -289,12 +263,8 @@ class Vrf(object):
 
         conf_str = build_config_xml(configxmlstr)
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "OPERATE_VRF")
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "OPERATE_VRF")
 
     def get_proposed(self):
         """get_proposed"""
@@ -378,7 +348,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = Vrf(argument_spec)
     interface.work()
 

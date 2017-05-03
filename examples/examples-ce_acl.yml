@@ -1,19 +1,51 @@
----
-
-- name: cloudengine acl module test
+- name: CloudEngine command test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_acl: state=present acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config ACL"
+    ce_acl:
+      state:  present
+      acl_name:  2200
+      provider: "{{ cli }}"
 
-  - ce_acl: state=delete_acl acl_name=2200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Undo ACL"
+    ce_acl:
+      state:  delete_acl
+      acl_name:  2200
+      provider: "{{ cli }}"
 
-  - ce_acl: state=present acl_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config ACL base rule"
+    ce_acl:
+      state:  present
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"
 
-  - ce_acl: state=delete_acl acl_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_acl: state=present acl_name=wdz rule_name=wdz_rule rule_id=111 rule_action=permit source_ip=10.10.10.10 src_wild=0.0.255.255 frag_type=fragment host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_acl: state=absent acl_name=wdz rule_name=wdz_rule host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "undo ACL base rule"
+    ce_acl:
+      state:  absent
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"

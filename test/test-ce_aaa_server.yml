@@ -4,23 +4,29 @@
   hosts: cloudengine
   connection: local
   gather_facts: no
-
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
 # normal argument test
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 1"
@@ -29,7 +35,7 @@
         - data.changed == true
 
   - name: "configure accounting scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: state=present acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 2"
@@ -38,7 +44,7 @@
         - data.changed == false
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 3"
@@ -47,7 +53,7 @@
         - data.changed == true
 
   - name: "undo accounting scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: state=absent acct_scheme_name=test1  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 4"
@@ -56,7 +62,7 @@
         - data.changed == false
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=test1  accounting_mode=radius radius_server_group=test2 local_user_group=wdz_group
+    ce_aaa_server: state=present acct_scheme_name=test1  accounting_mode=radius radius_server_group=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 5"
@@ -65,7 +71,7 @@
         - data.changed == true
 
   - name: "undo accounting scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=test1  accounting_mode=radius radius_server_group=test2 local_user_group=wdz_group
+    ce_aaa_server: state=absent acct_scheme_name=test1  accounting_mode=radius radius_server_group=test2 local_user_group=wdz_group provider="{{ cli }}"
     register: data
 
   - name: "TEST 6"
@@ -74,11 +80,11 @@
         - data.changed == true
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=local
+    ce_aaa_server: state=absent authen_scheme_name=wdz1 first_authen_mode=local provider="{{ cli }}"
     register: data
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wdz1 first_authen_mode=local
+    ce_aaa_server: state=present authen_scheme_name=wdz1 first_authen_mode=local provider="{{ cli }}"
     register: data
 
   - name: "TEST 7"
@@ -87,7 +93,7 @@
         - data.changed == true
 
   - name: "configure authentication scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wdz1 first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=wdz1 first_authen_mode=local
     register: data
 
   - name: "TEST 8"
@@ -96,7 +102,7 @@
         - data.changed == false
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=wdz1 first_authen_mode=local
     register: data
 
   - name: "TEST 9"
@@ -105,7 +111,7 @@
         - data.changed == true
 
   - name: "undo authentication scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=wdz1 first_authen_mode=local
     register: data
 
   - name: "TEST 10"
@@ -114,7 +120,7 @@
         - data.changed == false
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wdz1 first_authen_mode=radius radius_server_group=test2 
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=wdz1 first_authen_mode=radius radius_server_group=test2 
     register: data
 
   - name: "TEST 11"
@@ -123,7 +129,7 @@
         - data.changed == true
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wdz1 first_authen_mode=radius radius_server_group=test2 
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=wdz1 first_authen_mode=radius radius_server_group=test2 
     register: data
 
   - name: "TEST 12"
@@ -132,11 +138,11 @@
         - data.changed == true
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wdz2 first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=wdz2 first_author_mode=local
     register: data
 
   - name: "configure authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wdz2 first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=wdz2 first_author_mode=local
     register: data
 
   - name: "TEST 13"
@@ -145,7 +151,7 @@
         - data.changed == true
 
   - name: "configure authorization scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wdz2 first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=wdz2 first_author_mode=local
     register: data
 
   - name: "TEST 14"
@@ -154,7 +160,7 @@
         - data.changed == false
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wdz2 first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=wdz2 first_author_mode=local
     register: data
 
   - name: "TEST 15"
@@ -163,7 +169,7 @@
         - data.changed == true
 
   - name: "undo authorization scheme again"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wdz2 first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=wdz2 first_author_mode=local
     register: data
 
   - name: "TEST 16"
@@ -174,11 +180,11 @@
 # boundary and invalid value test
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=absent acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=present acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "TEST 17"
@@ -187,7 +193,7 @@
         - data.changed == true
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=absent acct_scheme_name=w  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "TEST 18"
@@ -196,11 +202,11 @@
         - data.changed == true
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=absent acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "TEST 19"
@@ -209,7 +215,7 @@
         - data.changed == true
 
   - name: "undo accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=absent acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
 
   - name: "TEST 20"
@@ -218,7 +224,7 @@
         - data.changed == true
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=present acct_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
     ignore_errors: true
 
@@ -228,7 +234,7 @@
         - data | failed
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=//\\:**** accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=present acct_scheme_name=//\\:**** accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
     ignore_errors: true
 
@@ -238,7 +244,7 @@
         - data | failed
 
   - name: "configure accounting scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present acct_scheme_name=""???|||<><> accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
+    ce_aaa_server: provider="{{ cli }}" state=present acct_scheme_name=""???|||<><> accounting_mode=hwtacacs hwtacas_template=test2 local_user_group=wdz_group
     register: data
     ignore_errors: true
 
@@ -248,11 +254,11 @@
         - data | failed
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=w first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=w first_authen_mode=local
     register: data
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=w first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=w first_authen_mode=local
     register: data
 
   - name: "TEST 24"
@@ -261,7 +267,7 @@
         - data.changed == true
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=w first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=w first_authen_mode=local
     register: data
 
   - name: "TEST 25"
@@ -270,11 +276,11 @@
         - data.changed == true
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
     register: data
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
     register: data
 
   - name: "TEST 26"
@@ -283,7 +289,7 @@
         - data.changed == true
 
   - name: "undo authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_authen_mode=local
     register: data
 
   - name: "TEST 27"
@@ -292,7 +298,7 @@
         - data.changed == true
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwddddddddwwwwwwww first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwddddddddwwwwwwww first_authen_mode=local
     register: data
     ignore_errors: true
 
@@ -302,7 +308,7 @@
         - data | failed
 
   - name: "configure authentication scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present authen_scheme_name=//\\:****""???|||<><> first_authen_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present authen_scheme_name=//\\:****""???|||<><> first_authen_mode=local
     register: data
     ignore_errors: true
 
@@ -312,11 +318,11 @@
         - data | failed
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=w first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=w first_author_mode=local
     register: data
 
   - name: "configure authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=w first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=w first_author_mode=local
     register: data
 
   - name: "TEST 30"
@@ -325,7 +331,7 @@
         - data.changed == true
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=w first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=w first_author_mode=local
     register: data
 
   - name: "TEST 31"
@@ -334,11 +340,11 @@
         - data.changed == true
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
     register: data
 
   - name: "configure authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
     register: data
 
   - name: "TEST 32"
@@ -347,7 +353,7 @@
         - data.changed == true
 
   - name: "undo authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=absent author_scheme_name=wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww first_author_mode=local
     register: data
 
   - name: "TEST 33"
@@ -356,7 +362,7 @@
         - data.changed == true
 
   - name: "configure authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=wwwwwwwwwwwwwwwwwddddddddwwwwwwwwwwwwwww first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=wwwwwwwwwwwwwwwwwddddddddwwwwwwwwwwwwwww first_author_mode=local
     register: data
     ignore_errors: true
 
@@ -366,7 +372,7 @@
         - data | failed
 
   - name: "configure authorization scheme"
-    ce_aaa_server: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present author_scheme_name=//\\:****""???|||<><> first_author_mode=local
+    ce_aaa_server: provider="{{ cli }}" state=present author_scheme_name=//\\:****""???|||<><> first_author_mode=local
     register: data
     ignore_errors: true
 

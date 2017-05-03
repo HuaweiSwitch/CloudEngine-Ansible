@@ -6,21 +6,40 @@
   gather_facts: no
   vars:
     test_intf: "interface 10GE1/0/25"
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      lines: 'return,rollback configuration to label ansible_test'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
   - name: "configure top level configuration and save it"
-    ce_config: lines='sysname boardleaf1' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      lines: 'sysname boardleaf1'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
   
   - name: "configure acl configuration"
-    ce_config: before='undo acl 2000' parents='acl 2000' lines='rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32,rule 50 permit source 5.5.5.5 32' match=exact host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      before: 'undo acl 2000'
+      parents: 'acl 2000'
+      lines: 'rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32,rule 50 permit source 5.5.5.5 32'
+      match: exact
+      provider: "{{ cli }}"
+      transport: cli
     register: data
 
   - name: "TEST 2"
@@ -29,7 +48,12 @@
         - data.changed == true
 
   - name: "repeat configure acl configuration "
-    ce_config: parents='acl 2000' lines='rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32' replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: 'acl 2000'
+      lines: 'rule 10 permit source 1.1.1.1 32,rule 20 permit source 2.2.2.2 32,rule 30 permit source 3.3.3.3 32,rule 40 permit source 4.4.4.4 32'
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
 
   - name: "TEST 3"
@@ -38,7 +62,11 @@
         - data.changed == true
  
   - name: "Error command"
-    ce_config: parents='sys' lines='sysname boardleaf' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: 'sys'
+      lines: 'sysname boardleaf'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: true
 
@@ -48,8 +76,14 @@
         - data | failed
 
   - name: "configure bgp "
-    ce_config: parents='bgp 50' lines='peer 1.2.3.4 as-nu 100' after='q' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: 'bgp 50'
+      lines: 'peer 1.2.3.4 as-nu 100'
+      after: 'q'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
+    ignore_errors: true
 
   - name: "TEST 5"
     assert:
@@ -57,8 +91,14 @@
         - data.changed == true
 
   - name: "undo configure bgp "
-    ce_config: parents='bgp 50' lines='undo peer 1.2.3.4 as-nu 100' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: 'bgp 50'
+      lines: 'undo peer 1.2.3.4 as-nu 100'
+      after: 'com'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
+    ignore_errors: true
 
   - name: "TEST 6"
     assert:
@@ -66,22 +106,40 @@
         - data.changed == true
 
   - name: "Multiple configure"
-    ce_config: before='vlan 120,quit' lines='{{test_intf}},p t a v 120' after='com' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      before: 'vlan 120,quit'
+      parents: '{{test_intf}}'
+      lines: 'port link-type trunk'
+      after: 'p t a v 120'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: true
 
   - name: "TEST 7"
     assert:
       that:
-        - data.changed == false
+        - data.changed == true
   
   - name: "undo bgp 50"
-    ce_config: lines='undo bgp 50' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      lines: 'undo bgp 50'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: true
 
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
   - name: "config interface"
-    ce_config: parents={{test_intf}} lines='undo portswitch' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'clear configuration this,undo portswitch'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -91,7 +149,13 @@
         - data.changed == true
 
   - name: "config interface ip"
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: none
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -101,7 +165,13 @@
         - data.changed == true
 
   - name: "config interface ip, again replace=block match=strict"
-    ce_config: parents={{test_intf}} lines='undo portswitch' match=strict replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch'
+      match: strict
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -111,7 +181,13 @@
         - data.changed == false
 
   - name: "config interface ip, again replace=block match=exact "
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=exact replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: exact
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -121,7 +197,13 @@
         - data.changed == false
 
   - name: "config interface ip, again replace=block match=none "
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=exact replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: exact
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -131,7 +213,13 @@
         - data.changed == false
 
   - name: "config interface ip, again replace=block match=line "
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=line replace=block host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: line
+      replace: block
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -141,7 +229,14 @@
         - data.changed == false
 
   - name: "config interface ip,  save"
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block save=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: none
+      replace: block
+      save: true
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -151,7 +246,14 @@
         - data.changed == true
 
   - name: "config interface ip, backup"
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block backup=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: none
+      replace: block
+      backup: true
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -162,7 +264,14 @@
         - data.backup_path
 
   - name: "config interface ip, config=true"
-    ce_config: parents={{test_intf}} lines='undo portswitch,ip address 1.1.2.2 255.255.255.0' match=none replace=block config=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      parents: '{{test_intf}}'
+      lines: 'undo portswitch,ip address 1.1.2.2 255.255.255.0'
+      match: none
+      replace: block
+      config: true
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
@@ -172,7 +281,11 @@
         - data.changed == true
 
   - name: "test defaults"
-    ce_config: lines='undo snmp-agent blacklist user-block disable' defaults=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      lines: 'undo snmp-agent blacklist user-block disable'
+      defaults: true
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 

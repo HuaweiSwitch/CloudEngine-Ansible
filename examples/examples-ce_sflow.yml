@@ -1,72 +1,41 @@
 ---
 
-- hosts: ce128
+- name: sflow module test
+  hosts: ce128
+  connection: local
   gather_facts: no
   vars:
-    agent_ipv4: 1.2.3.4
-    agent_ipv6: 22::1
-    source_ipv4: 4.3.2.1
-    source_ipv6: 22::2
-    collector_ipv4: 1.2.3.4
-    collector_ipv6: 22::3
-    vpn1: sflow_vpn1
-    vpn2: sflow_vpn2
-    clear_cmd: 'undo ip vpn-instance sflow_vpn1,undo ip vpn-instance sflow_vpn2'
-    setup_cmd: 'ip vpn-instance sflow_vpn1,quit,ip vpn-instance sflow_vpn2,quit'
-    
-  
-  tasks:  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-  - ce_config: lines={{setup_cmd}} replace=line match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  tasks:
+  - name: Configuring sFlow Agent
+    ce_sflow:
+      agent_ip: 6.6.6.6
+      provider: '{{ cli }}'
 
-  - ce_sflow: agent_ip={{agent_ipv4}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: agent_ip={{agent_ipv4}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: agent_ip={{agent_ipv6}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: agent_ip={{agent_ipv6}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: source_ip={{source_ipv4}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: source_ip={{source_ipv4}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: source_ip={{source_ipv6}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: source_ip={{source_ipv6}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: collector_id=1 collector_ip={{collector_ipv4}} collector_ip_vpn={{vpn1}} collector_datagram_size=1500 collector_udp_port=1234 collector_meth=enhanced collector_description=testname1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: collector_id=2 collector_ip={{collector_ipv6}} collector_ip_vpn={{vpn2}} collector_datagram_size=1500 collector_udp_port=4321 collector_meth=meth collector_description=testname2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: sflow_interface=10ge2/0/2 sample_collector=1,2 sample_rate=200 state=present sample_length=111 sample_direction=both host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: sflow_interface=10ge2/0/2 sample_collector=1,2 sample_rate=200 state=absent sample_length=111 sample_direction=both host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: sflow_interface=10ge2/0/2 counter_collector=1,2 counter_interval=200 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: sflow_interface=10ge2/0/2 counter_collector=1 counter_interval=200 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: sflow_interface=10ge2/0/2 counter_collector=2 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: export_route=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: export_route=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: rate_limit=1000 rate_limit_slot=2 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: rate_limit=1000 rate_limit_slot=2 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: forward_enp_slot=all state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: forward_enp_slot=all state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: collector_id=1 collector_ip={{collector_ipv4}} collector_ip_vpn={{vpn1}} collector_datagram_size=1500 collector_udp_port=1234 collector_meth=enhanced collector_description=testname1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_sflow: collector_id=2 collector_ip={{collector_ipv6}} collector_ip_vpn={{vpn2}} collector_datagram_size=1500 collector_udp_port=4321 collector_meth=meth collector_description=testname2 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_config: lines={{clear_cmd}} replace=line match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  
-  
-  
+  - name: Configuring sFlow Collector
+    ce_sflow:
+      collector_id: 1
+      collector_ip: 7.7.7.7
+      collector_ip_vpn: vpn1
+      collector_description: Collector1
+      provider: '{{ cli }}'
+
+  - name: Configure flow sampling.
+    ce_sflow:
+      sflow_interface: 10GE2/0/2
+      sample_collector: 1
+      sample_direction: inbound
+      provider: '{{ cli }}'
+
+  - name: Configure counter sampling.
+    ce_sflow:
+      sflow_interface: 10GE2/0/2
+      counter_collector: 1
+      counter_interval: 1000
+      provider: '{{ cli }}'

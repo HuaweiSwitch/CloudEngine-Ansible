@@ -1,11 +1,25 @@
----
-
-- name: cloudengine snmp location module test
+- name: CloudEngine snmp location test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP location"
+    ce_snmp_location:
+      state:  present
+      location:  nanjing China
+      provider: "{{ cli }}"
 
-  - ce_snmp_location: location="nanjing China" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Undo SNMP location"
+    ce_snmp_location:
+      state:  absent
+      location:  nanjing China
+      provider: "{{ cli }}"

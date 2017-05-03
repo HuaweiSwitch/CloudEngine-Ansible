@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages SNMP community configuration.
 description:
     - Manages SNMP community configuration on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -81,47 +80,50 @@ options:
 '''
 
 EXAMPLES = '''
-# config SNMP community
-  - name: "config SNMP community"
-    ce_snmp_community:
-        state:  present
-        community_name:  Wdz123
-        access_right:  write
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
 
-# undo SNMP community
-  - name: "undo SNMP community"
-    ce_snmp_community:
-        state:  absent
-        community_name:  Wdz123
-        access_right:  write
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- name: CloudEngine snmp community test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# config SNMP group
-  - name: "config SNMP group"
-    ce_snmp_community:
-        state:  present
-        group_name:  wdz_group
-        security_level:  noAuthNoPriv
-        acl_number:  2000
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+  tasks:
 
-# undo SNMP group
-  - name: "undo SNMP group"
+  - name: "Config SNMP community"
     ce_snmp_community:
-        state:  absent
-        group_name:  wdz_group
-        security_level:  noAuthNoPriv
-        acl_number:  2000
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      community_name:  Wdz123456789
+      access_right:  write
+      provider: "{{ cli }}"
+
+  - name: "Undo SNMP community"
+    ce_snmp_community:
+      state:  absent
+      community_name:  Wdz123456789
+      access_right:  write
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP group"
+    ce_snmp_community:
+      state:  present
+      group_name:  wdz_group
+      security_level:  noAuthNoPriv
+      acl_number:  2000
+      provider: "{{ cli }}"
+
+  - name: "Undo SNMP group"
+    ce_snmp_community:
+      state:  absent
+      group_name:  wdz_group
+      security_level:  noAuthNoPriv
+      acl_number:  2000
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -153,16 +155,9 @@ updates:
     sample: ["snmp-agent group v3 wdz_group noauthentication acl 2000"]
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 # get snmp commutiny
@@ -291,24 +286,15 @@ CE_DELETE_SNMP_V3_GROUP_TAIL = """
 class SnmpCommunity(object):
     """ Manages SNMP community configuration """
 
-    def __init__(self, **kwargs):
-        """ Class init """
-
-        self.netconf = get_netconf(**kwargs)
-
     def netconf_get_config(self, **kwargs):
         """ Get configure through netconf """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, **kwargs):
         """ Set configure through netconf """
@@ -316,13 +302,9 @@ class SnmpCommunity(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_snmp_community_args(self, **kwargs):
         """ Check snmp community args """
@@ -371,13 +353,13 @@ class SnmpCommunity(object):
                 conf_str += "<mibViewName></mibViewName>"
 
             conf_str += CE_GET_SNMP_COMMUNITY_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 if state == "present":
                     need_cfg = True
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -498,13 +480,13 @@ class SnmpCommunity(object):
                 conf_str += "<notifyViewName></notifyViewName>"
 
             conf_str += CE_GET_SNMP_V3_GROUP_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 if state == "present":
                     need_cfg = True
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -595,9 +577,9 @@ class SnmpCommunity(object):
 
         conf_str += CE_MERGE_SNMP_COMMUNITY_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge snmp community failed.')
 
         community_safe_name = "******"
@@ -629,9 +611,9 @@ class SnmpCommunity(object):
 
         conf_str += CE_CREATE_SNMP_COMMUNITY_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create snmp community failed.')
 
         community_safe_name = "******"
@@ -663,9 +645,9 @@ class SnmpCommunity(object):
 
         conf_str += CE_DELETE_SNMP_COMMUNITY_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create snmp community failed.')
 
         community_safe_name = "******"
@@ -696,9 +678,9 @@ class SnmpCommunity(object):
             conf_str += "<notifyViewName>%s</notifyViewName>" % notify_view
         conf_str += CE_MERGE_SNMP_V3_GROUP_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge snmp v3 group failed.')
 
         if security_level == "noAuthNoPriv":
@@ -744,9 +726,9 @@ class SnmpCommunity(object):
             conf_str += "<notifyViewName>%s</notifyViewName>" % notify_view
         conf_str += CE_CREATE_SNMP_V3_GROUP_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create snmp v3 group failed.')
 
         if security_level == "noAuthNoPriv":
@@ -792,9 +774,9 @@ class SnmpCommunity(object):
             conf_str += "<notifyViewName>%s</notifyViewName>" % notify_view
         conf_str += CE_DELETE_SNMP_V3_GROUP_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete snmp v3 group failed.')
 
         if security_level == "noAuthNoPriv":
@@ -827,11 +809,8 @@ def main():
         notify_view=dict(type='str')
     )
 
-    if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
-
-    module = NetworkModule(argument_spec=argument_spec,
-                           supports_check_mode=True)
+    argument_spec.update(ce_argument_spec)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     changed = False
     proposed = dict()
@@ -840,10 +819,6 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     acl_number = module.params['acl_number']
     community_name = module.params['community_name']
     community_mib_view = module.params['community_mib_view']
@@ -854,8 +829,7 @@ def main():
     write_view = module.params['write_view']
     notify_view = module.params['notify_view']
 
-    snmp_community_obj = SnmpCommunity(
-        host=host, port=port, username=username, password=password)
+    snmp_community_obj = SnmpCommunity()
 
     if not snmp_community_obj:
         module.fail_json(msg='Error: Init module failed.')

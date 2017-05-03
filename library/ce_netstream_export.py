@@ -25,7 +25,6 @@ DOCUMENTATION = '''
 module: ce_netstream_export
 version_added: "2.3"
 short_description: Manages netstream export.
-extends_documentation_fragment: cloudengine
 description:
     - Configure NetStream flow statistics exporting and versions for exported packets.
 author: Zhijin Zhou (@CloudEngine-Ansible)
@@ -76,8 +75,8 @@ options:
             - Configures the statistics to carry BGP next hop information. Currently, only V9 supports the exported
               packets carrying BGP next hop information.
         required: false
-        choices: ['true','false']
-        default: 'false'
+        choices: ['enable','disable']
+        default: 'disable'
     state:
         description:
             - Manage the state of the resource.
@@ -87,59 +86,61 @@ options:
 '''
 
 EXAMPLES = '''
-# Configures the source address for the exported packets carrying IPv4 flow statistics.
-- ce_netstream_export:
-    type: ip
-    source_ip: 192.8.2.2
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: netstream export module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-#Configures the source IP address for the exported packets carrying VXLAN flexible flow statistics.
-- ce_netstream_export:
-    type: vxlan
-    source_ip: 192.8.2.3
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  tasks:
 
-#Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics.
-- ce_netstream_export:
-    type: ip
-    host_ip: 192.8.2.4
-    host_port: 25
-    host_vpn: test
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Configures the source address for the exported packets carrying IPv4 flow statistics.
+    ce_netstream_export:
+      type: ip
+      source_ip: 192.8.2.2
+      provider: "{{ cli }}"
 
-#Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics.
-- ce_netstream_export:
-    type: vxlan
-    host_ip: 192.8.2.5
-    host_port: 26
-    host_vpn: test
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Configures the source IP address for the exported packets carrying VXLAN flexible flow statistics.
+    ce_netstream_export:
+      type: vxlan
+      source_ip: 192.8.2.3
+      provider: "{{ cli }}"
 
-#Configures the version number of the exported packets carrying IPv4 flow statistics.
-- ce_netstream_export:
-    type: ip
-    version: 9
-    as_option: origin
-    bgp_nexthop: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Configures the destination IP address and destination UDP port number for the exported packets carrying IPv4 flow statistics.
+    ce_netstream_export:
+      type: ip
+      host_ip: 192.8.2.4
+      host_port: 25
+      host_vpn: test
+      provider: "{{ cli }}"
 
-#Configures the version for the exported packets carrying VXLAN flexible flow statistics.
-- ce_netstream_export:
-    type: vxlan
-    version: 9
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Configures the destination IP address and destination UDP port number for the exported packets carrying VXLAN flexible flow statistics.
+    ce_netstream_export:
+      type: vxlan
+      host_ip: 192.8.2.5
+      host_port: 26
+      host_vpn: test
+      provider: "{{ cli }}"
+
+  - name: Configures the version number of the exported packets carrying IPv4 flow statistics.
+    ce_netstream_export:
+      type: ip
+      version: 9
+      as_option: origin
+      bgp_nexthop: enable
+      provider: "{{ cli }}"
+
+  - name: Configures the version for the exported packets carrying VXLAN flexible flow statistics.
+    ce_netstream_export:
+      type: vxlan
+      version: 9
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -149,7 +150,7 @@ proposed:
     type: dict
     sample: {
                 "as_option": "origin",
-                "bgp_nexthop": "true",
+                "bgp_nexthop": "enable",
                 "host_ip": "192.8.5.6",
                 "host_port": "26",
                 "host_vpn": "test",
@@ -163,7 +164,7 @@ existing:
     type: dict
     sample: {
                 "as_option": null,
-                "bgp_nexthop": "false",
+                "bgp_nexthop": "disable",
                 "host_ip": null,
                 "host_port": null,
                 "host_vpn": null,
@@ -177,7 +178,7 @@ end_state:
     type: dict or null
     sample: {
                 "as_option": "origin",
-                "bgp_nexthop": "true",
+                "bgp_nexthop": "enable",
                 "host_ip": "192.8.5.6",
                 "host_port": "26",
                 "host_vpn": "test",
@@ -202,8 +203,9 @@ changed:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
 
 
 def is_ipv4_addr(ip_addr):
@@ -248,12 +250,6 @@ class NetstreamExport(object):
         self.config = None
         self.exist_conf = dict()
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -265,25 +261,22 @@ class NetstreamExport(object):
     def __init_module__(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_netstream_config(self):
         """get current netstream configuration"""
 
+        flags = list()
         exp = " | inc ^netstream export"
-
-        return self.module.config.get_config(include_defaults=False, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def get_existing(self):
         """get existing config"""
@@ -346,7 +339,8 @@ class NetstreamExport(object):
 
         self.commands.append(cmd)          # set to device
         if command.lower() not in ["quit", "return"]:
-            self.updates_cmd.append(cmd)   # show updates result
+            if cmd not in self.updates_cmd:
+                self.updates_cmd.append(cmd)   # show updates result
 
     def config_nets_export_src_addr(self):
         """Configures the source address for the exported packets"""
@@ -446,7 +440,7 @@ class NetstreamExport(object):
             elif self.as_option == 'peer':
                 cmd += ' peer-as'
 
-            if self.bgp_netxhop == 'true':
+            if self.bgp_netxhop == 'enable':
                 cmd += ' bgp-nexthop'
 
         if cmd == 'netstream export ip version 5':
@@ -504,7 +498,7 @@ class NetstreamExport(object):
         if self.type == 'vxlan' and self.version == '5':
             self.module.fail_json(msg="Error: When type is vxlan, version must be 9.")
 
-        if self.type == 'ip' and self.version == '5' and self.bgp_netxhop == 'true':
+        if self.type == 'ip' and self.version == '5' and self.bgp_netxhop == 'enable':
             self.module.fail_json(msg="Error: When type=ip and version=5, bgp_netxhop is not supported.")
 
         if (self.host_ip and not self.host_port) or (self.host_port and not self.host_ip):
@@ -520,7 +514,7 @@ class NetstreamExport(object):
         self.exist_conf['host_vpn'] = None
         self.exist_conf['version'] = None
         self.exist_conf['as_option'] = None
-        self.exist_conf['bgp_netxhop'] = 'false'
+        self.exist_conf['bgp_netxhop'] = 'disable'
 
         self.config = self.get_netstream_config()
 
@@ -561,10 +555,10 @@ def main():
         host_vpn=dict(required=False, type='str'),
         version=dict(required=False, type='str', choices=['5', '9']),
         as_option=dict(required=False, type='str', choices=['origin', 'peer']),
-        bgp_nexthop=dict(required=False, type='str', choices=['true', 'false'], default='false'),
+        bgp_nexthop=dict(required=False, type='str', choices=['enable', 'disable'], default='disable'),
         state=dict(choices=['absent', 'present'], default='present', required=False)
     )
-
+    argument_spec.update(ce_argument_spec)
     netstream_export = NetstreamExport(argument_spec)
     netstream_export.work()
 

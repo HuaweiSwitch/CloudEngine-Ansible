@@ -3,29 +3,33 @@
 - name: cloudengine vxlan global module test
   hosts: ce128
   vars:
-    bdid1: 1
-    bdid2: 101
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   gather_facts: no
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "ensure bridge domain not exit"
-    ce_vxlan_global: bridge_domain_id={{bdid1}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=1 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "ensure bridge domain not exit"
-    ce_vxlan_global: bridge_domain_id={{bdid2}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=101 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "create bd bdid1"
-    ce_vxlan_global: bridge_domain_id={{bdid1}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=1 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -35,7 +39,7 @@
         - data.changed == true
 
   - name: "create bd bdid2"
-    ce_vxlan_global: bridge_domain_id={{bdid2}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=101 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -45,7 +49,7 @@
         - data.changed == true
 
   - name: "create bd bdid2, again"
-    ce_vxlan_global: bridge_domain_id={{bdid2}} state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=101 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -55,7 +59,7 @@
         - data.changed == false
 
   - name: "delete bd bdid1"
-    ce_vxlan_global: bridge_domain_id={{bdid1}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=1 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -65,7 +69,7 @@
         - data.changed == true
 
   - name: "delete bd bdid1, again"
-    ce_vxlan_global: bridge_domain_id={{bdid1}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=1 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -75,7 +79,7 @@
         - data.changed == false
 
   - name: "delete bd bdid2"
-    ce_vxlan_global: bridge_domain_id={{bdid2}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=101 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -85,7 +89,7 @@
         - data.changed == true
 
   - name: "check bridge_domain_id 1"
-    ce_vxlan_global: bridge_domain_id=0 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=0 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -96,7 +100,7 @@
         - data | failed 
 
   - name: "check bridge_domain_id 2"
-    ce_vxlan_global: bridge_domain_id=abc state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=abc state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -107,7 +111,7 @@
         - data | failed
 
   - name: "check bridge_domain_id 3"
-    ce_vxlan_global: bridge_domain_id=16777215 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=16777215 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -117,7 +121,7 @@
         - data.changed == true
 
   - name: "check bridge_domain_id 4"
-    ce_vxlan_global: bridge_domain_id=16777215 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=16777215 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -127,7 +131,7 @@
         - data.changed == true
 
   - name: "check bridge_domain_id 5"
-    ce_vxlan_global: bridge_domain_id=16777216 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: bridge_domain_id=16777216 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -138,81 +142,81 @@
         - data | failed 
 
   - name: "ensure tunnel mode not vxlan"
-    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "set tunnel mode vxlan"
-    ce_vxlan_global: tunnel_mode_vxlan=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: tunnel_mode_vxlan=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "unset tunnel mode vxlan"
-    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "prevent loops enable"
-    ce_vxlan_global: tunnel_mode_vxlan=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: tunnel_mode_vxlan=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "prevent loops disable"
-    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: tunnel_mode_vxlan=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 acl extend enable"
-    ce_vxlan_global: nvo3_acl_extend=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_acl_extend=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 acl extend disable"
-    ce_vxlan_global: nvo3_acl_extend=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_acl_extend=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 gw enhanced l2"
-    ce_vxlan_global: nvo3_gw_enhanced=l2 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_gw_enhanced=l2 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 gw enhanced l3"
-    ce_vxlan_global: nvo3_gw_enhanced=l3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_gw_enhanced=l3 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "unset nvo3 gw enhanced l3"
-    ce_vxlan_global: nvo3_gw_enhanced=l3 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_gw_enhanced=l3 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "nvo3 service extend enable"
-    ce_vxlan_global: nvo3_service_extend=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_service_extend=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 service extend disable"
-    ce_vxlan_global: nvo3_service_extend=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_service_extend=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "nvo3 eth trunk hash enable"
-    ce_vxlan_global: nvo3_eth_trunk_hash=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_eth_trunk_hash=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "nvo3 eth trunk hash disable"
-    ce_vxlan_global: nvo3_eth_trunk_hash=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_eth_trunk_hash=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "nvo3 ecmp hash enable"
-    ce_vxlan_global: nvo3_ecmp_hash=enable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_ecmp_hash=enable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "nvo3 ecmp hash disable"
-    ce_vxlan_global: nvo3_ecmp_hash=disable state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_global: nvo3_ecmp_hash=disable state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true

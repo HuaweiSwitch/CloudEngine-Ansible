@@ -3,11 +3,17 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   
   tasks:  
-  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp_auth: key_id=111111 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable trusted_key=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable trusted_key=true auth_type=text host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_ntp_auth: key_id=111111 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 provider="{{ cli }}"
+  - ce_ntp_auth: key_id=111111 state=absent provider="{{ cli }}"
+  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable provider="{{ cli }}"
+  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable trusted_key=enable provider="{{ cli }}"
+  - ce_ntp_auth: key_id=111111 auth_pwd=admin@121111111111111 auth_mode=md5 authentication=enable trusted_key=enable auth_type=text provider="{{ cli }}"
+  - ce_ntp_auth: key_id=111111 state=absent provider="{{ cli }}"

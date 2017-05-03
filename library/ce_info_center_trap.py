@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages information center trap configuration.
 description:
     - Manages information center trap configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -49,8 +48,8 @@ options:
         description:
             - Whether a trap buffer is enabled to output information.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     trap_buff_size:
         description:
             - Size of a trap buffer.
@@ -74,8 +73,8 @@ options:
         description:
             - Whether a device is enabled to output alarms.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     trap_level:
         description:
             - Trap level permitted to output.
@@ -86,46 +85,52 @@ options:
 '''
 
 EXAMPLES = '''
-# config trap buffer
-  - name: "config trap buffer"
+
+- name: CloudEngine info center trap test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config trap buffer"
     ce_info_center_trap:
-        state:  present
-        trap_buff_enable:  true
-        trap_buff_size:  768
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo trap buffer
-  - name: "undo trap buffer"
+      state:  present
+      trap_buff_enable:  true
+      trap_buff_size:  768
+      provider: "{{ cli }}"
+
+  - name: "Undo trap buffer"
     ce_info_center_trap:
-        state:  absent
-        trap_buff_enable:  true
-        trap_buff_size:  768
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config trap module log level
-  - name: "config trap module log level"
+      state:  absent
+      trap_buff_enable:  true
+      trap_buff_size:  768
+      provider: "{{ cli }}"
+
+  - name: "Config trap module log level"
     ce_info_center_trap:
-        state:  present
-        module_name:  aaa
-        channel_id:  1
-        trap_enable:  true
-        trap_level:  error
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo trap module log level
-  - name: "undo trap module log level"
+      state:  present
+      module_name:  aaa
+      channel_id:  1
+      trap_enable:  true
+      trap_level:  error
+      provider: "{{ cli }}"
+
+  - name: "Undo trap module log level"
     ce_info_center_trap:
-        state:  absent
-        module_name:  aaa
-        channel_id:  1
-        trap_enable:  true
-        trap_level:  error
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      module_name:  aaa
+      channel_id:  1
+      trap_enable:  true
+      trap_level:  error
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -156,16 +161,9 @@ updates:
     sample: ["info-center trapbuffer", "info-center trapbuffer size 768"]
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 # get info center trap global
@@ -274,21 +272,16 @@ class InfoCenterTrap(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
         self.trap_time_stamp = self.module.params['trap_time_stamp'] or None
-        self.trap_buff_enable = self.module.params['trap_buff_enable'] or None
+        self.trap_buff_enable = self.module.params['trap_buff_enable']
         self.trap_buff_size = self.module.params['trap_buff_size'] or None
         self.module_name = self.module.params['module_name'] or None
         self.channel_id = self.module.params['channel_id'] or None
-        self.trap_enable = self.module.params['trap_enable'] or None
+        self.trap_enable = self.module.params['trap_enable']
         self.trap_level = self.module.params['trap_level'] or None
 
         # cur config
@@ -303,40 +296,19 @@ class InfoCenterTrap(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # netconf
-        if not HAS_NCCLIENT:
-            raise Exception("Error: The ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.password)
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
     def netconf_get_config(self, conf_str):
         """ Netconf get config """
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, conf_str):
         """ Netconf set config """
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_global_args(self):
         """ Check global args """
@@ -345,7 +317,7 @@ class InfoCenterTrap(object):
         find_flag = False
         self.cur_global_cfg["global_cfg"] = []
 
-        if self.trap_time_stamp or self.trap_buff_enable or self.trap_buff_size:
+        if self.trap_time_stamp or self.trap_buff_enable != 'no_use' or self.trap_buff_size:
             if self.trap_buff_size:
                 if self.trap_buff_size.isdigit():
                     if int(self.trap_buff_size) < 0 or int(self.trap_buff_size) > 1024:
@@ -359,18 +331,18 @@ class InfoCenterTrap(object):
 
             if self.trap_time_stamp:
                 conf_str += "<trapTimeStamp></trapTimeStamp>"
-            if self.trap_buff_enable:
+            if self.trap_buff_enable != 'no_use':
                 conf_str += "<icTrapBuffEn></icTrapBuffEn>"
             if self.trap_buff_size:
                 conf_str += "<trapBuffSize></trapBuffSize>"
 
             conf_str += CE_GET_TRAP_GLOBAL_TAIL
-            con_obj = self.netconf_get_config(conf_str=conf_str)
+            recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 find_flag = False
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -391,7 +363,7 @@ class InfoCenterTrap(object):
 
                         if self.trap_time_stamp and tmp.get("trapTimeStamp").lower() != self.trap_time_stamp:
                             find_flag = False
-                        if self.trap_buff_enable and tmp.get("icTrapBuffEn") != self.trap_buff_enable:
+                        if self.trap_buff_enable != 'no_use' and tmp.get("icTrapBuffEn") != self.trap_buff_enable:
                             find_flag = False
                         if self.trap_buff_size and tmp.get("trapBuffSize") != self.trap_buff_size:
                             find_flag = False
@@ -442,18 +414,18 @@ class InfoCenterTrap(object):
 
             if self.channel_id:
                 conf_str += "<icChannelId></icChannelId>"
-            if self.trap_enable:
+            if self.trap_enable != 'no_use':
                 conf_str += "<trapEnFlg></trapEnFlg>"
             if self.trap_level:
                 conf_str += "<trapEnLevel></trapEnLevel>"
 
             conf_str += CE_GET_TRAP_SOURCE_TAIL
-            con_obj = self.netconf_get_config(conf_str=conf_str)
+            recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 find_flag = False
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -476,7 +448,7 @@ class InfoCenterTrap(object):
                             find_flag = False
                         if self.channel_id and tmp.get("icChannelId") != self.channel_id:
                             find_flag = False
-                        if self.trap_enable and tmp.get("trapEnFlg") != self.trap_enable:
+                        if self.trap_enable != 'no_use' and tmp.get("trapEnFlg") != self.trap_enable:
                             find_flag = False
                         if self.trap_level and tmp.get("trapEnLevel") != self.trap_level:
                             find_flag = False
@@ -500,7 +472,7 @@ class InfoCenterTrap(object):
 
         if self.trap_time_stamp:
             self.proposed["trap_time_stamp"] = self.trap_time_stamp
-        if self.trap_buff_enable:
+        if self.trap_buff_enable != 'no_use':
             self.proposed["trap_buff_enable"] = self.trap_buff_enable
         if self.trap_buff_size:
             self.proposed["trap_buff_size"] = self.trap_buff_size
@@ -508,7 +480,7 @@ class InfoCenterTrap(object):
             self.proposed["module_name"] = self.module_name
         if self.channel_id:
             self.proposed["channel_id"] = self.channel_id
-        if self.trap_enable:
+        if self.trap_enable != 'no_use':
             self.proposed["trap_enable"] = self.trap_enable
         if self.trap_level:
             self.proposed["trap_level"] = self.trap_level
@@ -539,22 +511,22 @@ class InfoCenterTrap(object):
 
         if self.trap_time_stamp:
             conf_str += "<trapTimeStamp>%s</trapTimeStamp>" % self.trap_time_stamp.upper()
-        if self.trap_buff_enable:
+        if self.trap_buff_enable != 'no_use':
             conf_str += "<icTrapBuffEn>%s</icTrapBuffEn>" % self.trap_buff_enable
         if self.trap_buff_size:
             conf_str += "<trapBuffSize>%s</trapBuffSize>" % self.trap_buff_size
 
         conf_str += CE_MERGE_TRAP_GLOBAL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge trap global failed.')
 
         if self.trap_time_stamp:
             cmd = "info-center timestamp trap " + TIME_STAMP_DICT.get(self.trap_time_stamp)
             self.updates_cmd.append(cmd)
-        if self.trap_buff_enable:
+        if self.trap_buff_enable != 'no_use':
             if self.trap_buff_enable == "true":
                 cmd = "info-center trapbuffer"
             else:
@@ -573,22 +545,22 @@ class InfoCenterTrap(object):
 
         if self.trap_time_stamp:
             conf_str += "<trapTimeStamp>DATE_SECOND</trapTimeStamp>"
-        if self.trap_buff_enable:
+        if self.trap_buff_enable != 'no_use':
             conf_str += "<icTrapBuffEn>false</icTrapBuffEn>"
         if self.trap_buff_size:
             conf_str += "<trapBuffSize>256</trapBuffSize>"
 
         conf_str += CE_MERGE_TRAP_GLOBAL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: delete trap global failed.')
 
         if self.trap_time_stamp:
             cmd = "undo info-center timestamp trap"
             self.updates_cmd.append(cmd)
-        if self.trap_buff_enable:
+        if self.trap_buff_enable != 'no_use':
             cmd = "undo info-center trapbuffer"
             self.updates_cmd.append(cmd)
         if self.trap_buff_size:
@@ -606,16 +578,16 @@ class InfoCenterTrap(object):
             conf_str += "<moduleName>%s</moduleName>" % self.module_name
         if self.channel_id:
             conf_str += "<icChannelId>%s</icChannelId>" % self.channel_id
-        if self.trap_enable:
+        if self.trap_enable != 'no_use':
             conf_str += "<trapEnFlg>%s</trapEnFlg>" % self.trap_enable
         if self.trap_level:
             conf_str += "<trapEnLevel>%s</trapEnLevel>" % self.trap_level
 
         conf_str += CE_MERGE_TRAP_SOURCE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge trap source failed.')
 
         cmd = "info-center source"
@@ -623,7 +595,7 @@ class InfoCenterTrap(object):
             cmd += " %s" % self.module_name
         if self.channel_id:
             cmd += " channel %s" % self.channel_id
-        if self.trap_enable:
+        if self.trap_enable != 'no_use':
             if self.trap_enable == "true":
                 cmd += " trap state on"
             else:
@@ -637,7 +609,7 @@ class InfoCenterTrap(object):
     def delete_trap_source(self):
         """ Delete trap source """
 
-        if not self.trap_enable and not self.trap_level:
+        if self.trap_enable == 'no_use' and not self.trap_level:
             conf_str = CE_DELETE_TRAP_SOURCE_HEADER
             if self.module_name:
                 conf_str += "<moduleName>%s</moduleName>" % self.module_name
@@ -650,15 +622,15 @@ class InfoCenterTrap(object):
                 conf_str += "<moduleName>%s</moduleName>" % self.module_name
             if self.channel_id:
                 conf_str += "<icChannelId>%s</icChannelId>" % self.channel_id
-            if self.trap_enable:
+            if self.trap_enable != 'no_use':
                 conf_str += "<trapEnFlg>%s</trapEnFlg>" % CHANNEL_DEFAULT_TRAP_STATE.get(self.channel_id)
             if self.trap_level:
                 conf_str += "<trapEnLevel>%s</trapEnLevel>" % CHANNEL_DEFAULT_TRAP_LEVEL.get(self.channel_id)
             conf_str += CE_MERGE_TRAP_SOURCE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Delete trap source failed.')
 
         cmd = "undo info-center source"
@@ -666,7 +638,7 @@ class InfoCenterTrap(object):
             cmd += " %s" % self.module_name
         if self.channel_id:
             cmd += " channel %s" % self.channel_id
-        if self.trap_enable:
+        if self.trap_enable != 'no_use':
             cmd += " trap state"
         if self.trap_level:
             cmd += " level"
@@ -714,15 +686,16 @@ def main():
                                       'date_millisecond', 'shortdate_second', 'shortdate_tenthsecond',
                                       'shortdate_millisecond', 'formatdate_second', 'formatdate_tenthsecond',
                                       'formatdate_millisecond']),
-        trap_buff_enable=dict(choices=['true', 'false']),
+        trap_buff_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         trap_buff_size=dict(type='str'),
         module_name=dict(type='str'),
         channel_id=dict(type='str'),
-        trap_enable=dict(choices=['true', 'false']),
+        trap_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         trap_level=dict(choices=['emergencies', 'alert', 'critical', 'error', 'warning', 'notification',
                                  'informational', 'debugging'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = InfoCenterTrap(argument_spec=argument_spec)
     module.work()
 

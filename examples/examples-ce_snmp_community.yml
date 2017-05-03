@@ -1,14 +1,43 @@
----
-
-- name: cloudengine snmp community module test
+- name: CloudEngine snmp community test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
-  - ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
 
-  - ce_snmp_community: community_name=Wdz123@huawei access_right=write host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP community"
+    ce_snmp_community:
+      state:  present
+      community_name:  Wdz123456789
+      access_right:  write
+      provider: "{{ cli }}"
 
-  - ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Undo SNMP community"
+    ce_snmp_community:
+      state:  absent
+      community_name:  Wdz123456789
+      access_right:  write
+      provider: "{{ cli }}"
 
-  - ce_snmp_community: group_name=wdz_group security_level=noAuthNoPriv acl_number=2000 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP group"
+    ce_snmp_community:
+      state:  present
+      group_name:  wdz_group
+      security_level:  noAuthNoPriv
+      acl_number:  2000
+      provider: "{{ cli }}"
+
+  - name: "Undo SNMP group"
+    ce_snmp_community:
+      state:  absent
+      group_name:  wdz_group
+      security_level:  noAuthNoPriv
+      acl_number:  2000
+      provider: "{{ cli }}"

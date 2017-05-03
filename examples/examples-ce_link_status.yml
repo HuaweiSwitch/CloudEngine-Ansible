@@ -1,0 +1,30 @@
+---
+
+- name: Link status test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Get specified interface link status information"
+    ce_link_status:
+      interface: 40GE1/0/1
+      provider: "{{ cli }}"
+
+  - name: "Get specified interface type link status information"
+    ce_link_status:
+      interface: 40GE
+      provider: "{{ cli }}"
+
+  - name: "Get all interface link status information"
+    ce_link_status:
+      interface: all
+      provider: "{{ cli }}"

@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages SNMP user configuration.
 description:
     - Manages SNMP user configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -81,55 +80,58 @@ options:
 '''
 
 EXAMPLES = '''
-# config SNMP usm user
-  - name: "config SNMP usm user"
-    ce_snmp_user:
-        state:  present
-        usm_user_name:  wdz_snmp
-        remote_engine_id:  800007DB03389222111200
-        acl_number:  2000
-        user_group:  wdz_group
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
 
-# undo SNMP usm user
-  - name: "undo SNMP usm user"
-    ce_snmp_user:
-        state:  absent
-        usm_user_name:  wdz_snmp
-        remote_engine_id:  800007DB03389222111200
-        acl_number:  2000
-        user_group:  wdz_group
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- name: CloudEngine snmp user test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# config SNMP local user
-  - name: "config SNMP local user"
-    ce_snmp_user:
-        state:  present
-        aaa_local_user:  wdz_user
-        auth_protocol:  md5
-        auth_key:  huawei123
-        priv_protocol:  des56
-        priv_key:  huawei123
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+  tasks:
 
-# undo SNMP local user
-  - name: "config SNMP local user"
+  - name: "Config SNMP usm user"
     ce_snmp_user:
-        state:  absent
-        aaa_local_user:  wdz_user
-        auth_protocol:  md5
-        auth_key:  huawei123
-        priv_protocol:  des56
-        priv_key:  huawei123
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      usm_user_name:  wdz_snmp
+      remote_engine_id:  800007DB03389222111200
+      acl_number:  2000
+      user_group:  wdz_group
+      provider: "{{ cli }}"
+
+  - name: "Undo SNMP usm user"
+    ce_snmp_user:
+      state:  absent
+      usm_user_name:  wdz_snmp
+      remote_engine_id:  800007DB03389222111200
+      acl_number:  2000
+      user_group:  wdz_group
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP local user"
+    ce_snmp_user:
+      state:  present
+      aaa_local_user:  wdz_user
+      auth_protocol:  md5
+      auth_key:  huawei123
+      priv_protocol:  des56
+      priv_key:  huawei123
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP local user"
+    ce_snmp_user:
+      state:  absent
+      aaa_local_user:  wdz_user
+      auth_protocol:  md5
+      auth_key:  huawei123
+      priv_protocol:  des56
+      priv_key:  huawei123
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -165,16 +167,9 @@ updates:
     sample: ["snmp-agent remote-engineid 800007DB03389222111200 usm-user v3 wdz_snmp wdz_group acl 2000"]
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec, get_config
 
 
 # get snmp v3 USM user
@@ -311,12 +306,10 @@ CE_DELETE_SNMP_V3_LOCAL_USER = """
 class SnmpUser(object):
     """ Manages SNMP user configuration """
 
-    def __init__(self, **kwargs):
-        """ Class init """
+    def __init__(self):
+        """ init function """
 
         self.local_engine_id = None
-
-        self.netconf = get_netconf(**kwargs)
 
     def netconf_get_config(self, **kwargs):
         """ Get configure by netconf """
@@ -324,13 +317,9 @@ class SnmpUser(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, **kwargs):
         """ Set configure by netconf """
@@ -338,13 +327,9 @@ class SnmpUser(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_snmp_v3_usm_user_args(self, **kwargs):
         """ Check snmp v3 usm user invalid args """
@@ -425,14 +410,14 @@ class SnmpUser(object):
                 conf_str += "<privKey></privKey>"
 
             conf_str += CE_GET_SNMP_V3_USM_USER_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 if state == "present":
                     need_cfg = True
 
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -568,14 +553,14 @@ class SnmpUser(object):
                     msg='Error: The length of priv_key %s is out of [1 - 255].' % priv_key)
 
             conf_str = CE_GET_SNMP_V3_LOCAL_USER
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 if state == "present":
                     need_cfg = True
 
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -716,9 +701,9 @@ class SnmpUser(object):
         cmds.append(cmd)
 
         conf_str += CE_MERGE_SNMP_V3_USM_USER_TAIL
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge snmp v3 usm user failed.')
 
         return cmds
@@ -803,9 +788,9 @@ class SnmpUser(object):
         cmds.append(cmd)
 
         conf_str += CE_CREATE_SNMP_V3_USM_USER_TAIL
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create snmp v3 usm user failed.')
 
         return cmds
@@ -856,9 +841,9 @@ class SnmpUser(object):
             conf_str += "<privKey>%s</privKey>" % priv_key
 
         conf_str += CE_DELETE_SNMP_V3_USM_USER_TAIL
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete snmp v3 usm user failed.')
 
         return cmd
@@ -875,9 +860,9 @@ class SnmpUser(object):
 
         conf_str = CE_MERGE_SNMP_V3_LOCAL_USER % (
             local_user_name, auth_protocol, auth_key, priv_protocol, priv_key)
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge snmp v3 local user failed.')
 
         cmd = "snmp-agent local-user v3 %s " % local_user_name + "authentication-mode %s " % auth_protocol + \
@@ -897,9 +882,9 @@ class SnmpUser(object):
 
         conf_str = CE_CREATE_SNMP_V3_LOCAL_USER % (
             local_user_name, auth_protocol, auth_key, priv_protocol, priv_key)
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create snmp v3 local user failed.')
 
         cmd = "snmp-agent local-user v3 %s " % local_user_name + "authentication-mode %s " % auth_protocol + \
@@ -919,9 +904,9 @@ class SnmpUser(object):
 
         conf_str = CE_DELETE_SNMP_V3_LOCAL_USER % (
             local_user_name, auth_protocol, auth_key, priv_protocol, priv_key)
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete snmp v3 local user failed.')
 
         cmd = "undo snmp-agent local-user v3 %s" % local_user_name
@@ -934,8 +919,9 @@ class SnmpUser(object):
         module = kwargs["module"]
 
         regular = "| include snmp | include local-engineid"
-        tmp_cfg = module.config.get_config(
-            include_all=True, regular=regular)
+        flags = list()
+        flags.append(regular)
+        tmp_cfg = get_config(module, flags)
 
         if tmp_cfg:
             tmp_data = tmp_cfg.split(r"snmp-agent local-engineid ")
@@ -959,12 +945,8 @@ def main():
         aaa_local_user=dict(type='str')
     )
 
-    if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
-
-    module = NetworkModule(argument_spec=argument_spec,
-                           connect_on_load=False,
-                           supports_check_mode=True)
+    argument_spec.update(ce_argument_spec)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     changed = False
     proposed = dict()
@@ -973,10 +955,6 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     acl_number = module.params['acl_number']
     usm_user_name = module.params['usm_user_name']
     remote_engine_id = module.params['remote_engine_id']
@@ -987,8 +965,7 @@ def main():
     priv_key = module.params['priv_key']
     aaa_local_user = module.params['aaa_local_user']
 
-    snmp_user_obj = SnmpUser(
-        host=host, port=port, username=username, password=password)
+    snmp_user_obj = SnmpUser()
 
     if not snmp_user_obj:
         module.fail_json(msg='Error: Init module failed.')

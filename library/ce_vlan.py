@@ -28,7 +28,6 @@ short_description: Manages VLAN resources and attributes.
 description:
     - Manages VLAN configurations on Huawei CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     vlan_id:
         description:
@@ -56,23 +55,45 @@ options:
         required: false
         default: present
         choices: ['present','absent']
-
 '''
+
 EXAMPLES = '''
-# Ensure a range of VLANs are not present on the switch
-- ce_vlan: vlan_range="2-10,20,50,55-60,100-150" host=68.170.147.165 username=hauwei password=huawei state=absent
+- name: vlan module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Ensure VLAN 50 exists with the name WEB
-- ce_vlan: vlan_id=50 host=68.170.147.165 name=WEB username=huawei password=huawei
+  tasks:
 
-# Ensure VLAN is NOT on the device
-- ce_vlan: vlan_id=50 host=68.170.147.165 state=absent username=huawei password=huawei
+  - name: Ensure a range of VLANs are not present on the switch
+    ce_vlan:
+      vlan_range: "2-10,20,50,55-60,100-150"
+      state: absent
+      provider: "{{ cli }}"
 
+  - name: Ensure VLAN 50 exists with the name WEB
+    ce_vlan:
+      vlan_id: 50
+      name: WEB
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: Ensure VLAN is NOT on the device
+    ce_vlan:
+      vlan_id: 50
+      state: absent
+      provider: "{{ cli }}"
 
 '''
 
 RETURN = '''
-
 proposed_vlans_list:
     description: list of VLANs being proposed
     returned: always
@@ -118,16 +139,8 @@ changed:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
-
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, execute_nc_action, ce_argument_spec
 
 CE_NC_CREATE_VLAN = """
 <config>
@@ -256,11 +269,10 @@ class Vlan(object):
     """
      Manages VLAN resources and attributes
     """
+
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
-        self.hwnc = None
         self.init_module()
 
         # vlan config info
@@ -269,12 +281,6 @@ class Vlan(object):
         self.name = self.module.params['name']
         self.description = self.module.params['description']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -286,36 +292,17 @@ class Vlan(object):
         self.results = dict()
         self.vlan_attr_end = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """
         init ansilbe NetworkModule.
         """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """
-        init netconf.
-        """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -328,13 +315,9 @@ class Vlan(object):
             description = ''
 
         conf_str = CE_NC_CREATE_VLAN % (vlan_id, name, description)
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "CREATE_VLAN")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "CREATE_VLAN")
+        self.changed = True
 
     def merge_vlan(self, vlan_id, name, description):
         """Merge vlan."""
@@ -351,13 +334,9 @@ class Vlan(object):
         if not conf_str:
             return
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_VLAN")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "MERGE_VLAN")
+        self.changed = True
 
     def create_vlan_batch(self, vlan_list):
         """Create vlan batch."""
@@ -368,15 +347,11 @@ class Vlan(object):
         vlan_bitmap = self.vlan_list_to_bitmap(vlan_list)
         xmlstr = CE_NC_CREATE_VLAN_BATCH % (vlan_bitmap, vlan_bitmap)
 
-        try:
-            con_obj = self.netconf.execute_action(action=xmlstr)
-            self.check_response(con_obj, "CREATE_VLAN_BATCH")
-            self.updates_cmd.append('vlan batch %s' % (
-                self.vlan_range.replace(',', ' ').replace('-', ' to ')))
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = execute_nc_action(self.module, xmlstr)
+        self.check_response(recv_xml, "CREATE_VLAN_BATCH")
+        self.updates_cmd.append('vlan batch %s' % (
+            self.vlan_range.replace(',', ' ').replace('-', ' to ')))
+        self.changed = True
 
     def delete_vlan_batch(self, vlan_list):
         """Delete vlan batch."""
@@ -387,40 +362,28 @@ class Vlan(object):
         vlan_bitmap = self.vlan_list_to_bitmap(vlan_list)
         xmlstr = CE_NC_DELETE_VLAN_BATCH % (vlan_bitmap, vlan_bitmap)
 
-        try:
-            con_obj = self.netconf.execute_action(action=xmlstr)
-            self.check_response(con_obj, "DELETE_VLAN_BATCH")
-            self.updates_cmd.append('undo vlan batch %s' % (
-                self.vlan_range.replace(',', ' ').replace('-', ' to ')))
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = execute_nc_action(self.module, xmlstr)
+        self.check_response(recv_xml, "DELETE_VLAN_BATCH")
+        self.updates_cmd.append('undo vlan batch %s' % (
+            self.vlan_range.replace(',', ' ').replace('-', ' to ')))
+        self.changed = True
 
     def undo_config_vlan(self, vlanid):
         """Delete vlan."""
 
-        confstr = CE_NC_DELETE_VLAN % vlanid
-        try:
-            con_obj = self.netconf.set_config(config=confstr)
-            self.check_response(con_obj, "DELETE_VLAN")
-            self.changed = True
-            self.updates_cmd.append('undo vlan %s' % self.vlan_id)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        conf_str = CE_NC_DELETE_VLAN % vlanid
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "DELETE_VLAN")
+        self.changed = True
+        self.updates_cmd.append('undo vlan %s' % self.vlan_id)
 
     def get_vlan_attr(self, vlan_id):
         """ get vlan attributes."""
 
         conf_str = CE_NC_GET_VLAN % vlan_id
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-        xml_str = con_obj.xml
+        xml_str = get_nc_config(self.module, conf_str)
         attr = dict()
+
         if "<data/>" in xml_str:
             return attr
         else:
@@ -438,13 +401,9 @@ class Vlan(object):
         sample: [ ("20", "VLAN_NAME_20"), ("30", "VLAN_NAME_30") ]"""
 
         conf_str = CE_NC_GET_VLANS
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-        xml_str = con_obj.xml
+        xml_str = get_nc_config(self.module, conf_str)
         vlan_list = list()
+
         if "<data/>" in xml_str:
             return vlan_list
         else:
@@ -456,13 +415,9 @@ class Vlan(object):
         """ get all vlan vid list, sample: [ "20", "30", "31" ]"""
 
         conf_str = CE_NC_GET_VLANS
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-        xml_str = con_obj.xml
+        xml_str = get_nc_config(self.module, conf_str)
         vlan_list = list()
+
         if "<data/>" in xml_str:
             return vlan_list
         else:
@@ -728,6 +683,7 @@ def main():
                    default='present', required=False),
     )
 
+    argument_spec.update(ce_argument_spec)
     vlancfg = Vlan(argument_spec)
     vlancfg.work()
 

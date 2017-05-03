@@ -1,69 +1,35 @@
 ---
 
-- hosts: cloudengine
+- name: vxlan gateway module test
+  hosts: ce128
+  connection: local
   gather_facts: no
   vars:
-    vbdif_name: Vbdif100
-    vni_id: 100
-    peer_ip: 3.3.3.3
-    source_ip: 1.2.3.4
-    vpn1: vxlan_gw_vpn1
-    vpn2: vxlan_gw_vpn2
-    clear_cmd: 'undo ip vpn-instance vxlan_gw_vpn1,undo ip vpn-instance vxlan_gw_vpn2,undo interface vbdif100,undo bridge-domain 100'
-    setup_cmd: 'ip vpn-instance vxlan_gw_vpn1,quit,ip vpn-instance vxlan_gw_vpn2,quit,bridge-domain 100,quit,interface vbdif100,quit'
-    
-  
-  tasks:  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-  - ce_config: lines='ip vpn-instance vxlan_gw_vpn1' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_config: lines='ip vpn-instance vxlan_gw_vpn2' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_config: lines='bridge-domain 100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_config: lines='interface vbdif100' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    
-  - ce_vxlan_gateway: dfs_id=1 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    
-  - ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip}} dfs_source_vpn={{vpn1}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_source_ip={{source_ip}} dfs_source_vpn={{vpn1}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2000  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_udp_port=2000  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_all_active=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip}} dfs_peer_vpn={{vpn2}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_peer_ip={{peer_ip}} dfs_peer_vpn={{vpn2}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 dfs_all_active=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: dfs_id=1 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vpn_instance={{vpn1}} vpn_vni={{vni_id}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_mac=0000-5e00-0100  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} vbdif_bind_vpn={{vpn2}}  state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_distribute_gateway=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=enable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_gateway: vbdif_name={{vbdif_name}} arp_direct_route=disable  state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
+  tasks:
+
+  - name: Configuring Centralized All-Active Gateways for the VXLAN Network
+    ce_vxlan_gateway:
+      dfs_id: 1
+      dfs_source_ip: 6.6.6.6
+      dfs_all_active: enable
+      dfs_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+  - name: Bind the VPN instance to a Layer 3 gateway, enable distributed gateway, and configure host route advertisement.
+    ce_vxlan_gateway:
+      vbdif_name: Vbdif100
+      vbdif_bind_vpn: vpn1
+      arp_distribute_gateway: enable
+      arp_direct_route: enable
+      provider: "{{ cli }}"
+  - name: Assign a VNI to a VPN instance.
+    ce_vxlan_gateway:
+      vpn_instance: vpn1
+      vpn_vni: 100
+      provider: "{{ cli }}"

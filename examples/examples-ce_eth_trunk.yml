@@ -1,15 +1,22 @@
 ---
 
-- hosts: cloudengine
+- name: eth_trunk module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    trunk_id: 100
-    all_members: '40GE 2/0/24,40GE 2/0/25'
-    clear_cmd: 'interface 40GE 2/0/24, clear config this, quit, interface 40GE 2/0/25, clear config this, quit'
-  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
   tasks:
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_eth_trunk: trunk_id={{trunk_id}} mode=manual members={{all_members}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure Eth-Trunk100 is created, add two members, and set to mode lacp-static
+    ce_eth_trunk:
+      trunk_id: 100
+      members: ['10GE1/0/24', '10GE1/0/25']
+      mode: 'lacp-static'
+      state: present
+      provider: '{{ cli }}'

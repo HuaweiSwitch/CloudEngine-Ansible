@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages information center debug configuration.
 description:
     - Manages information center debug configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -62,8 +61,8 @@ options:
         description:
             - Whether a device is enabled to output debugging information.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     debug_level:
         description:
             - Debug level permitted to output.
@@ -74,44 +73,50 @@ options:
 '''
 
 EXAMPLES = '''
-# config debug time stamp
-  - name: "config debug time stamp"
+
+- name: CloudEngine info center debug test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config debug time stamp"
     ce_info_center_debug:
-        state:  present
-        debug_time_stamp:  date_boot
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo debug time stamp
-  - name: "undo debug time stamp"
+      state:  present
+      debug_time_stamp:  date_boot
+      provider: "{{ cli }}"
+
+  - name: "Undo debug time stamp"
     ce_info_center_debug:
-        state:  absent
-        debug_time_stamp:  date_boot
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config debug module log level
-  - name: "config debug module log level"
+      state:  absent
+      debug_time_stamp:  date_boot
+      provider: "{{ cli }}"
+
+  - name: "Config debug module log level"
     ce_info_center_debug:
-        state:  present
-        module_name:  aaa
-        channel_id:  1
-        debug_enable:  true
-        debug_level:  error
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo debug module log level
-  - name: "undo debug module log level"
+      state:  present
+      module_name:  aaa
+      channel_id:  1
+      debug_enable:  true
+      debug_level:  error
+      provider: "{{ cli }}"
+
+  - name: "Undo debug module log level"
     ce_info_center_debug:
-        state:  absent
-        module_name:  aaa
-        channel_id:  1
-        debug_enable:  true
-        debug_level:  error
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      module_name:  aaa
+      channel_id:  1
+      debug_enable:  true
+      debug_level:  error
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -142,16 +147,9 @@ updates:
     sample: ["info-center timestamp debugging boot"]
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 # get info center debug global
@@ -259,19 +257,14 @@ class InfoCenterDebug(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
         self.debug_time_stamp = self.module.params['debug_time_stamp'] or None
         self.module_name = self.module.params['module_name'] or None
         self.channel_id = self.module.params['channel_id'] or None
-        self.debug_enable = self.module.params['debug_enable'] or None
+        self.debug_enable = self.module.params['debug_enable']
         self.debug_level = self.module.params['debug_level'] or None
 
         # cur config
@@ -286,41 +279,6 @@ class InfoCenterDebug(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # netconf
-        if not HAS_NCCLIENT:
-            raise Exception("Error: The ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.password)
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def netconf_get_config(self, conf_str):
-        """ Netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, conf_str):
-        """ Netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def check_global_args(self):
         """ Check global args """
 
@@ -334,12 +292,11 @@ class InfoCenterDebug(object):
             conf_str += "<debugTimeStamp></debugTimeStamp>"
             conf_str += CE_GET_DEBUG_GLOBAL_TAIL
 
-            con_obj = self.netconf_get_config(conf_str=conf_str)
-
-            if "<data/>" in con_obj.xml:
+            xml_str = get_nc_config(self.module, conf_str)
+            if "<data/>" in xml_str:
                 find_flag = False
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = xml_str.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -407,18 +364,17 @@ class InfoCenterDebug(object):
 
             if self.channel_id:
                 conf_str += "<icChannelId></icChannelId>"
-            if self.debug_enable:
+            if self.debug_enable != 'no_use':
                 conf_str += "<dbgEnFlg></dbgEnFlg>"
             if self.debug_level:
                 conf_str += "<dbgEnLevel></dbgEnLevel>"
 
             conf_str += CE_GET_DEBUG_SOURCE_TAIL
-            con_obj = self.netconf_get_config(conf_str=conf_str)
-
-            if "<data/>" in con_obj.xml:
+            xml_str = get_nc_config(self.module, conf_str)
+            if "<data/>" in xml_str:
                 find_flag = False
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = xml_str.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -441,7 +397,7 @@ class InfoCenterDebug(object):
                             find_flag = False
                         if self.channel_id and tmp.get("icChannelId") != self.channel_id:
                             find_flag = False
-                        if self.debug_enable and tmp.get("dbgEnFlg") != self.debug_enable:
+                        if self.debug_enable != 'no_use' and tmp.get("dbgEnFlg") != self.debug_enable:
                             find_flag = False
                         if self.debug_level and tmp.get("dbgEnLevel") != self.debug_level:
                             find_flag = False
@@ -469,7 +425,7 @@ class InfoCenterDebug(object):
             self.proposed["module_name"] = self.module_name
         if self.channel_id:
             self.proposed["channel_id"] = self.channel_id
-        if self.debug_enable:
+        if self.debug_enable != 'no_use':
             self.proposed["debug_enable"] = self.debug_enable
         if self.debug_level:
             self.proposed["debug_level"] = self.debug_level
@@ -503,9 +459,8 @@ class InfoCenterDebug(object):
 
         conf_str += CE_MERGE_DEBUG_GLOBAL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge debug global failed.')
 
         if self.debug_time_stamp:
@@ -524,9 +479,8 @@ class InfoCenterDebug(object):
 
         conf_str += CE_MERGE_DEBUG_GLOBAL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: delete debug global failed.')
 
         if self.debug_time_stamp:
@@ -544,16 +498,15 @@ class InfoCenterDebug(object):
             conf_str += "<moduleName>%s</moduleName>" % self.module_name
         if self.channel_id:
             conf_str += "<icChannelId>%s</icChannelId>" % self.channel_id
-        if self.debug_enable:
+        if self.debug_enable != 'no_use':
             conf_str += "<dbgEnFlg>%s</dbgEnFlg>" % self.debug_enable
         if self.debug_level:
             conf_str += "<dbgEnLevel>%s</dbgEnLevel>" % self.debug_level
 
         conf_str += CE_MERGE_DEBUG_SOURCE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge debug source failed.')
 
         cmd = "info-center source"
@@ -561,7 +514,7 @@ class InfoCenterDebug(object):
             cmd += " %s" % self.module_name
         if self.channel_id:
             cmd += " channel %s" % self.channel_id
-        if self.debug_enable:
+        if self.debug_enable != 'no_use':
             if self.debug_enable == "true":
                 cmd += " debug state on"
             else:
@@ -575,7 +528,7 @@ class InfoCenterDebug(object):
     def delete_debug_source(self):
         """ Delete debug source """
 
-        if not self.debug_enable and not self.debug_level:
+        if self.debug_enable == 'no_use' and not self.debug_level:
             conf_str = CE_DELETE_DEBUG_SOURCE_HEADER
             if self.module_name:
                 conf_str += "<moduleName>%s</moduleName>" % self.module_name
@@ -588,15 +541,14 @@ class InfoCenterDebug(object):
                 conf_str += "<moduleName>%s</moduleName>" % self.module_name
             if self.channel_id:
                 conf_str += "<icChannelId>%s</icChannelId>" % self.channel_id
-            if self.debug_enable:
+            if self.debug_enable != 'no_use':
                 conf_str += "<dbgEnFlg>%s</dbgEnFlg>" % CHANNEL_DEFAULT_DBG_STATE.get(self.channel_id)
             if self.debug_level:
                 conf_str += "<dbgEnLevel>%s</dbgEnLevel>" % CHANNEL_DEFAULT_DBG_LEVEL.get(self.channel_id)
             conf_str += CE_MERGE_DEBUG_SOURCE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Delete debug source failed.')
 
         cmd = "undo info-center source"
@@ -604,7 +556,7 @@ class InfoCenterDebug(object):
             cmd += " %s" % self.module_name
         if self.channel_id:
             cmd += " channel %s" % self.channel_id
-        if self.debug_enable:
+        if self.debug_enable != 'no_use':
             cmd += " debug state"
         if self.debug_level:
             cmd += " level"
@@ -654,11 +606,12 @@ def main():
                                        'formatdate_millisecond']),
         module_name=dict(type='str'),
         channel_id=dict(type='str'),
-        debug_enable=dict(choices=['true', 'false']),
+        debug_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         debug_level=dict(choices=['emergencies', 'alert', 'critical', 'error', 'warning', 'notification',
                                   'informational', 'debugging'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = InfoCenterDebug(argument_spec=argument_spec)
     module.work()
 

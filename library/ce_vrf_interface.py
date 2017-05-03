@@ -25,7 +25,6 @@ DOCUMENTATION = '''
 module: ce_vrf_interface
 version_added: "2.3"
 short_description: Manages interface specific VPN configuration.
-extends_documentation_fragment: cloudengine
 description:
     - Manages interface specific VPN configuration of Huawei CloudEngine switches.
 author: Zhijin Zhou (@CloudEngine-Ansible)
@@ -51,10 +50,33 @@ options:
 '''
 
 EXAMPLES = '''
-# Configure a VPN instance for the interface
-- ce_vrf_interface: vpn_interface=40GE1/0/2 vrf=test state=present
-# Disable the association between a VPN instance and an interface
-- ce_vrf_interface: vpn_interface=40GE1/0/2 vrf=test state=absent
+- name: VRF interface test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Configure a VPN instance for the interface"
+    ce_vrf_interface:
+      vpn_interface: 40GE1/0/2
+      vrf: test
+      state: present
+      provider: "{{ cli }}"
+
+  - name: "Disable the association between a VPN instance and an interface"
+    ce_vrf_interface:
+      vpn_interface: 40GE1/0/2
+      vrf: test
+      state: absent
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -97,16 +119,9 @@ changed:
 '''
 
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, get_nc_config, set_nc_config
 
 CE_NC_GET_VRF = """
 <filter type="subtree">
@@ -246,10 +261,9 @@ def get_interface_type(interface):
 class VrfInterface(object):
     """Manange vpn instance"""
 
-    def __init__(self, argument_spec, ):
+    def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # vpn instance info
@@ -262,12 +276,6 @@ class VrfInterface(object):
         self.intf_info['vrfName'] = None
         self.conf_exist = False
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -276,59 +284,17 @@ class VrfInterface(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf interface"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-            if not self.netconf:
-                self.module.fail_json(msg='Error: netconf init failed')
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace('\r\n', ''))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace('\r\n', ''))
-
-        return con_obj
 
     def get_update_cmd(self):
         """ get  updated command"""
@@ -395,11 +361,11 @@ class VrfInterface(object):
         """ get the VPN instance associated with the interface"""
 
         xml_str = CE_NC_GET_VRF_INTERFACE
-        con_obj = self.netconf_get_config(xml_str)
-        if "<data/>" in con_obj.xml:
+        con_obj = get_nc_config(self.module, xml_str)
+        if "<data/>" in con_obj:
             return
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = con_obj.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -423,9 +389,8 @@ class VrfInterface(object):
         """ judge whether the VPN instance is existed"""
 
         conf_str = CE_NC_GET_VRF % self.vrf
-        con_obj = self.netconf_get_config(conf_str)
-
-        if "<data/>" in con_obj.xml:
+        con_obj = get_nc_config(self.module, conf_str)
+        if "<data/>" in con_obj:
             return False
 
         return True
@@ -434,13 +399,12 @@ class VrfInterface(object):
         """ get related configuration of the interface"""
 
         conf_str = CE_NC_GET_INTF % self.vpn_interface
-        con_obj = self.netconf_get_config(conf_str)
-
-        if "<data/>" in con_obj.xml:
+        con_obj = get_nc_config(self.module, conf_str)
+        if "<data/>" in con_obj:
             return
 
         # get interface base info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = con_obj.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -511,11 +475,13 @@ class VrfInterface(object):
 
             xml_str = CE_NC_MERGE_VRF_INTERFACE % (
                 self.vrf, self.vpn_interface)
-            self.netconf_set_config(xml_str, "VRF_INTERFACE_CONFIG")
+            ret_xml = set_nc_config(self.module, xml_str)
+            self.check_response(ret_xml, "VRF_INTERFACE_CONFIG")
             self.changed = True
         elif self.state == 'absent':
             xml_str = CE_NC_DEL_INTF_VPN % (self.vrf, self.vpn_interface)
-            self.netconf_set_config(xml_str, "DEL_VRF_INTERFACE_CONFIG")
+            ret_xml = set_nc_config(self.module, xml_str)
+            self.check_response(ret_xml, "DEL_VRF_INTERFACE_CONFIG")
             self.changed = True
 
     def work(self):
@@ -543,7 +509,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     vrf_intf = VrfInterface(argument_spec)
     vrf_intf.work()
 

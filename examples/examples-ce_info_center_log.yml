@@ -1,31 +1,36 @@
----
-
-- name: cloudengine info center log module test
+- name: CloudEngine info center log test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_info_center_log: log_time_stamp=date_boot state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Setting the timestamp format of logs"
+    ce_info_center_log:
+      log_time_stamp: date_tenthsecond
+      provider: "{{ cli }}"
 
-  - ce_info_center_log: log_time_stamp=date_tenthsecond state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Enabled to output information to the log buffer"
+    ce_info_center_log:
+      log_buff_enable: true
+      provider: "{{ cli }}"
 
-  - ce_info_center_log: log_time_stamp=shortdate_second state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Set the maximum number of logs in the log buffer"
+    ce_info_center_log:
+      log_buff_size: 100
+      provider: "{{ cli }}"
 
-  - ce_info_center_log: log_time_stamp=formatdate_millisecond state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_info_center_log: log_time_stamp=formatdate_millisecond state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_info_center_log: log_buff_enable=false state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_info_center_log: log_buff_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_info_center_log: log_buff_size=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_info_center_log: log_buff_size=100 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_info_center_log: module_name=aaa channel_id=1 log_enable=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_info_center_log: module_name=aaa channel_id=1 log_enable=true log_level=notification state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_info_center_log: module_name=aaa channel_id=1 log_enable=true log_level=notification state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Set a rule for outputting logs to a channel"
+    ce_info_center_log:
+      module_name: aaa
+      channel_id: 1
+      log_enable: true
+      log_level: critical
+      provider: "{{ cli }}"

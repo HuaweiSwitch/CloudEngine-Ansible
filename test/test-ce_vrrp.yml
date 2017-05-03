@@ -1,0 +1,404 @@
+---
+
+- name: cloudengine vrrp module test
+  hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "config interface 10GE1/0/8"
+    ce_config: lines='interface 10GE1/0/8, undo portswitch, undo ifg 11' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "config interface 10GE1/0/9"
+    ce_config: lines='interface 10GE1/0/9, undo portswitch, undo ifg 11' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "config interface 10GE1/0/10"
+    ce_config: lines='interface 10GE1/0/10, undo portswitch, undo ifg 11' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "config interface 10GE1/0/8"
+    ce_config: lines='interface 10GE1/0/8, vrrp vrid 1' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "config interface 10GE1/0/9"
+    ce_config: lines='interface 10GE1/0/9, vrrp vrid 2' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "config interface 10GE1/0/10"
+    ce_config: lines='interface 10GE1/0/10, vrrp vrid 3' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "vrrp version v3"
+    ce_vrrp: version=v3 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp version"
+    ce_vrrp: version=v3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp version v2"
+    ce_vrrp: version=v2 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "vrrp gratuitous-arp interval"
+    ce_vrrp: gratuitous_arp_interval=40 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp gratuitous-arp interval again"
+    ce_vrrp: gratuitous_arp_interval=40 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo vrrp gratuitous-arp interval"
+    ce_vrrp: gratuitous_arp_interval=40 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp recover-delay"
+    ce_vrrp: recover_delay=10 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp recover-delay again"
+    ce_vrrp: recover_delay=10 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo vrrp recover-delay"
+    ce_vrrp: recover_delay=10 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid virtual-ip 10.14.2.7"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 virtual_ip=10.14.2.7 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid virtual-ip 10.14.2.8"
+    ce_vrrp: interface=10GE1/0/9 vrid=2 virtual_ip=10.14.2.8 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid virtual-ip 10.14.2.10"
+    ce_vrrp: interface=10GE1/0/10 vrid=3 virtual_ip=10.14.2.10 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid virtual-ip 10.14.2.10 again"
+    ce_vrrp: interface=10GE1/0/10 vrid=3 virtual_ip=10.14.2.10 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo vrrp vrid virtual-ip 10.14.2.10"
+    ce_vrrp: interface=10GE1/0/10 vrid=3 virtual_ip=10.14.2.10 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid virtual-ip 10.14.2.10 again"
+    ce_vrrp: interface=10GE1/0/10 vrid=3 virtual_ip=10.14.2.10 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "vrrp vrid admin"
+    ce_vrrp: interface=10GE1/0/9 vrid=2 vrrp_type=admin state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid admin"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 vrrp_type=admin admin_ignore_if_down=True state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid admin"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 vrrp_type=admin state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid fast-resume"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 fast_resume=enable state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "vrrp vrid fast-resume 2"
+    ce_vrrp: interface=10GE1/0/9 vrid=2 fast_resume=enable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid fast-resume"
+    ce_vrrp: interface=10GE1/0/9 vrid=2 fast_resume=disable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid holding-multiplier "
+    ce_vrrp: interface=10GE1/0/8 vrid=1 holding_multiplier=4 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid holding-multiplier "
+    ce_vrrp: interface=10GE1/0/8 vrid=1 holding_multiplier=4 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid holding-multiplier "
+    ce_vrrp: interface=10GE1/0/8 vrid=1 holding_multiplier=3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid preempt timer delay"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 preempt_timer_delay=10 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid preempt timer delay"
+    ce_vrrp: interface=10GE1/0/8 vrid=1 preempt_timer_delay=10 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid track admin-vrrp vrid error"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 vrrp_type=member admin_interface=10GE1/0/9 admin_vrid=9 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "vrrp vrid track admin-vrrp vrid"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 vrrp_type=member admin_interface=10GE1/0/9 admin_vrid=2 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid track admin-vrrp vrid"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 vrrp_type=member admin_interface=10GE1/0/9 admin_vrid=2 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid auth_mode=simple"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 auth_mode=simple auth_key=aaa is_plain=True provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid auth_mode=md5"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 auth_mode=md5 auth_key=777 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid auth_mode=md5"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 auth_mode=md5 auth_key=777 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo vrrp vrid auth_mode=md5"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 auth_mode=md5 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "vrrp vrid auth_mode=md5 is_plain=True"
+    ce_vrrp:  interface=10GE1/0/8 vrid=1 auth_mode=md5 auth_key=aaa is_plain=True provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "vrrp vrid virtual-ip 10.14.2.15 10GE1/0/11 is l2 port"
+    ce_vrrp: interface=10GE1/0/11 vrid=1 virtual_ip=10.14.2.15 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed

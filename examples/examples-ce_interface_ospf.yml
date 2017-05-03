@@ -1,22 +1,46 @@
 ---
 
-- hosts: cloudengine
+- name: eth_trunk module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    test_intf: 40ge2/0/30
-    process: 10
-    clear_cmd: 'interface 40ge2/0/30, clear config this'
-    setup_cmd: 'interface 40ge2/0/30, undo portswitch'
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Enables OSPF and sets the cost on an interface
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      cost: 100
+      provider: '{{ cli }}'
 
-  - ce_config: lines={{setup_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Sets the dead interval of the OSPF neighbor
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      dead_interval: 100
+      provider: '{{ cli }}'
 
-  - ce_interface_ospf: process_id={{process}} area=100 interface={{test_intf}} state=present cost=10 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
- 
-  - ce_interface_ospf: process_id={{process}} area=100 interface={{test_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
- 
-  - ce_ospf: process_id={{process}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Sets the interval for sending Hello packets on an interface
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      hello_interval: 2
+      provider: '{{ cli }}'
 
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Disables an interface from receiving and sending OSPF packets
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      silent_interface: true
+      provider: '{{ cli }}'

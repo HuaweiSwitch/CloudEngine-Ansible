@@ -27,7 +27,6 @@ short_description: Manages static route configuration.
 description:
     - Manages the static routes of Huawei CloudEngine switches.
 author: Yang yang (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - If no vrf is supplied, vrf is set to default.
       If state=absent, the route will be removed, regardless of the
@@ -90,16 +89,61 @@ options:
 '''
 
 EXAMPLES = '''
-# Config a ipv4 static route, next hop is an address and that it has the proper description
-- ce_static_route: prefix=2.1.1.2 mask = 24 next_hop=3.1.1.2 description='Configured by Ansible' aftype=v4
-# Config a ipv4 static route ,next hop is an interface and that it has the proper description
-- ce_static_route: prefix=2.1.1.2 mask = 24 next_hop=10GE1/0/1 description='Configured by Ansible' aftype=v4
-# Config a ipv6 static route, next hop is an address and that it has the proper description
-- ce_static_route: prefix=fc00:0:0:2001::  mask = 64 next_hop=fc00:0:0:2004::1 description='Configured by Ansible' aftype=v6
-# Config a ipv4 static route, next hop is an interface and that it has the proper description
-- ce_static_route: prefix=fc00:0:0:2001:: mask = 64 next_hop=10GE1/0/1 description='Configured by Ansible' aftype=v6
-# Config a VRF and set ipv4 static route, next hop is an address and that it has the proper description
-- ce_static_route: vrf=vpna prefix=2.1.1.2 mask = 24 next_hop=3.1.1.2 description='Configured by Ansible' aftype=v4
+- name: static route module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Config a ipv4 static route, next hop is an address and that it has the proper description
+    ce_static_route:
+      prefix: 2.1.1.2
+      mask: 24
+      next_hop: 3.1.1.2
+      description: 'Configured by Ansible'
+      aftype: v4
+      provider: "{{ cli }}"
+  - name: Config a ipv4 static route ,next hop is an interface and that it has the proper description
+    ce_static_route:
+      prefix: 2.1.1.2
+      mask: 24
+      next_hop: 10GE1/0/1
+      description: 'Configured by Ansible'
+      aftype: v4
+      provider: "{{ cli }}"
+  - name: Config a ipv6 static route, next hop is an address and that it has the proper description
+    ce_static_route:
+      prefix: fc00:0:0:2001::1
+      mask: 64
+      next_hop: fc00:0:0:2004::1
+      description: 'Configured by Ansible'
+      aftype: v6
+      provider: "{{ cli }}"
+  - name: Config a ipv4 static route, next hop is an interface and that it has the proper description
+    ce_static_route:
+      prefix: fc00:0:0:2001::1
+      mask: 64
+      next_hop: 10GE1/0/1
+      description: 'Configured by Ansible'
+      aftype: v6
+      provider: "{{ cli }}"
+  - name: Config a VRF and set ipv4 static route, next hop is an address and that it has the proper description
+    ce_static_route:
+      vrf: vpna
+      prefix: 2.1.1.2
+      mask: 24
+      next_hop: 3.1.1.2
+      description: 'Configured by Ansible'
+      aftype: v4
+      provider: "{{ cli }}"
 '''
 RETURN = '''
 proposed:
@@ -133,18 +177,9 @@ changed:
 '''
 
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
-
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_STATIC_ROUTE = """
 <filter type="subtree">
@@ -309,7 +344,6 @@ class StaticRoute(object):
     def __init__(self, argument_spec, ):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # static route info
@@ -333,12 +367,6 @@ class StaticRoute(object):
         if self.destvrf is None:
             self.destvrf = "_public_"
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -348,32 +376,16 @@ class StaticRoute(object):
         self.end_state = dict()
 
         self.static_routes_info = dict()
-        # init netconf connect
-        self.init_netconf()
 
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: Netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -565,12 +577,8 @@ class StaticRoute(object):
 
         conf_str = build_config_xml(configxmlstr)
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "OPERATE_STATIC_ROUTE")
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "OPERATE_STATIC_ROUTE")
 
     def get_static_route(self, state):
         """get ipv4 static route"""
@@ -582,15 +590,11 @@ class StaticRoute(object):
         else:
             getxmlstr = CE_NC_GET_STATIC_ROUTE
 
-        try:
-            get_obj = self.netconf.get_config(filter=getxmlstr)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(self.module, getxmlstr)
 
-        if 'data/' in get_obj.xml:
+        if 'data/' in xml_str:
             return
-        xml_str = get_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -832,7 +836,7 @@ def main():
         state=dict(choices=['absent', 'present'],
                    default='present', required=False),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = StaticRoute(argument_spec)
     interface.work()
 

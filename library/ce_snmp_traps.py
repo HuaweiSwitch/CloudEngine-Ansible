@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages SNMP traps configuration.
 description:
     - Manages SNMP traps configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -70,31 +69,39 @@ options:
 '''
 
 EXAMPLES = '''
-# config SNMP trap all enable
-  - name: "config SNMP trap all enable"
+
+- name: CloudEngine snmp traps test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config SNMP trap all enable"
     ce_snmp_traps:
-        state:  present
-        feature_name:  all
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config SNMP trap interface
-  - name: "config SNMP trap interface"
+      state:  present
+      feature_name:  all
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP trap interface"
     ce_snmp_traps:
-        state:  present
-        interface_type:  40GE
-        interface_number:  2/0/1
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config SNMP trap port
-  - name: "config SNMP trap port"
+      state:  present
+      interface_type:  40GE
+      interface_number:  2/0/1
+      provider: "{{ cli }}"
+
+  - name: "Config SNMP trap port"
     ce_snmp_traps:
-        state:  present
-        port_number:  2222
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      port_number:  2222
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -129,11 +136,8 @@ updates:
 '''
 
 
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.cloudengine import get_cli_exception
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.network import NetworkError
-from ansible.module_utils.netcli import CommandRunner, AddCommandError
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config, ce_argument_spec, run_commands
 
 
 class SnmpTraps(object):
@@ -145,8 +149,7 @@ class SnmpTraps(object):
         # module
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # config
         self.cur_cfg = dict()
@@ -174,9 +177,9 @@ class SnmpTraps(object):
         self.end_state["undo snmp-agent trap"] = []
 
         commands = list()
-        cmd1 = {'output': 'text', 'command': 'display interface brief'}
+        cmd1 = 'display interface brief'
         commands.append(cmd1)
-        self.interface = self.excute_command(commands)
+        self.interface = run_commands(self.module, commands)
 
     def check_args(self):
         """ Check invalid args """
@@ -307,18 +310,15 @@ class SnmpTraps(object):
         """ Load configure through cli """
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_get_config(self):
         """ Get configure through cli """
 
         regular = "| include snmp | include trap"
-        tmp_cfg = self.module.config.get_config(
-            include_all=True, regular=regular)
+        flags = list()
+        flags.append(regular)
+        tmp_cfg = get_config(self.module, flags)
 
         return tmp_cfg
 
@@ -334,7 +334,10 @@ class SnmpTraps(object):
 
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def undo_trap_feature_name(self):
@@ -349,7 +352,10 @@ class SnmpTraps(object):
 
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def set_trap_source_interface(self):
@@ -359,7 +365,10 @@ class SnmpTraps(object):
             self.interface_type, self.interface_number)
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def undo_trap_source_interface(self):
@@ -368,7 +377,10 @@ class SnmpTraps(object):
         cmd = "undo snmp-agent trap source"
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def set_trap_source_port(self):
@@ -377,7 +389,10 @@ class SnmpTraps(object):
         cmd = "snmp-agent trap source-port %s" % self.port_number
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def undo_trap_source_port(self):
@@ -386,31 +401,11 @@ class SnmpTraps(object):
         cmd = "undo snmp-agent trap source-port"
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
-
-    def excute_command(self, commands):
-        """ Method to execute command """
-
-        runner = CommandRunner(self.module)
-        for cmd in commands:
-            try:
-                runner.add_command(**cmd)
-            except AddCommandError:
-                exc = get_exception()
-                self.module.fail_json(msg=str(exc))
-
-        try:
-            runner.run()
-        except NetworkError:
-            err = get_cli_exception()
-            self.module.fail_json(msg=err)
-
-        output = []
-        for cmd in commands:
-            tmp = runner.get_command(cmd['command'], cmd.get('output'))
-            output.append(tmp)
-        return output
 
     def work(self):
         """ The work function """
@@ -548,6 +543,7 @@ def main():
         port_number=dict(type='str')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = SnmpTraps(argument_spec=argument_spec)
     module.work()
 

@@ -26,8 +26,7 @@ module: ce_aaa_server
 version_added: "2.3"
 short_description: Manages AAA server global configuration.
 description:
-    - Manages AAA server global configuration
-extends_documentation_fragment: cloudengine
+    - Manages AAA server global configuration.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -100,49 +99,52 @@ options:
 '''
 
 EXAMPLES = '''
-# radius authentication Server Basic settings
-  - name: "radius authentication Server Basic settings"
-    ce_aaa_server:
-        state:  present
-        authen_scheme_name:  test1
-        first_authen_mode:  radius
-        radius_server_group:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
 
-# undo radius authentication Server Basic settings
-  - name: "undo radius authentication Server Basic settings"
-    ce_aaa_server:
-        state:  absent
-        authen_scheme_name:  test1
-        first_authen_mode:  radius
-        radius_server_group:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+- name: AAA server test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# hwtacacs accounting Server Basic settings
-  - name: "hwtacacs accounting Server Basic settings"
-    ce_aaa_server:
-        state:  present
-        acct_scheme_name:  test1
-        accounting_mode:  hwtacacs
-        hwtacas_template:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+  tasks:
 
-# undo hwtacacs accounting Server Basic settings
-  - name: "undo hwtacacs accounting Server Basic settings"
+  - name: "Radius authentication Server Basic settings"
     ce_aaa_server:
-        state:  absent
-        acct_scheme_name:  test1
-        accounting_mode:  hwtacacs
-        hwtacas_template:  test2
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      authen_scheme_name:  test1
+      first_authen_mode:  radius
+      radius_server_group:  test2
+      provider: "{{ cli }}"
+
+  - name: "Undo radius authentication Server Basic settings"
+    ce_aaa_server:
+      state:  absent
+      authen_scheme_name:  test1
+      first_authen_mode:  radius
+      radius_server_group:  test2
+      provider: "{{ cli }}"
+
+  - name: "Hwtacacs accounting Server Basic settings"
+    ce_aaa_server:
+      state:  present
+      acct_scheme_name:  test1
+      accounting_mode:  hwtacacs
+      hwtacas_template:  test2
+      provider: "{{ cli }}"
+
+  - name: "Undo hwtacacs accounting Server Basic settings"
+    ce_aaa_server:
+      state:  absent
+      acct_scheme_name:  test1
+      accounting_mode:  hwtacacs
+      hwtacas_template:  test2
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -180,15 +182,8 @@ updates:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 SUCCESS = """success"""
@@ -750,27 +745,15 @@ CE_DELETE_LOCAL_USER_GROUP = """
 class AaaServer(object):
     """ Manages aaa configuration """
 
-    def __init__(self, **kwargs):
-        """ Class init """
-
-        self.netconf = get_netconf(**kwargs)
-
-        if not self.netconf:
-            return None
-
     def netconf_get_config(self, **kwargs):
         """ Get configure by netconf """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, **kwargs):
         """ Set configure by netconf """
@@ -778,13 +761,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(module, conf_str)
 
-        return con_obj
+        return recv_xml
 
     def get_authentication_scheme(self, **kwargs):
         """ Get scheme of authentication """
@@ -792,9 +771,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_AUTHENTICATION_SCHEME
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -816,9 +794,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_AUTHENTICATION_DOMAIN
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -842,9 +819,9 @@ class AaaServer(object):
         conf_str = CE_MERGE_AUTHENTICATION_SCHEME % (
             authen_scheme_name, first_authen_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge authentication scheme failed.')
 
         cmds = []
@@ -864,9 +841,9 @@ class AaaServer(object):
         conf_str = CE_MERGE_AUTHENTICATION_DOMAIN % (
             domain_name, authen_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge authentication domain failed.')
 
         cmds = []
@@ -886,9 +863,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_AUTHENTICATION_SCHEME % (
             authen_scheme_name, first_authen_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create authentication scheme failed.')
 
         cmds = []
@@ -908,9 +885,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_AUTHENTICATION_DOMAIN % (
             domain_name, authen_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create authentication domain failed.')
 
         cmds = []
@@ -934,9 +911,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_AUTHENTICATION_SCHEME % (
             authen_scheme_name, first_authen_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete authentication scheme failed.')
 
         cmds = []
@@ -960,9 +937,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_AUTHENTICATION_DOMAIN % (
             domain_name, authen_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete authentication domain failed.')
 
         cmds = []
@@ -979,9 +956,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_AUTHORIZATION_SCHEME
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1003,9 +979,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_AUTHORIZATION_DOMAIN
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1029,9 +1004,9 @@ class AaaServer(object):
         conf_str = CE_MERGE_AUTHORIZATION_SCHEME % (
             author_scheme_name, first_author_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge authorization scheme failed.')
 
         cmds = []
@@ -1051,9 +1026,9 @@ class AaaServer(object):
         conf_str = CE_MERGE_AUTHORIZATION_DOMAIN % (
             domain_name, author_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge authorization domain failed.')
 
         cmds = []
@@ -1073,9 +1048,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_AUTHORIZATION_SCHEME % (
             author_scheme_name, first_author_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create authorization scheme failed.')
 
         cmds = []
@@ -1095,9 +1070,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_AUTHORIZATION_DOMAIN % (
             domain_name, author_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create authorization domain failed.')
 
         cmds = []
@@ -1121,9 +1096,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_AUTHORIZATION_SCHEME % (
             author_scheme_name, first_author_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete authorization scheme failed.')
 
         cmds = []
@@ -1147,9 +1122,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_AUTHORIZATION_DOMAIN % (
             domain_name, author_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete authorization domian failed.')
 
         cmds = []
@@ -1166,9 +1141,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_ACCOUNTING_SCHEME
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1189,9 +1163,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_ACCOUNTING_DOMAIN
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1215,9 +1188,9 @@ class AaaServer(object):
         conf_str = CE_MERGE_ACCOUNTING_SCHEME % (
             acct_scheme_name, accounting_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge accounting scheme failed.')
 
         cmds = []
@@ -1236,9 +1209,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_ACCOUNTING_DOMAIN % (domain_name, acct_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge accounting domain failed.')
 
         cmds = []
@@ -1258,9 +1231,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_ACCOUNTING_SCHEME % (
             acct_scheme_name, accounting_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create accounting scheme failed.')
 
         cmds = []
@@ -1280,9 +1253,9 @@ class AaaServer(object):
         conf_str = CE_CREATE_ACCOUNTING_DOMAIN % (
             domain_name, acct_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create accounting domain failed.')
 
         cmds = []
@@ -1306,9 +1279,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_ACCOUNTING_SCHEME % (
             acct_scheme_name, accounting_mode)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete accounting scheme failed.')
 
         cmds = []
@@ -1332,9 +1305,9 @@ class AaaServer(object):
         conf_str = CE_DELETE_ACCOUNTING_DOMAIN % (
             domain_name, acct_scheme_name)
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete accounting domain failed.')
 
         cmds = []
@@ -1351,9 +1324,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_RADIUS_TEMPLATE
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1374,9 +1346,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_RADIUS_TEMPLATE % radius_server_group
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge radius template failed.')
 
         cmds = []
@@ -1392,9 +1364,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_CREATE_RADIUS_TEMPLATE % radius_server_group
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create radius template failed.')
 
         cmds = []
@@ -1410,9 +1382,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_DELETE_RADIUS_TEMPLATE % radius_server_group
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete radius template failed.')
 
         cmds = []
@@ -1427,9 +1399,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_RADIUS_CLIENT
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1450,9 +1421,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_RADIUS_CLIENT % enable
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge radius client failed.')
 
         cmds = []
@@ -1470,9 +1441,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_HWTACACS_TEMPLATE
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1493,9 +1463,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_HWTACACS_TEMPLATE % hwtacas_template
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge hwtacacs template failed.')
 
         cmds = []
@@ -1511,9 +1481,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_CREATE_HWTACACS_TEMPLATE % hwtacas_template
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Create hwtacacs template failed.')
 
         cmds = []
@@ -1529,9 +1499,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_DELETE_HWTACACS_TEMPLATE % hwtacas_template
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete hwtacacs template failed.')
 
         cmds = []
@@ -1546,9 +1516,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_HWTACACS_GLOBAL_CFG
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1569,9 +1538,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_HWTACACS_GLOBAL_CFG % enable
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge hwtacacs global config failed.')
 
         cmds = []
@@ -1590,9 +1559,8 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_GET_LOCAL_USER_GROUP
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
-        xml_str = con_obj.xml
         result = list()
 
         if "<data/>" in xml_str:
@@ -1613,9 +1581,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_MERGE_LOCAL_USER_GROUP % local_user_group
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Merge local user group failed.')
 
         cmds = []
@@ -1631,9 +1599,9 @@ class AaaServer(object):
         module = kwargs["module"]
         conf_str = CE_DELETE_LOCAL_USER_GROUP % local_user_group
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in xml:
             module.fail_json(msg='Error: Delete local user group failed.')
 
         cmds = []
@@ -1641,12 +1609,6 @@ class AaaServer(object):
         cmds.append(cmd)
 
         return cmds
-
-
-def get_aaa_server(**kwargs):
-    """ Get aaa server instance """
-
-    return AaaServer(**kwargs)
 
 
 def check_name(**kwargs):
@@ -1749,10 +1711,9 @@ def main():
         local_user_group=dict(type='str')
     )
 
-    if not HAS_NCCLIENT:
-        raise Exception("Error: The ncclient library is required")
+    argument_spec.update(ce_argument_spec)
 
-    module = NetworkModule(argument_spec=argument_spec,
+    module = AnsibleModule(argument_spec=argument_spec,
                            supports_check_mode=True)
 
     check_module_argument(module=module)
@@ -1764,10 +1725,6 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     authen_scheme_name = module.params['authen_scheme_name']
     first_authen_mode = module.params['first_authen_mode']
     author_scheme_name = module.params['author_scheme_name']
@@ -1779,8 +1736,7 @@ def main():
     hwtacas_template = module.params['hwtacas_template']
     local_user_group = module.params['local_user_group']
 
-    ce_aaa_server = get_aaa_server(
-        host=host, port=port, username=username, password=password)
+    ce_aaa_server = AaaServer()
 
     if not ce_aaa_server:
         module.fail_json(msg='Error: init module failed.')

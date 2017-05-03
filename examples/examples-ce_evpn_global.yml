@@ -3,8 +3,14 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_evpn_global: evpn_overlay_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_global: evpn_overlay_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_evpn_global: evpn_overlay_enable=enable provider="{{ cli }}"
+  - ce_evpn_global: evpn_overlay_enable=disable provider="{{ cli }}"

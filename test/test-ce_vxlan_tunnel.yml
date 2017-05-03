@@ -2,6 +2,13 @@
 
 - name: cloudengine vxlan tunnel module test
   hosts: ce128
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
@@ -9,32 +16,32 @@
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "bridge-domain 20"
-    ce_config: lines='bridge-domain 20' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='bridge-domain 20' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "bridge-domain 2"
-    ce_config: lines='bridge-domain 2' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='bridge-domain 2' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "undo interface Nve1"
-    ce_config: lines='undo interface Nve1' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='undo interface Nve1' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "interface Nve1"
-    ce_config: lines='interface Nve1' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='interface Nve1' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "add vni_id and bridge_domain_id"
-    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -44,7 +51,7 @@
         - data.changed == true
 
   - name: "add vni_id and bridge_domain_id again"
-    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -54,7 +61,7 @@
         - data.changed == false
 
   - name: "add vni_id and bridge_domain_id , vni_id is invalid"
-    ce_vxlan_tunnel: vni_id=0 bridge_domain_id=2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=0 bridge_domain_id=2 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -65,7 +72,7 @@
         - data | failed
 
   - name: "add vni_id and bridge_domain_id , bridge_domain_id is invalid"
-    ce_vxlan_tunnel: vni_id=2 bridge_domain_id=0 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=2 bridge_domain_id=0 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -76,7 +83,7 @@
         - data | failed
 
   - name: "add vni_id and bridge_domain_id , bridge_domain_id does not exist"
-    ce_vxlan_tunnel: vni_id=0 bridge_domain_id=30 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=0 bridge_domain_id=30 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -87,7 +94,7 @@
         - data | failed
 
   - name: "delete vni_id and bridge_domain_id"
-    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -97,7 +104,7 @@
         - data.changed == true
 
   - name: "delete vni_id and bridge_domain_id again"
-    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: vni_id=1 bridge_domain_id=20 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -107,7 +114,7 @@
         - data.changed == false
 
   - name: "nve_name does not exist"
-    ce_vxlan_tunnel: nve_name=Nve2 nve_mode=mode-l3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve2 nve_mode=mode-l3 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -118,7 +125,7 @@
         - data | failed
 
   - name: "nve_name is invalid"
-    ce_vxlan_tunnel: nve_name=Nve nve_mode=mode-l3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve nve_mode=mode-l3 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -129,7 +136,7 @@
         - data | failed
 
   - name: "set nve mode"
-    ce_vxlan_tunnel: nve_name=Nve1 nve_mode=mode-l3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 nve_mode=mode-l3 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -139,7 +146,7 @@
         - data.changed == true
 
   - name: "delete nve mode"
-    ce_vxlan_tunnel: nve_name=Nve1 nve_mode=mode-l3 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 nve_mode=mode-l3 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -149,7 +156,7 @@
         - data.changed == true
         
   - name: "set source ip, source ip is valid"
-    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -159,7 +166,7 @@
         - data.changed == true
 
   - name: "set source ip, source ip is valid again"
-    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -169,7 +176,7 @@
         - data.changed == false
 
   - name: "create source ip, source ip is invalid"
-    ce_vxlan_tunnel: nve_name=Nve1 source_ip=888 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 source_ip=888 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -180,7 +187,7 @@
         - data | failed
 
   - name: "delete source ip 1.2.3.4"
-    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 source_ip=1.2.3.4 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -190,7 +197,7 @@
         - data.changed == true
 
   - name: "set vni peer_list_ip"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -200,7 +207,7 @@
         - data.changed == true
 
   - name: "set vni peer_list_ip again, peer_list_ip is not same"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.3 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.3 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -210,7 +217,7 @@
         - data.changed == true
 
   - name: "set vni peer_list_ip again, peer_list_ip is same"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=2.2.2.5,2.5.3.9 state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=2.2.2.5,2.5.3.9 state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -220,7 +227,7 @@
         - data.changed == true
 
   - name: "set vni peer list protocol_type"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state="present" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state="present" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -230,7 +237,7 @@
         - data.changed == true
 
   - name: "delete peer_list_ip"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2 state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2 state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -240,7 +247,7 @@
         - data.changed == true
 
   - name: "delete vni protocol_type"
-    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state="absent" provider="{{ cli }}"
     register: data
     ignore_errors: false
 

@@ -1,10 +1,16 @@
 ---
 
-- hosts: ce78
-  gather_facts: no
+- name: cloudengine reboot module test
+  hosts: cloudengine
   vars:
     confirm: true
     save_config: true
+  connection: local
+  gather_facts: no
+
 
   tasks:
-  - ce_reboot: confirm={{confirm}} save_config={{save_config}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Reboot the network device"
+    ce_reboot: confirm={{confirm}} save_config={{save_config}}  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    register: data
+    ignore_errors: true

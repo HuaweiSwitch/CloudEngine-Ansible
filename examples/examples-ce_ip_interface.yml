@@ -1,36 +1,49 @@
 ---
 
-- hosts: cloudengine
+- name: ip_interface module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    test_intf: 10GE1/0/24
-    clear_cmd: 'interface 10ge1/0/24, clear config this'
-    setup_cmd: 'interface 10ge1/0/24, undo portswitch'
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
+  - name: Ensure ipv4 address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v4
+      state: present
+      addr: 20.20.20.20
+      mask: 24
+      provider: '{{ cli }}'
 
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure ipv4 secondary address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v4
+      state: present
+      addr: 30.30.30.30
+      mask: 24
+      ipv4_type: sub
+      provider: '{{ cli }}'
 
-  - ce_config: lines={{setup_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure ipv6 is enabled on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v6
+      state: present
+      provider: '{{ cli }}'
 
-  - ce_interface: interface={{test_intf}} mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v4 addr=30.30.30.30 mask=24 ipv4_type=sub state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v6 state=present addr=2001::db8:800:200c:cccb mask=64 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v4 addr=30.30.30.30 mask=24 ipv4_type=sub state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v4 addr=20.20.20.20 mask=24 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_ip_interface: interface={{test_intf}} version=v6 state=absent addr=2001::db8:800:200c:cccb mask=64 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_ip_interface: interface={{test_intf}} version=v6 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_interface: interface={{test_intf}} state=default host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure ipv6 address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v6
+      state: present
+      addr: 2001::db8:800:200c:cccb
+      mask: 64
+      provider: '{{ cli }}'

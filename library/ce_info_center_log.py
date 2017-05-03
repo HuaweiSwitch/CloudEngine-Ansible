@@ -29,7 +29,6 @@ description:
     - Setting the Timestamp Format of Logs.
       Configuring the Device to Output Logs to the Log Buffer.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     log_time_stamp:
         description:
@@ -43,8 +42,8 @@ options:
         description:
             - Enables the Switch to send logs to the log buffer.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     log_buff_size:
         description:
             - Specifies the maximum number of logs in the log buffer.
@@ -67,8 +66,8 @@ options:
         description:
             - Indicates whether log filtering is enabled.
         required: false
-        default: null
-        choices: ['true', 'false']
+        default: no_use
+        choices: ['no_use','true', 'false']
     log_level:
         description:
             - Specifies a log severity.
@@ -86,34 +85,43 @@ options:
 """
 
 EXAMPLES = '''
-# Setting the Timestamp Format of Logs
-- ce_info_center_log:
-    log_time_stamp: date_tenthsecond
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enabled to output information to the log buffer.
-- ce_info_center_log:
-    log_buff_enable: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Set the maximum number of logs in the log buffer.
-- ce_info_center_log:
-    log_buff_size: 100
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Set a rule for outputting logs to a channel
-- ce_info_center_log:
-    module_name: aaa
-    channel_id: 1
-    log_enable: true
-    log_level: critical
-    sample_direction: inbound
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+
+- name: CloudEngine info center log test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Setting the timestamp format of logs"
+    ce_info_center_log:
+      log_time_stamp: date_tenthsecond
+      provider: "{{ cli }}"
+
+  - name: "Enabled to output information to the log buffer"
+    ce_info_center_log:
+      log_buff_enable: true
+      provider: "{{ cli }}"
+
+  - name: "Set the maximum number of logs in the log buffer"
+    ce_info_center_log:
+      log_buff_size: 100
+      provider: "{{ cli }}"
+
+  - name: "Set a rule for outputting logs to a channel"
+    ce_info_center_log:
+      module_name: aaa
+      channel_id: 1
+      log_enable: true
+      log_level: critical
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -144,16 +152,10 @@ changed:
     sample: true
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
 
 CE_NC_GET_LOG = """
 <filter type="subtree">
@@ -230,7 +232,6 @@ class InfoCenterLog(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -243,11 +244,6 @@ class InfoCenterLog(object):
         self.log_level = self.module.params['log_level']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.log_dict = dict()
         self.changed = False
@@ -258,59 +254,16 @@ class InfoCenterLog(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed"""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def get_log_dict(self):
         """ log config dict"""
@@ -324,11 +277,11 @@ class InfoCenterLog(object):
         else:
             conf_str = CE_NC_GET_LOG_GLOBAL
 
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return log_dict
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -365,7 +318,7 @@ class InfoCenterLog(object):
             else:
                 pass
 
-        if self.log_buff_enable:
+        if self.log_buff_enable != 'no_use':
             if self.log_dict.get("icLogBuffEn") != self.log_buff_enable:
                 xml_str += '<icLogBuffEn>%s</icLogBuffEn>' % self.log_buff_enable
                 if self.log_buff_enable == "true":
@@ -405,7 +358,7 @@ class InfoCenterLog(object):
                     self.channel_id != source.get("icChannelId"):
                 return ''
 
-            if not self.log_enable and not self.log_level:
+            if self.log_enable == 'no_use' and not self.log_level:
                 xml_str = '<icSources><icSource operation="delete">'
             else:
                 xml_str = '<icSources><icSource operation="merge">'
@@ -416,7 +369,7 @@ class InfoCenterLog(object):
             self.module_name, self.channel_id)
 
         # log_enable
-        if self.log_enable:
+        if self.log_enable != 'no_use':
             if self.state == "present" and (not source or self.log_enable != source.get("logEnFlg")):
                 xml_str += '<logEnFlg>%s</logEnFlg>' % self.log_enable
                 if self.log_enable == "true":
@@ -437,7 +390,7 @@ class InfoCenterLog(object):
                 cmd += ' level'
 
         if xml_str.endswith("</icChannelId>"):
-            if not self.log_enable and not self.log_level and self.state == "absent":
+            if self.log_enable == 'no_use' and not self.log_level and self.state == "absent":
                 xml_str += '</icSource></icSources>'
                 self.updates_cmd.append(cmd)
                 return xml_str
@@ -461,7 +414,8 @@ class InfoCenterLog(object):
             </syslog>
             </config>""" % xml_str
 
-        self.netconf_set_config(xml_cfg, "SET_LOG")
+        recv_xml = set_nc_config(self.module, xml_cfg)
+        self.check_response(recv_xml, "SET_LOG")
         self.changed = True
 
     def check_params(self):
@@ -494,7 +448,7 @@ class InfoCenterLog(object):
 
         if self.log_time_stamp:
             self.proposed["log_time_stamp"] = self.log_time_stamp
-        if self.log_buff_enable:
+        if self.log_buff_enable != 'no_use':
             self.proposed["log_buff_enable"] = self.log_buff_enable
         if self.log_buff_size:
             self.proposed["log_buff_size"] = self.log_buff_size
@@ -502,7 +456,7 @@ class InfoCenterLog(object):
             self.proposed["module_name"] = self.module_name
         if self.channel_id:
             self.proposed["channel_id"] = self.channel_id
-        if self.log_enable:
+        if self.log_enable != 'no_use':
             self.proposed["log_enable"] = self.log_enable
         if self.log_level:
             self.proposed["log_level"] = self.log_level
@@ -516,7 +470,7 @@ class InfoCenterLog(object):
 
         if self.log_time_stamp:
             self.existing["log_time_stamp"] = self.log_dict.get("logTimeStamp").lower()
-        if self.log_buff_enable:
+        if self.log_buff_enable != 'no_use':
             self.existing["log_buff_enable"] = self.log_dict.get("icLogBuffEn")
         if self.log_buff_size:
             self.existing["log_buff_size"] = self.log_dict.get("bufferSize")
@@ -532,7 +486,7 @@ class InfoCenterLog(object):
 
         if self.log_time_stamp:
             self.end_state["log_time_stamp"] = log_dict.get("logTimeStamp").lower()
-        if self.log_buff_enable:
+        if self.log_buff_enable != 'no_use':
             self.end_state["log_buff_enable"] = log_dict.get("icLogBuffEn")
         if self.log_buff_size:
             self.end_state["log_buff_size"] = log_dict.get("bufferSize")
@@ -549,7 +503,7 @@ class InfoCenterLog(object):
 
         # deal present or absent
         xml_str = ''
-        if self.log_time_stamp or self.log_buff_enable or self.log_buff_size:
+        if self.log_time_stamp or self.log_buff_enable != 'no_use' or self.log_buff_size:
             xml_str += self.config_log_global()
 
         if self.module_name:
@@ -580,13 +534,11 @@ def main():
                             choices=['date_boot', 'date_second', 'date_tenthsecond', 'date_millisecond',
                                      'shortdate_second', 'shortdate_tenthsecond', 'shortdate_millisecond',
                                      'formatdate_second', 'formatdate_tenthsecond', 'formatdate_millisecond']),
-        log_buff_enable=dict(required=False, type='str',
-                               choices=['true', 'false']),
+        log_buff_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         log_buff_size=dict(required=False, type='str'),
         module_name=dict(required=False, type='str'),
         channel_id=dict(required=False, type='str'),
-        log_enable=dict(required=False, type='str',
-                        choices=['true', 'false']),
+        log_enable=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         log_level=dict(required=False, type='str',
                        choices=['emergencies', 'alert', 'critical', 'error',
                                 'warning', 'notification', 'informational', 'debugging']),
@@ -594,6 +546,7 @@ def main():
                    choices=['present', 'absent'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = InfoCenterLog(argument_spec)
     module.work()
 

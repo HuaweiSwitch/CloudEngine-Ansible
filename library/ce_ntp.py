@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages core NTP configuration.
 description:
     - Manages core NTP configuration.
-extends_documentation_fragment: cloudengine
 author:
     - Zhijin Zhou (@CloudEngine-Ansible)
 options:
@@ -43,17 +42,15 @@ options:
         default: null
     key_id:
         description:
-            - Authentication key identifier to use with
-              given NTP server or peer.
+            - Authentication key identifier to use with given NTP server or peer.
         required: false
         default: null
     is_preferred:
         description:
-            - Makes given NTP server or peer the preferred
-              NTP server or peer for the device.
+            - Makes given NTP server or peer the preferred NTP server or peer for the device.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
     vpn_name:
         description:
             - Makes the device communicate with the given
@@ -76,10 +73,37 @@ options:
 '''
 
 EXAMPLES = '''
-# Set NTP Server with parameters
-- ce_ntp: server=192.8.2.6 [vpn_name=js | source_int=vlanif4001 | is_preferred=true | key_id=32]
-# Set NTP Peer with parameters
-- ce_ntp: peer=192.8.2.6 [vpn_name=js | source_int=vlanif4001 | is_preferred=true | key_id=32]
+- name: NTP test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Set NTP Server with parameters"
+    ce_ntp:
+      server: 192.8.2.6
+      vpn_name: js
+      source_int: vlanif4001
+      is_preferred: enable
+      key_id: 32
+      provider: "{{ cli }}"
+
+  - name: "Set NTP Peer with parameters"
+    ce_ntp:
+      peer: 192.8.2.6
+      vpn_name: js
+      source_int: vlanif4001
+      is_preferred: enable
+      key_id: 32
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -88,21 +112,21 @@ proposed:
     returned: always
     type: dict
     sample: {"server": "2.2.2.2",        "key_id": "48",
-             "is_preferred": "true",     "vpn_name":"js",
+             "is_preferred": "enable",     "vpn_name":"js",
              "source_int": "vlanif4002", "state":"present"}
 existing:
     description:
         - k/v pairs of existing ntp server/peer
     type: dict
     sample: {"server": "2.2.2.2",        "key_id": "32",
-            "is_preferred": "false",     "vpn_name":"js",
+            "is_preferred": "disable",     "vpn_name":"js",
             "source_int": "vlanif4002"}
 end_state:
     description: k/v pairs of ntp info after module execution
     returned: always
     type: dict
     sample: {"server": "2.2.2.2",        "key_id": "48",
-             "is_preferred": "true",     "vpn_name":"js",
+             "is_preferred": "enable",     "vpn_name":"js",
              "source_int": "vlanif4002"}
 updates:
     description: command sent to the device
@@ -116,18 +140,10 @@ changed:
     sample: true
 '''
 
-import sys
 import re
-import datetime
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, get_nc_config, set_nc_config
 
 CE_NC_GET_NTP_CONFIG = """
 <filter type="subtree">
@@ -237,14 +253,11 @@ def get_interface_type(interface):
 
 
 class Ntp(object):
-    """ntp class"""
+    """Ntp class"""
 
     def __init__(self, argument_spec):
-        self.start_time = datetime.datetime.now()
-        self.end_time = None
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.mutually_exclusive = [('server', 'peer')]
         self.init_module()
 
@@ -259,11 +272,6 @@ class Ntp(object):
         self.ntp_conf = dict()
         self.conf_exsit = False
         self.ip_ver = 'IPv4'
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         if self.server:
             self.peer_type = 'Server'
@@ -285,12 +293,11 @@ class Ntp(object):
         self.existing = list()
         self.end_state = list()
 
-        # init netconf connect
-        self.init_netconf()
         self.init_data()
 
     def init_data(self):
-        """ init_data"""
+        """Init data"""
+
         if self.interface is not None:
             self.interface = self.interface.lower()
 
@@ -298,27 +305,17 @@ class Ntp(object):
             self.key_id = ""
 
         if not self.is_preferred:
-            self.is_preferred = 'false'
+            self.is_preferred = 'disable'
 
     def init_module(self):
-        """ init_module"""
+        """Init module"""
 
-        self.module = NetworkModule(argument_spec=self.spec, supports_check_mode=True,
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True,
                                     mutually_exclusive=self.mutually_exclusive)
 
-    def init_netconf(self):
-        """ init_netconf"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
     def check_ipaddr_validate(self):
-        """ check_ipaddr_validate"""
+        """Check ipaddress validate"""
+
         rule1 = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.'
         rule2 = r'(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'
         ipv4_regex = '%s%s%s%s%s%s' % ('^', rule1, rule1, rule1, rule2, '$')
@@ -344,7 +341,8 @@ class Ntp(object):
                 self.module.fail_json(msg='Error: Illegal peer ip-address.')
 
     def ntp_ucast_ipv4_validate(self):
-        """ntp_ucast_ipv4_validate"""
+        """Check ntp ucast ipv4 address"""
+
         addr_list = re.findall(r'(.*)\.(.*)\.(.*)\.(.*)', self.address)
         if not addr_list:
             self.module.fail_json(msg='Error: Match ip-address fail.')
@@ -358,6 +356,7 @@ class Ntp(object):
 
     def check_params(self):
         """Check all input params"""
+
         # check interface type
         if self.interface:
             intf_type = get_interface_type(self.interface)
@@ -378,38 +377,14 @@ class Ntp(object):
         if self.address:
             self.check_ipaddr_validate()
 
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def set_ntp(self, *args):
-        """configure ntp parameters"""
+        """Configure ntp parameters"""
 
         if self.state == 'present':
             if self.ip_ver == 'IPv4':
@@ -418,7 +393,8 @@ class Ntp(object):
             elif self.ip_ver == 'IPv6':
                 xml_str = CE_NC_MERGE_NTP_CONFIG % (
                     args[0], '0.0.0.0', args[1], args[2], args[3], args[4], args[5], args[6])
-            self.netconf_set_config(xml_str, "NTP_CORE_CONFIG")
+            ret_xml = set_nc_config(self.module, xml_str)
+            self.check_response(ret_xml, "NTP_CORE_CONFIG")
         else:
             if self.ip_ver == 'IPv4':
                 xml_str = CE_NC_DELETE_NTP_CONFIG % (
@@ -426,14 +402,20 @@ class Ntp(object):
             elif self.ip_ver == 'IPv6':
                 xml_str = CE_NC_DELETE_NTP_CONFIG % (
                     args[0], '0.0.0.0', args[1], args[2], args[3])
-            self.netconf_set_config(xml_str, "UNDO_NTP_CORE_CONFIG")
+            ret_xml = set_nc_config(self.module, xml_str)
+            self.check_response(ret_xml, "UNDO_NTP_CORE_CONFIG")
 
     def config_ntp(self):
-        """config ntp"""
+        """Config ntp"""
+
         if self.state == "present":
             if self.address and not self.conf_exsit:
+                if self.is_preferred == 'enable':
+                    is_preferred = 'true'
+                else:
+                    is_preferred = 'false'
                 self.set_ntp(self.ip_ver, self.address, self.peer_type,
-                             self.vpn_name, self.key_id, self.is_preferred, self.interface)
+                             self.vpn_name, self.key_id, is_preferred, self.interface)
                 self.changed = True
         else:
             if self.address:
@@ -442,7 +424,8 @@ class Ntp(object):
                 self.changed = True
 
     def show_result(self):
-        """show_result"""
+        """Show result"""
+
         self.results['changed'] = self.changed
         self.results['proposed'] = self.proposed
         self.results['existing'] = self.existing
@@ -452,21 +435,18 @@ class Ntp(object):
         else:
             self.results['updates'] = list()
 
-        self.end_time = datetime.datetime.now()
-        self.results['execute_time'] = str(self.end_time - self.start_time)
-
         self.module.exit_json(**self.results)
 
     def get_ntp_exist_config(self):
-        """get ntp existed config"""
+        """Get ntp existed configure"""
+
         ntp_config = list()
         conf_str = CE_NC_GET_NTP_CONFIG
-        con_obj = self.netconf_get_config(conf_str)
-
-        if "<data/>" in con_obj.xml:
+        con_obj = get_nc_config(self.module, conf_str)
+        if "<data/>" in con_obj:
             return ntp_config
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = con_obj.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -485,11 +465,15 @@ class Ntp(object):
                 ip_addr = ntp_dict['ipv4Addr']
             if ntp_dict['ifName'] is None:
                 ntp_dict['ifName'] = ""
+            if ntp_dict['isPreferred'] == 'true':
+                is_preferred = 'enable'
+            else:
+                is_preferred = 'disable'
 
             if self.state == "present":
                 key_id = ntp_dict['keyId'] or ""
                 cur_ntp_cfg = dict(vpn_name=ntp_dict['vpnName'], source_int=ntp_dict['ifName'].lower(), address=ip_addr,
-                                   peer_type=ntp_dict['type'], prefer=ntp_dict['isPreferred'], key_id=key_id)
+                                   peer_type=ntp_dict['type'], prefer=is_preferred, key_id=key_id)
                 exp_ntp_cfg = dict(vpn_name=self.vpn_name, source_int=self.interface.lower(), address=self.address,
                                    peer_type=self.peer_type, prefer=self.is_preferred, key_id=self.key_id)
                 if cmp(cur_ntp_cfg, exp_ntp_cfg) == 0:
@@ -505,21 +489,23 @@ class Ntp(object):
             if self.peer_type == 'Server':
                 ntp_config.append(dict(vpn_name=vpn_name,
                                        source_int=if_name, server=ip_addr,
-                                       is_preferred=ntp_dict['isPreferred'], key_id=ntp_dict['keyId']))
+                                       is_preferred=is_preferred, key_id=ntp_dict['keyId']))
             else:
                 ntp_config.append(dict(vpn_name=vpn_name,
                                        source_int=if_name, peer=ip_addr,
-                                       is_preferred=ntp_dict['isPreferred'], key_id=ntp_dict['keyId']))
+                                       is_preferred=is_preferred, key_id=ntp_dict['keyId']))
 
         return ntp_config
 
     def get_existing(self):
-        """get existing info"""
+        """Get existing info"""
+
         if self.address:
             self.existing = self.get_ntp_exist_config()
 
     def get_proposed(self):
-        """get proposed info"""
+        """Get proposed info"""
+
         if self.address:
             vpn_name = self.vpn_name
             if vpn_name == "_public_":
@@ -542,12 +528,14 @@ class Ntp(object):
                                      is_preferred=self.is_preferred, key_id=key_id)
 
     def get_end_state(self):
-        """get end state info"""
+        """Get end state info"""
+
         if self.address:
             self.end_state = self.get_ntp_exist_config()
 
     def get_update_cmd(self):
-        """get_update_cmd"""
+        """Get updated commands"""
+
         if self.conf_exsit:
             return
 
@@ -577,7 +565,7 @@ class Ntp(object):
                 if (self.vpn_name) and (self.vpn_name != '_public_'):
                     cli_str = "%s %s %s" % (
                         cli_str, "vpn-instance", self.vpn_name)
-                if self.is_preferred == "true":
+                if self.is_preferred == "enable":
                     cli_str = "%s %s" % (cli_str, "preferred")
         else:
             if self.address:
@@ -601,7 +589,8 @@ class Ntp(object):
         self.updates_cmd.append(cli_str)
 
     def work(self):
-        """work"""
+        """Excute task"""
+
         self.get_existing()
         self.get_proposed()
 
@@ -613,17 +602,18 @@ class Ntp(object):
 
 
 def main():
-    """ main"""
+    """Main function entry"""
+
     argument_spec = dict(
         server=dict(type='str'),
         peer=dict(type='str'),
         key_id=dict(type='str'),
-        is_preferred=dict(type='str', choices=['true', 'false']),
+        is_preferred=dict(type='str', choices=['enable', 'disable']),
         vpn_name=dict(type='str', default='_public_'),
         source_int=dict(type='str'),
         state=dict(choices=['absent', 'present'], default='present'),
     )
-
+    argument_spec.update(ce_argument_spec)
     ntp_obj = Ntp(argument_spec)
     ntp_obj.work()
 

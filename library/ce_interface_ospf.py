@@ -28,7 +28,6 @@ short_description: Manages configuration of an OSPF interface instance.
 description:
     - Manages configuration of an OSPF interface instance.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     interface:
         description:
@@ -69,8 +68,7 @@ options:
             - Setting to true will prevent this interface from receiving
               HELLO packets. Valid values are 'true' and 'false'.
         required: false
-        choices: ['true','false']
-        default: null
+        default: false
     auth_mode:
         description:
             - Specifies the authentication type.
@@ -105,45 +103,50 @@ options:
 """
 
 EXAMPLES = '''
-# Enables OSPF and sets the cost on an interface
-- ce_interface_ospf:
-    interface: 40GE2/0/30
-    process_id: 1
-    area: 100
-    cost: 100
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: eth_trunk module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Sets the dead interval of the OSPF neighbor
-- ce_interface_ospf:
-    interface: 40GE2/0/30
-    process_id: 1
-    area: 100
-    dead_interval: 10
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  tasks:
+  - name: Enables OSPF and sets the cost on an interface
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      cost: 100
+      provider: '{{ cli }}'
 
-# Sets the interval for sending Hello packets on an interface
-- ce_interface_ospf:
-    interface: 40GE2/0/30
-    process_id: 1
-    area: 100
-    hello_interval: 2
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Sets the dead interval of the OSPF neighbor
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      dead_interval: 100
+      provider: '{{ cli }}'
 
-#disables an interface from receiving and sending OSPF packets
-- ce_interface_ospf:
-    interface: 40GE2/0/30
-    process_id: 1
-    area: 100
-    silent_interface: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Sets the interval for sending Hello packets on an interface
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      hello_interval: 2
+      provider: '{{ cli }}'
+
+  - name: Disables an interface from receiving and sending OSPF packets
+    ce_interface_ospf:
+      interface: 10GE1/0/30
+      process_id: 1
+      area: 100
+      silent_interface: true
+      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -151,7 +154,7 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: verbose mode
     type: dict
-    sample: {"process_id": "1", "area": "0.0.0.100", "interface": "40GE2/0/30", "cost": "100"}
+    sample: {"process_id": "1", "area": "0.0.0.100", "interface": "10GE1/0/30", "cost": "100"}
 existing:
     description: k/v pairs of existing configuration
     returned: verbose mode
@@ -161,14 +164,14 @@ end_state:
     description: k/v pairs of configuration after module execution
     returned: verbose mode
     type: dict
-    sample: {"process_id": "1", "area": "0.0.0.100", "interface": "40GE2/0/30",
+    sample: {"process_id": "1", "area": "0.0.0.100", "interface": "10GE1/0/30",
              "cost": "100", "dead_interval": "40", "hello_interval": "10",
              "process_id": "6", "silent_interface": "false", "auth_mode": "none"}
 updates:
     description: commands sent to the device
     returned: always
     type: list
-    sample: ["interface 40GE2/0/30",
+    sample: ["interface 10GE1/0/30",
              "ospf enable 1 area 0.0.0.100",
              "ospf cost 100"]
 changed:
@@ -178,16 +181,9 @@ changed:
     sample: true
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -343,6 +339,7 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
+
 def is_valid_v4addr(addr):
     """check is ipv4 addr is valid"""
 
@@ -362,6 +359,7 @@ def is_valid_v4addr(addr):
 
     return False
 
+
 class InterfaceOSPF(object):
     """
     Manages configuration of an OSPF interface instance.
@@ -370,7 +368,6 @@ class InterfaceOSPF(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -387,11 +384,6 @@ class InterfaceOSPF(object):
         self.auth_text_md5 = self.module.params['auth_text_md5']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # ospf info
         self.ospf_info = dict()
 
@@ -403,69 +395,18 @@ class InterfaceOSPF(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
-
-    def init_netconf(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
-
-        xml_str = con_obj.xml
-        if "<ok/>" not in xml_str:
-            self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def netconf_set_config(self, xml_str, xml_name):
         """netconf set config"""
 
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
+        rcv_xml = set_nc_config(self.module, xml_str)
+        if "<ok/>" not in rcv_xml:
+            self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
     def get_area_ip(self):
         """convert integer to ip address"""
@@ -487,12 +428,12 @@ class InterfaceOSPF(object):
         ospf_info = dict()
         conf_str = CE_NC_GET_OSPF % (
             self.process_id, self.get_area_ip(), self.interface)
-        con_obj = self.netconf_get_config(conf_str)
+        rcv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in rcv_xml:
             return ospf_info
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = rcv_xml.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -540,8 +481,8 @@ class InterfaceOSPF(object):
         self.updates_cmd.append("ospf %s" % self.process_id)
         self.updates_cmd.append("area %s" % self.get_area_ip())
         if self.silent_interface:
-            xml_intf += CE_NC_XML_SET_SILENT % self.silent_interface
-            if self.silent_interface == "true":
+            xml_intf += CE_NC_XML_SET_SILENT % str(self.silent_interface).lower()
+            if self.silent_interface:
                 self.updates_cmd.append("silent-interface %s" % self.interface)
             else:
                 self.updates_cmd.append("undo silent-interface %s" % self.interface)
@@ -593,11 +534,11 @@ class InterfaceOSPF(object):
 
         # ospf view
         xml_ospf = ""
-        if self.silent_interface and intf_dict.get("silentEnable") != self.silent_interface:
-            xml_ospf += CE_NC_XML_SET_SILENT % self.silent_interface
+        if intf_dict.get("silentEnable") != str(self.silent_interface).lower():
+            xml_ospf += CE_NC_XML_SET_SILENT % str(self.silent_interface).lower()
             self.updates_cmd.append("ospf %s" % self.process_id)
             self.updates_cmd.append("area %s" % self.get_area_ip())
-            if self.silent_interface == "true":
+            if self.silent_interface:
                 self.updates_cmd.append("silent-interface %s" % self.interface)
             else:
                 self.updates_cmd.append("undo silent-interface %s" % self.interface)
@@ -850,8 +791,7 @@ def main():
         cost=dict(required=False, type='str'),
         hello_interval=dict(required=False, type='str'),
         dead_interval=dict(required=False, type='str'),
-        silent_interface=dict(required=False, type='str',
-                              choices=['true', 'false']),
+        silent_interface=dict(required=False, default=False, type='bool'),
         auth_mode=dict(required=False,
                        choices=['none', 'null', 'hmac-sha256', 'md5', 'hmac-md5', 'simple'], type='str'),
         auth_text_simple=dict(required=False, type='str', no_log=True),
@@ -861,6 +801,7 @@ def main():
                    choices=['present', 'absent'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = InterfaceOSPF(argument_spec)
     module.work()
 

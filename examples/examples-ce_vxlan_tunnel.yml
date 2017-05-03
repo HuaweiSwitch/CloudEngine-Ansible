@@ -1,17 +1,23 @@
 ---
 
-- hosts: ce128
+- name: vxlan tunnel module test
+  hosts: ce128
+  connection: local
   gather_facts: no
-
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
-  - ce_vxlan_tunnel: vni_id=10 bridge_domain_id=90 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: vni_id=10 bridge_domain_id=90 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve2 nve_mode=mode-l3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve2 nve_mode=mode-l3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 source_ip=3.3.3.3 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 source_ip=3.3.3.3 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2,2.2.2.5,2.5.3.9 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 peer_list_ip=1.2.2.2,2.2.2.5,2.5.3.9 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_vxlan_tunnel: nve_name=Nve1 vni_id=100 protocol_type=bgp state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+
+  - name: Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
+    ce_vxlan_tunnel:
+      nve_name: Nve1
+      vni_id: 100
+      protocol_type: bgp
+      state: present
+      provider: "{{ cli }}"
