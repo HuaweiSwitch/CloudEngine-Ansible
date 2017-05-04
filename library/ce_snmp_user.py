@@ -18,12 +18,12 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_snmp_user
-version_added: "2.3"
+version_added: "2.4"
 short_description: Manages SNMP user configuration.
 description:
     - Manages SNMP user configurations on CloudEngine switches.
@@ -57,13 +57,13 @@ options:
         default: null
     auth_protocol:
         description:
-            - Authentication protocol ( md5 | sha ).
+            - Authentication protocol.
         required: false
         default: null
         choices: ['noAuth', 'md5', 'sha']
     auth_key:
         description:
-            - The authentication password. Simple password length <8-255>. Field max.
+            - The authentication password. Password length, 8-255 characters.
         required: false
         default: null
     priv_protocol:
@@ -74,7 +74,7 @@ options:
         choices: ['noPriv', 'des56', '3des168', 'aes128', 'aes192', 'aes256']
     priv_key:
         description:
-            - The encryption password. Simple password length <8-255>. Field max.
+            - The encryption password. Password length 8-255 characters.
         required: false
         default: null
 '''
@@ -148,8 +148,8 @@ proposed:
              "state": "present", "user_group": "wdz_group",
              "usm_user_name": "wdz_snmp"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {"snmp local user": {"local_user_info": []},
              "snmp usm user": {"usm_user_info": []}}
@@ -306,11 +306,6 @@ CE_DELETE_SNMP_V3_LOCAL_USER = """
 class SnmpUser(object):
     """ Manages SNMP user configuration """
 
-    def __init__(self):
-        """ init function """
-
-        self.local_engine_id = None
-
     def netconf_get_config(self, **kwargs):
         """ Get configure by netconf """
 
@@ -352,11 +347,6 @@ class SnmpUser(object):
         local_user_name = module.params['aaa_local_user']
 
         if usm_user_name:
-
-            if local_user_name:
-                module.fail_json(
-                    msg='Error: Please do not input usm_user_name and local_user_name at the same time.')
-
             if len(usm_user_name) > 32 or len(usm_user_name) == 0:
                 module.fail_json(
                     msg='Error: The length of usm_user_name %s is out of [1 - 32].' % usm_user_name)
@@ -945,8 +935,13 @@ def main():
         aaa_local_user=dict(type='str')
     )
 
+    mutually_exclusive = [("usm_user_name", "local_user_name")]
     argument_spec.update(ce_argument_spec)
-    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
+    module = AnsibleModule(
+        argument_spec=argument_spec,
+        mutually_exclusive=mutually_exclusive,
+        supports_check_mode=True
+    )
 
     changed = False
     proposed = dict()
