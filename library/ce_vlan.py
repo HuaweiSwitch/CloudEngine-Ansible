@@ -113,7 +113,7 @@ proposed:
     description: k/v pairs of parameters passed into module (does not include
                  vlan_id or vlan_range)
     returned: always
-    type: dict or null
+    type: dict
     sample: {"vlan_id":"20", "name": "VLAN_APP", "description": "vlan for app" }
 existing:
     description: k/v pairs of existing vlan or null when using vlan_range
@@ -124,7 +124,7 @@ end_state:
     description: k/v pairs of the VLAN after executing module or null
                  when using vlan_range
     returned: always
-    type: dict or null
+    type: dict
     sample: {"vlan_id":"20", "name": "VLAN_APP", "description": "vlan for app" }
 updates:
     description: command string sent to the device
@@ -299,13 +299,11 @@ class Vlan(object):
 
         required_one_of = [["vlan_id", "vlan_range"]]
         mutually_exclusive = [["vlan_id", "vlan_range"]]
-        required_if = [('description', not None, ('vlan_id',)), ('name', not None, ('vlan_id',))]
 
         self.module = AnsibleModule(
             argument_spec=self.spec,
             required_one_of=required_one_of,
             mutually_exclusive=mutually_exclusive,
-            required_if=required_if,
             supports_check_mode=True)
 
     def check_response(self, xml_str, xml_name):
@@ -498,6 +496,14 @@ class Vlan(object):
 
     def check_params(self):
         """Check all input params"""
+
+        if not self.vlan_id and self.description:
+            self.module.fail_json(
+                msg='Error: Vlan description could be set only at one vlan.')
+
+        if not self.vlan_id and self.name:
+            self.module.fail_json(
+                msg='Error: Vlan name could be set only at one vlan.')
 
         # check vlan id
         if self.vlan_id:
