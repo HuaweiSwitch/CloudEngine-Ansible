@@ -1,20 +1,49 @@
 ---
 
-- hosts: cloudengine
+- name: interface module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    test_intf: 40GE2/0/22
-    clear_cmd: 'interface 40ge2/0/22, clear config this'
-  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
   tasks:
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure an interface is a Layer 3 port and that it has the proper description
+    ce_interface:
+      interface: 10GE1/0/22
+      description: 'Configured by Ansible'
+      mode: layer3
+      provider: '{{ cli }}'
 
-  - ce_interface: interface={{test_intf}}  description='Configured by Ansible' mode=layer3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Admin down an interface
+    ce_interface:
+      interface: 10GE1/0/22
+      admin_state: down
+      provider: '{{ cli }}'
 
-  - ce_interface: interface={{test_intf}}  admin_state=down host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Remove all tunnel interfaces
+    ce_interface:
+      interface_type: tunnel
+      state: absent
+      provider: '{{ cli }}'
 
-  - ce_interface: interface_type=tunnel state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_interface: interface_type=40ge admin_state=up host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Remove all logical interfaces
+    ce_interface:
+      interface_type: '{{ item }}'
+      state: absent
+      provider: '{{ cli }}'
+    with_items:
+      - loopback
+      - eth-trunk
+      - nve
 
-  - ce_config: lines={{clear_cmd}} host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Admin up all 10GE interfaces
+    ce_interface:
+      interface_type: 10GE
+      admin_state: up
+      provider: '{{ cli }}'

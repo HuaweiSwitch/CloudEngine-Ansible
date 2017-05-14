@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = """
 ---
 module: ce_vxlan_arp
-version_added: "2.3"
-short_description: Manages ARP attributes of VXLAN.
+version_added: "2.4"
+short_description: Manages ARP attributes of VXLAN on HUAWEI CloudEngine devices.
 description:
-    - Manages ARP attributes of VXLAN.
+    - Manages ARP attributes of VXLAN on HUAWEI CloudEngine devices.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: CloudEngine
 options:
     evn_bgp:
         description:
@@ -58,7 +57,7 @@ options:
         description:
             - Configures the local device as the route reflector (RR) and its peer as the client.
         required: false
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
         default: null
     vbdif_name:
         description:
@@ -73,7 +72,7 @@ options:
         default: null
     host_collect_protocol:
         description:
-            - enables EVN BGP or BGP EVPN to advertise host information.
+            - Enables EVN BGP or BGP EVPN to advertise host information.
         required: false
         choices: ['bgp','none']
         default: null
@@ -85,7 +84,7 @@ options:
         default: null
     arp_suppress:
         description:
-            - enables ARP broadcast suppression in a BD.
+            - Enables ARP broadcast suppression in a BD.
         required: false
         choices: ['enable', 'disable']
         default: null
@@ -99,41 +98,45 @@ options:
 """
 
 EXAMPLES = '''
-# Configure EVN BGP on Layer 2 and Layer 3 VXLAN gateways to establish EVN BGP peer relationships.
-- ce_vxlan_arp:
-    evn_bgp: enable
-    evn_source_ip: 6.6.6.6
-    evn_peer_ip: 7.7.7.7
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure a Layer 3 VXLAN gateway as a BGP RR.
-- ce_vxlan_arp:
-    evn_bgp: enable
-    evn_server: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable EVN BGP on a Layer 3 VXLAN gateway to collect host information.
-- ce_vxlan_arp:
-    vbdif_name: Vbdif100
-    arp_collect_host: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable Layer 2 and Layer 3 VXLAN gateways to use EVN BGP to advertise host information.
-- ce_vxlan_arp:
-    host_collect_protocol: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Enable ARP broadcast suppression on a Layer 2 VXLAN gateway.
-- ce_vxlan_arp:
-    bridge_domain_id: 100
-    arp_suppress: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan arp module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configure EVN BGP on Layer 2 and Layer 3 VXLAN gateways to establish EVN BGP peer relationships.
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_source_ip: 6.6.6.6
+      evn_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+  - name: Configure a Layer 3 VXLAN gateway as a BGP RR.
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_server: enable
+      provider: "{{ cli }}"
+  - name: Enable EVN BGP on a Layer 3 VXLAN gateway to collect host information.
+    ce_vxlan_arp:
+      vbdif_name: Vbdif100
+      arp_collect_host: enable
+      provider: "{{ cli }}"
+  - name: Enable Layer 2 and Layer 3 VXLAN gateways to use EVN BGP to advertise host information.
+    ce_vxlan_arp:
+      host_collect_protocol: bgp
+      provider: "{{ cli }}"
+  - name: Enable ARP broadcast suppression on a Layer 2 VXLAN gateway.
+    ce_vxlan_arp:
+      bridge_domain_id: 100
+      arp_suppress: enable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -167,8 +170,9 @@ changed:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
 
 
 def is_config_exist(cmp_cfg, test_cfg):
@@ -178,6 +182,7 @@ def is_config_exist(cmp_cfg, test_cfg):
         return False
 
     return bool(test_cfg in cmp_cfg)
+
 
 def is_valid_v4addr(addr):
     """check is ipv4 addr is valid"""
@@ -195,6 +200,7 @@ def is_valid_v4addr(addr):
 
     return False
 
+
 def get_evn_peers(config):
     """get evn peer ip list"""
 
@@ -203,6 +209,7 @@ def get_evn_peers(config):
         return None
     else:
         return list(set(get))
+
 
 def get_evn_srouce(config):
     """get evn peer ip list"""
@@ -214,6 +221,7 @@ def get_evn_srouce(config):
     else:
         return get[0]
 
+
 def get_evn_reflect_client(config):
     """get evn reflect client list"""
 
@@ -223,6 +231,7 @@ def get_evn_reflect_client(config):
         return None
     else:
         return list(get)
+
 
 class VxlanArp(object):
     """
@@ -266,31 +275,30 @@ class VxlanArp(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        required_together = [("vbdif_name", "arp_collect_host"), ("bridge_domain_id", "arp_suppress")]
+        self.module = AnsibleModule(argument_spec=self.spec,
+                                    required_together=required_together,
+                                    supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
+
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
-        config = ""
 
-        exp = " | ignore-case section include evn bgp|host collect protocol bgp"
+        flags = list()
+        exp = "| ignore-case section include evn bgp|host collect protocol bgp"
         if self.vbdif_name:
             exp += "|^interface %s$" % self.vbdif_name
 
         if self.bridge_domain_id:
             exp += "|^bridge-domain %s$" % self.bridge_domain_id
 
-        config = self.module.config.get_config(
-            include_defaults=False, regular=exp)
+        flags.append(exp)
+        config = get_config(self.module, flags)
 
         return config
 
@@ -317,7 +325,7 @@ class VxlanArp(object):
 
         cmd = "bridge-domain %s" % self.bridge_domain_id
         if not is_config_exist(self.config, cmd):
-            self.module.fail_json(msg="Error: Bridge domain is not exist.")
+            self.module.fail_json(msg="Error: Bridge domain %s is not exist." % self.bridge_domain_id)
 
         cmd = "arp broadcast-suppress enable"
         exist = is_config_exist(self.config, cmd)
@@ -332,7 +340,6 @@ class VxlanArp(object):
 
     def config_evn_bgp(self):
         """enables EVN BGP and configure evn bgp command"""
-
 
         evn_bgp_view = False
         evn_bgp_enable = False
@@ -377,19 +384,19 @@ class VxlanArp(object):
                         self.cli_add_command("evn bgp")
                         evn_bgp_view = True
                     self.cli_add_command(cmd)
-                    if self.evn_reflect_client == "true":
+                    if self.evn_reflect_client == "enable":
                         self.cli_add_command(
                             "peer %s reflect-client" % self.evn_peer_ip)
                 else:
                     if self.evn_reflect_client:
                         cmd = "peer %s reflect-client" % self.evn_peer_ip
                         exist = is_config_exist(self.config, cmd)
-                        if self.evn_reflect_client == "true" and not exist:
+                        if self.evn_reflect_client == "enable" and not exist:
                             if not evn_bgp_view:
                                 self.cli_add_command("evn bgp")
                                 evn_bgp_view = True
                             self.cli_add_command(cmd)
-                        elif self.evn_reflect_client == "false" and exist:
+                        elif self.evn_reflect_client == "disable" and exist:
                             if not evn_bgp_view:
                                 self.cli_add_command("evn bgp")
                                 evn_bgp_view = True
@@ -430,7 +437,7 @@ class VxlanArp(object):
 
         if not exist:
             self.module.fail_json(
-                msg="Error: Interface %s is not exist." % self.vbdif_name)
+                msg="Error: Interface %s does not exist." % self.vbdif_name)
 
         cmd = "arp collect host enable"
         exist = is_config_exist(self.config, cmd)
@@ -503,23 +510,13 @@ class VxlanArp(object):
             if not self.is_valid_vbdif(self.vbdif_name):
                 self.module.fail_json(msg="Error: vbdif_name is invalid.")
 
-        # vbdif_name and arp_collect_host must set at the same time
-        if bool(self.vbdif_name) != bool(self.arp_collect_host):
-            self.module.fail_json(
-                msg="Error: vbdif_name and arp_collect_host must set at the same time.")
-
-        # bridge_domain_id and arp_suppress must set at the same time
-        if bool(self.bridge_domain_id) != bool(self.arp_suppress):
-            self.module.fail_json(
-                msg="Error: bridge_domain_id and arp_suppress must set at the same time.")
-
         # evn_reflect_client and evn_peer_ip must set at the same time
         if self.evn_reflect_client and not self.evn_peer_ip:
             self.module.fail_json(
                 msg="Error: evn_reflect_client and evn_peer_ip must set at the same time.")
 
         # evn_server and evn_reflect_client can not set at the same time
-        if self.evn_server == "enable" and self.evn_reflect_client == "true":
+        if self.evn_server == "enable" and self.evn_reflect_client == "enable":
             self.module.fail_json(
                 msg="Error: evn_server and evn_reflect_client can not set at the same time.")
 
@@ -668,7 +665,7 @@ def main():
         evn_server=dict(required=False, type='str',
                         choices=['enable', 'disable']),
         evn_reflect_client=dict(
-            required=False, type='str', choices=['true', 'false']),
+            required=False, type='str', choices=['enable', 'disable']),
         vbdif_name=dict(required=False, type='str'),
         arp_collect_host=dict(required=False, type='str',
                               choices=['enable', 'disable']),
@@ -680,7 +677,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanArp(argument_spec)
     module.work()
 

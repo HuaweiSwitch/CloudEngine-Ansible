@@ -4,23 +4,29 @@
   hosts: cloudengine
   connection: local
   gather_facts: no
-
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
 # normal argument test
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "disable bgp"
-    ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_number=100 state=absent provider="{{ cli }}"
     register: data
 
   - name: "enable BGP"
-    ce_bgp: as_number=4294967295 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    ce_bgp: as_number=4294967295 provider="{{ cli }}" state=present
     register: data
 
   - name: "TEST 1"
@@ -29,7 +35,7 @@
         - data.changed == true
 
   - name: "enable BGP agein"
-    ce_bgp: as_number=4294967295 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+    ce_bgp: as_number=4294967295 provider="{{ cli }}" state=present
     register: data
 
   - name: "TEST 2"
@@ -38,7 +44,7 @@
         - data.changed == false
 
   - name: "disable BGP"
-    ce_bgp: as_number=4294967295 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_number=4294967295 provider="{{ cli }}" state=absent
     register: data
 
   - name: "TEST 3"
@@ -47,7 +53,7 @@
         - data.changed == true
 
   - name: "create confederation peer AS num"
-    ce_bgp: as_number=100 confed_id_number=250 confed_peer_as_num=260 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_number=100 confed_id_number=250 confed_peer_as_num=260 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 4"
@@ -56,7 +62,7 @@
         - data.changed == true
 
   - name: "change confederation peer AS num"
-    ce_bgp: confed_peer_as_num=360 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: confed_peer_as_num=360 state=present provider="{{ cli }}"
     register: data
 
   - name: "TEST 5"
@@ -65,7 +71,7 @@
         - data.changed == true
 
   - name: "change confederation ID AS num"
-    ce_bgp: confed_id_num=350 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: confed_id_num=350 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -75,7 +81,7 @@
         - data | failed
 
   - name: "create graceful restart"
-    ce_bgp: graceful_restart=true time_wait_for_rib=22 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: graceful_restart=true time_wait_for_rib=22 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 7"
@@ -84,7 +90,7 @@
         - data.changed == true
 
   - name: "change graceful restart time"
-    ce_bgp: graceful_restart=true time_wait_for_rib=33 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: graceful_restart=true time_wait_for_rib=33 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 8"
@@ -93,7 +99,7 @@
         - data.changed == true
 
   - name: "delete graceful restart"
-    ce_bgp: graceful_restart=false time_wait_for_rib=22 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: graceful_restart=false time_wait_for_rib=22 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 9"
@@ -102,7 +108,7 @@
         - data.changed == true
 
   - name: "set as path limit"
-    ce_bgp: as_path_limit=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_path_limit=200 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 10"
@@ -111,7 +117,7 @@
         - data.changed == true
 
   - name: "change as path limit"
-    ce_bgp: as_path_limit=300 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_path_limit=300 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 11"
@@ -120,7 +126,7 @@
         - data.changed == true
 
   - name: "set routerid vpn-instance auto select"
-    ce_bgp: bgp_rid_auto_sel=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: bgp_rid_auto_sel=true state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 12"
@@ -129,7 +135,7 @@
         - data.changed == true
 
   - name: "delete routerid vpn-instance auto select"
-    ce_bgp: bgp_rid_auto_sel=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: bgp_rid_auto_sel=false state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 13"
@@ -138,7 +144,7 @@
         - data.changed == true
 
   - name: "keep all routes information"
-    ce_bgp:  keep_all_routes=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp:  keep_all_routes=true state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 14"
@@ -147,7 +153,7 @@
         - data.changed == true
 
   - name: "delete keep all routes information"
-    ce_bgp:  keep_all_routes=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp:  keep_all_routes=false state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 15"
@@ -156,7 +162,7 @@
         - data.changed == true
 
   - name: "shutdown all bgp protocal"
-    ce_bgp:  is_shutdown=true state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp:  is_shutdown=true state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 16"
@@ -165,7 +171,7 @@
         - data.changed == true
 
   - name: "undo shutdown all bgp protocal"
-    ce_bgp:  is_shutdown=false state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp:  is_shutdown=false state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 17"
@@ -174,7 +180,7 @@
         - data.changed == true
 
   - name: "set time of counter when the bgp protocal was down"
-    ce_bgp: suppress_interval=500 hold_interval=600 clear_interval=700 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: suppress_interval=500 hold_interval=600 clear_interval=700 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 18"
@@ -183,7 +189,7 @@
         - data.changed == true
 
   - name: "change time of counter when the bgp protocal was down"
-    ce_bgp: suppress_interval=600 hold_interval=700 clear_interval=800 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: suppress_interval=600 hold_interval=700 clear_interval=800 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 19"
@@ -192,7 +198,7 @@
         - data.changed == true
 
   - name: "set route id of bgp"
-    ce_bgp: vrf_name='_public_' router_id=2.2.2.2 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' router_id=2.2.2.2 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 20"
@@ -201,7 +207,7 @@
         - data.changed == true
 
   - name: "change route id of bgp1"
-    ce_bgp: vrf_name='_public_' router_id=2.2.2::2 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' router_id=2.2.2::2 state=present  provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -211,7 +217,7 @@
         - data | failed
 
   - name: "change route id of bgp2"
-    ce_bgp: vrf_name='aaa' router_id=2.2.2.2 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='aaa' router_id=2.2.2.2 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -221,7 +227,7 @@
         - data | failed
 
   - name: "set time of bgp router1"
-    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=500 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=500 state=present  provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -231,7 +237,7 @@
         - data | failed
 
   - name: "set time of bgp router2"
-    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=200 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' hold_time=1000 keepalive_time=200 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 24"
@@ -240,7 +246,7 @@
         - data.changed == true
 
   - name: "set time of bgp connection retry"
-    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 25"
@@ -249,7 +255,7 @@
         - data.changed == true
 
   - name: "change time of bgp connection retry"
-    ce_bgp: vrf_name='_public_' conn_retry_time=65536 state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=65536 state=present  provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -259,7 +265,7 @@
         - data | failed
 
   - name: "delete time of bgp connection retry"
-    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' conn_retry_time=1000 state=absent  provider="{{ cli }}"
     register: data
 
   - name: "TEST 27"
@@ -268,7 +274,7 @@
         - data.changed == true
 
   - name: "set default address family type"
-    ce_bgp: vrf_name='_public_' default_af_type='ipv4uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' default_af_type='ipv4uni' state=present  provider="{{ cli }}"
     register: data
 
   - name: "TEST 28"
@@ -277,7 +283,7 @@
         - data.changed == false
 
   - name: "change default address family type"
-    ce_bgp: vrf_name='_public_' default_af_type='ipv6uni' state=present  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: vrf_name='_public_' default_af_type='ipv6uni' state=present  provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -287,7 +293,7 @@
         - data | failed
 
   - name: "disable bgp"
-    ce_bgp: as_number=100 state=absent  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_bgp: as_number=100 state=absent  provider="{{ cli }}"
     register: data
 
   - name: "TEST 30"

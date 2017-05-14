@@ -6,6 +6,12 @@
     source_int: vlanif4002
     ipv4_addr: "192.8.5.6"
     ipv6_addr: "192:1:1:1:1:1:1:1"
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
@@ -13,12 +19,12 @@
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "config ntp server"
-    ce_ntp: server={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -28,7 +34,7 @@
         - data.changed == true
 
   - name: "config ntp server again"
-    ce_ntp: server={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -38,7 +44,7 @@
         - data.changed == false
 
   - name: "undo config ntp server"
-    ce_ntp: server={{ipv4_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -48,12 +54,12 @@
         - data.changed == true
 
   - name: "ensure source-interface vlanif4002 exist"
-    ce_config: lines='vlan 4002, quit, interface vlanif 4002' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='vlan 4002, quit, interface vlanif 4002' provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "config ntp server and specify source-interface"
-    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -63,7 +69,7 @@
         - data.changed == true
    
   - name: "config ntp server and specify source-interface again"
-    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -73,7 +79,7 @@
         - data.changed == false
   
   - name: "undo config ntp server"
-    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv4_addr}} source_int={{source_int}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -83,7 +89,7 @@
         - data.changed == true
  
   - name: "config ntp peer"
-    ce_ntp: peer={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -93,7 +99,7 @@
         - data.changed == true
 
   - name: "config ntp peer again"
-    ce_ntp: peer={{ipv4_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -103,7 +109,7 @@
         - data.changed == false
 
   - name: "undo config ntp peer"
-    ce_ntp: peer={{ipv4_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -113,7 +119,7 @@
         - data.changed == true
     
   - name: "config ntp peer and specify source-interface"
-    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -123,7 +129,7 @@
         - data.changed == true
    
   - name: "config ntp peer and specify source-interface again"
-    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -133,7 +139,7 @@
         - data.changed == false
   
   - name: "undo config ntp peer"
-    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer={{ipv4_addr}} source_int={{source_int}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -143,7 +149,7 @@
         - data.changed == true
   
   - name: "Specify invalid ipaddress"
-    ce_ntp: peer="192.8.8" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="192.8.8" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -154,7 +160,7 @@
         - data | failed 
 
   - name: "Specify invalid ipaddress"
-    ce_ntp: peer="256.8.8.1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="256.8.8.1" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -165,7 +171,7 @@
         - data | failed 
   
   - name: "Specify invalid ipaddress"
-    ce_ntp: peer="258:258:1:1:1:1:1" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="258:258:1:1:1:1:1" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -176,7 +182,7 @@
         - data | failed 
 
   - name: "Specify invalid ipaddress"
-    ce_ntp: peer="258:258:1:1:1:1:1:65536" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="258:258:1:1:1:1:1:65536" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -187,7 +193,7 @@
         - data | failed 
   
   - name: "config ntp ipv6 server"
-    ce_ntp: server={{ipv6_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv6_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -197,7 +203,7 @@
         - data.changed == true
 
   - name: "config ntp ipv6 server"
-    ce_ntp: server={{ipv6_addr}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv6_addr}} state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -207,7 +213,7 @@
         - data.changed == false
 
   - name: "undo config ntp ipv6 server"
-    ce_ntp: server={{ipv6_addr}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server={{ipv6_addr}} state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -217,7 +223,7 @@
         - data.changed == true
   
   - name: "Specify invalid VPN name"
-    ce_ntp: peer="192.8.5.6" vpn_name="dddddddddddddddddddddddddddddddd" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="192.8.5.6" vpn_name="dddddddddddddddddddddddddddddddd" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -228,7 +234,7 @@
         - data | failed
   
   - name: "Specify invalid source_interface"
-    ce_ntp: peer="192.8.5.6" source_int="Vlanif9000" state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: peer="192.8.5.6" source_int="Vlanif9000" state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -239,7 +245,7 @@
         - data | failed
   
   - name: "config ntp server by abbreviated ipv6"
-    ce_ntp: server='2::3' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server='2::3' state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -249,7 +255,7 @@
         - data.changed == true
 
   - name: "config ntp server by abbreviated ipv6 again"
-    ce_ntp: server='2::3' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server='2::3' state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -259,7 +265,7 @@
         - data.changed == false
   
   - name: "unconfig server ip"
-    ce_ntp: server='2::3' state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_ntp: server='2::3' state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
   

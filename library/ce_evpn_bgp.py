@@ -17,16 +17,15 @@
 #
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_evpn_bgp
-version_added: "2.3"
-short_description: Manages BGP EVPN configuration.
+version_added: "2.4"
+short_description: Manages BGP EVPN configuration on HUAWEI CloudEngine switches.
 description:
-    - This module offers the ability to configure a BGP EVPN peer relationship on CloudEngine switch.
-extends_documentation_fragment: cloudengine
+    - This module offers the ability to configure a BGP EVPN peer relationship on HUAWEI CloudEngine switches.
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -74,7 +73,7 @@ options:
             - Enable or disable a device to advertise IP routes imported to a VPN instance to its EVPN instance.
         required: False
         default: null
-        choices: ['true','false']
+        choices: ['enable','disable']
     state:
         description:
             - Manage the state of the resource.
@@ -83,36 +82,41 @@ options:
         choices: ['present','absent']
 '''
 EXAMPLES = '''
-# enable peer address.
-    - name: "peer enable"
-    ce_evpn_bgp:
-        bgp_instance: 100
-        peer_address: 1.1.1.1
-        as_number: 100
-        peer_enable: true
-        username: "{{ un }}"
-        password: "{{ pwd }}"
-        host: "{{ inventory_hostname }}"
+- name: evpn bgp module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# enable peer group arp.
-    - name: "peer group arp"
-    ce_evpn_bgp:
-        bgp_instance: 100
-        peer_group_name: aaa
-        advertise_router_type: arp
-        username: "{{ un }}"
-        password: "{{ pwd }}"
-        host: "{{ inventory_hostname }}"
+  tasks:
 
-# enable advertise l2vpn evpn.
-    - name: "advertise l2vpn evpn"
+  - name: Enable peer address.
     ce_evpn_bgp:
-        bgp_instance: 100
-        vpn_name: aaa
-        advertise_l2vpn_evpn: true
-        username: "{{ un }}"
-        password: "{{ pwd }}"
-        host: "{{ inventory_hostname }}"
+      bgp_instance: 100
+      peer_address: 1.1.1.1
+      as_number: 100
+      peer_enable: true
+      provider: "{{ cli }}"
+
+  - name: Enable peer group arp.
+    ce_evpn_bgp:
+      bgp_instance: 100
+      peer_group_name: aaa
+      advertise_router_type: arp
+      provider: "{{ cli }}"
+
+  - name: Enable advertise l2vpn evpn.
+    ce_evpn_bgp:
+      bgp_instance: 100
+      vpn_name: aaa
+      advertise_l2vpn_evpn: enable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -122,8 +126,7 @@ proposed:
     type: dict
     sample: {"advertise_router_type": "arp", "bgp_instance": "100", "peer_group_name": "aaa", "state": "present"}
 existing:
-    description:
-        - k/v pairs of existing rollback
+    description: k/v pairs of existing rollback
     returned: always
     type: dict
     sample: {"bgp_instance": "100", "peer_group_advertise_type": []}
@@ -143,12 +146,13 @@ end_state:
     description: k/v pairs of configuration after module execution
     returned: verbose mode
     type: dict
-    sample: {"advertise_l2vpn_evpn": "true", "bgp_instance": "100", "vpn_name": "aaa"}
+    sample: {"advertise_l2vpn_evpn": "enable", "bgp_instance": "100", "vpn_name": "aaa"}
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
 
 
 def is_config_exist(cmp_cfg, test_cfg):
@@ -158,6 +162,7 @@ def is_config_exist(cmp_cfg, test_cfg):
         return False
 
     return bool(test_cfg in cmp_cfg)
+
 
 def is_valid_address(address):
     """check ip-address is valid"""
@@ -174,6 +179,7 @@ def is_valid_address(address):
         return True
 
     return False
+
 
 def is_valid_as_number(as_number):
     """check as-number is valid"""
@@ -197,6 +203,7 @@ def is_valid_as_number(as_number):
             return True
 
         return False
+
 
 class EvpnBgp(object):
     """
@@ -240,19 +247,24 @@ class EvpnBgp(object):
 
     def init_module(self):
         """ init module """
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
     def get_evpn_overlay_config(self):
         """get evpn-overlay enable configuration"""
+
+        flags = list()
         exp = "| ignore-case include evpn-overlay enable"
-        return self.module.config.get_config(include_defaults=False, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def get_current_config(self):
         """get current configuration"""
 
+        flags = list()
         exp = "| ignore-case section include bgp %s" % self.bgp_instance
-        return self.module.config.get_config(include_defaults=False, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -270,11 +282,7 @@ class EvpnBgp(object):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def check_params(self):
         """Check all input params"""
@@ -497,9 +505,9 @@ class EvpnBgp(object):
                 l2vpn_cmd = "advertise l2vpn evpn"
                 l2vpn_exist = is_config_exist(self.config, l2vpn_cmd)
                 if l2vpn_exist:
-                    self.existing["advertise_l2vpn_evpn"] = 'true'
+                    self.existing["advertise_l2vpn_evpn"] = 'enable'
                 else:
-                    self.existing["advertise_l2vpn_evpn"] = 'false'
+                    self.existing["advertise_l2vpn_evpn"] = 'disable'
 
     def get_end_state(self):
         """get end state info"""
@@ -538,9 +546,9 @@ class EvpnBgp(object):
                 l2vpn_cmd = "advertise l2vpn evpn"
                 l2vpn_exist = is_config_exist(self.config, l2vpn_cmd)
                 if l2vpn_exist:
-                    self.end_state["advertise_l2vpn_evpn"] = 'true'
+                    self.end_state["advertise_l2vpn_evpn"] = 'enable'
                 else:
-                    self.end_state["advertise_l2vpn_evpn"] = 'false'
+                    self.end_state["advertise_l2vpn_evpn"] = 'disable'
 
     def config_peer(self):
         """configure evpn bgp peer command"""
@@ -642,7 +650,7 @@ class EvpnBgp(object):
         else:
             exist_l2vpn = is_config_exist(config_vpn_list[1], cmd_l2vpn)
         cmd = "advertise l2vpn evpn"
-        if self.advertise_l2vpn_evpn == "true" and not exist_l2vpn:
+        if self.advertise_l2vpn_evpn == "enable" and not exist_l2vpn:
             cmd = "bgp %s" % self.bgp_instance
             self.cli_add_command(cmd)
             cmd = "ipv4-family vpn-instance %s" % self.vpn_name
@@ -650,13 +658,13 @@ class EvpnBgp(object):
             cmd = "advertise l2vpn evpn"
             self.cli_add_command(cmd)
             self.changed = True
-        elif self.advertise_l2vpn_evpn == "false" and exist_l2vpn:
+        elif self.advertise_l2vpn_evpn == "disable" and exist_l2vpn:
             cmd = "bgp %s" % self.bgp_instance
             self.cli_add_command(cmd)
             cmd = "ipv4-family vpn-instance %s" % self.vpn_name
             self.cli_add_command(cmd)
-            cmd = "undo advertise l2vpn evpn"
-            self.cli_add_command(cmd)
+            cmd = "advertise l2vpn evpn"
+            self.cli_add_command(cmd, undo=True)
             self.changed = True
 
     def work(self):
@@ -713,11 +721,11 @@ def main():
 
         vpn_name=dict(required=False, type='str'),
         advertise_l2vpn_evpn=dict(required=False, type='str', choices=[
-            'true', 'false']),
+            'enable', 'disable']),
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = EvpnBgp(argument_spec)
     module.work()
 

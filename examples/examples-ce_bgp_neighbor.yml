@@ -1,18 +1,28 @@
----
-
-- name: cloudengine bgp neighbor module test
+- name: CloudEngine BGP neighbor test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500
 
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500
+  - name: "Config bgp peer"
+    ce_bgp_neighbor:
+      state:  present
+      vrf_name:  js
+      peer_addr:  192.168.10.10
+      remote_as:  500
+      provider: "{{ cli }}"
 
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500 tcp_MSS=321
-
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500 tcp_MSS=321
-
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present peer_addr=192.168.10.10 remote_as=500 connect_mode=listenOnly is_bfd_block=true multiplier=10
-
-  - ce_bgp_neighbor: host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent peer_addr=192.168.10.10 remote_as=500 connect_mode=listenOnly is_bfd_block=true multiplier=10
+  - name: "Config bgp route id"
+    ce_bgp_neighbor:
+      state:  absent
+      vrf_name:  js
+      peer_addr:  192.168.10.10
+      provider: "{{ cli }}"

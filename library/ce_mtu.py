@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_mtu
-version_added: "2.3"
-short_description: Manages MTU settings on CloudEngine switch.
+version_added: "2.4"
+short_description: Manages MTU settings on HUAWEI CloudEngine switches.
 description:
-    - Manages MTU settings on CloudEngine switch.
-extends_documentation_fragment: cloudengine
+    - Manages MTU settings on HUAWEI CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
 notes:
     - Either C(sysmtu) param is required or C(interface) AND C(mtu) params are req'd.
@@ -66,47 +65,52 @@ options:
 '''
 
 EXAMPLES = '''
-# Config jumboframe on 40GE1/0/22
-- ce_mtu:
-    jumbo_max: 9000
-    jumbo_min: 8000
-    host: {{ inventory_hostname }}
-    username: {{ un }}
-    password: {{ pwd }}
+- name: Mtu test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Config mtu on 40GE1/0/22 (routed interface)
-- ce_mtu:
-    interface: 40GE1/0/22
-    mtu: 1600
-    host: {{ inventory_hostname }}
-    username: {{ un }}
-    password: {{ pwd }}
+  tasks:
 
-# Config mtu on 40GE1/0/23 (switched interface)
-- ce_mtu:
-    interface: 40GE1/0/23
-    mtu: 9216
-    host: {{ inventory_hostname }}
-    username: {{ un }}
-    password: {{ pwd }}
+  - name: "Config jumboframe on 40GE1/0/22"
+    ce_mtu:
+      interface: 40GE1/0/22
+      jumbo_max: 9000
+      jumbo_min: 8000
+      provider: "{{ cli }}"
 
-# Config mtu and jumboframe on 40GE1/0/22 (routed interface)
-- ce_mtu:
-    interface: 40GE1/0/22
-    mtu: 1601
-    jumbo_max: 9001
-    jumbo_min: 8001
-    host: {{ inventory_hostname }}
-    username: {{ un }}
-    password: {{ pwd }}
+  - name: "Config mtu on 40GE1/0/22 (routed interface)"
+    ce_mtu:
+      interface: 40GE1/0/22
+      mtu: 1600
+      provider: "{{ cli }}"
 
-# Unconfigure mtu and jumboframe on a given interface
-- ce_mtu:
-    interface: 40GE1/0/22
-    host: {{ inventory_hostname }}
-    username: {{ un }}
-    password: {{ pwd }}
-    state: absent
+  - name: "Config mtu on 40GE1/0/23 (switched interface)"
+    ce_mtu:
+      interface: 40GE1/0/22
+      mtu: 9216
+      provider: "{{ cli }}"
+
+  - name: "Config mtu and jumboframe on 40GE1/0/22 (routed interface)"
+    ce_mtu:
+      interface: 40GE1/0/22
+      mtu: 1601
+      jumbo_max: 9001
+      jumbo_min: 8001
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure mtu and jumboframe on a given interface"
+    ce_mtu:
+      state: absent
+      interface: 40GE1/0/22
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -116,8 +120,8 @@ proposed:
     type: dict
     sample: {"mtu": "1700", "jumbo_max": "9000", jumbo_min: "8000"}
 existing:
-    description:
-        - k/v pairs of existing mtu/sysmtu on the interface/system
+    description: k/v pairs of existing mtu/sysmtu on the interface/system
+    returned: always
     type: dict
     sample: {"mtu": "1600", "jumbo_max": "9216", "jumbo_min": "1518"}
 end_state:
@@ -137,22 +141,10 @@ changed:
     sample: true
 '''
 
-import sys
 import re
 import copy
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
-from ansible.module_utils.netcli import FailedConditionsError, FailedConditionalError
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.cloudengine import get_netconf
-from ansible.module_utils.netcli import CommandRunner
-from ansible.module_utils.netcli import AddCommandError
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, get_config, load_config, get_nc_config, set_nc_config
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -179,6 +171,7 @@ CE_NC_XML_MERGE_INTF_MTU = """
   </ifm>
 """
 
+
 def is_interface_support_setjumboframe(interface):
     """is interface support set jumboframe"""
 
@@ -200,6 +193,7 @@ def is_interface_support_setjumboframe(interface):
     else:
         support_flag = False
     return support_flag
+
 
 def get_interface_type(interface):
     """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
@@ -250,10 +244,12 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
+
 def build_config_xml(xmlstr):
     """ build_config_xml"""
 
     return '<config> ' + xmlstr + ' </config>'
+
 
 class Mtu(object):
     """set mtu"""
@@ -261,7 +257,6 @@ class Mtu(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # interface info
@@ -272,11 +267,7 @@ class Mtu(object):
         self.jbf_min = self.module.params['jumbo_min'] or None
         self.jbf_config = list()
         self.jbf_cli = ""
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
+        self.commands = list()
 
         # state
         self.changed = False
@@ -288,30 +279,15 @@ class Mtu(object):
         self.intf_info = dict()         # one interface info
         self.intf_type = None           # loopback tunnel ...
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init_module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init_netconf"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -319,19 +295,14 @@ class Mtu(object):
         """ get one interface attributes dict."""
         intf_info = dict()
         conf_str = CE_NC_GET_INTF % ifname
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        if "<data/>" in con_obj.xml:
+        ret_xml = get_nc_config(self.module, conf_str)
+        if "<data/>" in ret_xml:
             return intf_info
 
         intf = re.findall(
             r'.*<ifName>(.*)</ifName>.*\s*'
             r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*\s*'
-            r'<ifMtu>(.*)</ifMtu>.*', con_obj.xml)
+            r'<ifMtu>(.*)</ifMtu>.*', ret_xml)
 
         if intf:
             intf_info = dict(ifName=intf[0][0],
@@ -345,64 +316,46 @@ class Mtu(object):
 
         interface_cli = "interface %s" % self.interface
         if config_str.find(interface_cli) == -1:
-            self.module.fail_json(
-                msg='Error: Interface does not exist.')
-        npos1 = config_str.index(interface_cli)
+            self.module.fail_json(msg='Error: Interface does not exist.')
 
-        npos2 = config_str.index('#', npos1)
-        config_str_tmp = config_str[npos1:npos2]
         try:
-            npos3 = config_str_tmp.index('jumboframe enable')
+            npos1 = config_str.index('jumboframe enable')
         except ValueError:
             # return default vale
             return [9216, 1518]
-        npos4 = config_str_tmp.index('\n', npos3)
+        try:
+            npos2 = config_str.index('\n', npos1)
+            config_str_tmp = config_str[npos1:npos2]
+        except ValueError:
+            config_str_tmp = config_str[npos1:]
 
-        config_str_tmp = config_str_tmp[npos3:npos4]
         return re.findall(r'([0-9]+)', config_str_tmp)
 
-    def excute_command(self, commands):
-        """ excute_command"""
+    def cli_load_config(self, commands):
+        """load config by cli"""
 
-        runner = CommandRunner(self.module)
-        for cmd in commands:
-            try:
-                runner.add_command(**cmd)
-            except AddCommandError:
-                self.module.fail_json(
-                    msg='duplicate command detected: %s' % cmd)
+        if not self.module.check_mode:
+            load_config(self.module, commands)
 
-        try:
-            runner.run()
-        except FailedConditionsError:
-            exc = get_exception()
-            self.module.fail_json(
-                msg=get_cli_exception(exc), failed_conditions=exc.failed_conditions)
-        except FailedConditionalError:
-            exc = get_exception()
-            self.module.fail_json(
-                msg=get_cli_exception(exc), failed_conditional=exc.failed_conditional)
-        except NetworkError:
-            err = get_cli_exception()
-            self.module.fail_json(msg=err)
+    def cli_add_command(self, command, undo=False):
+        """add command to self.update_cmd and self.commands"""
 
-        for cmd in commands:
-            try:
-                output = runner.get_command(cmd['command'], cmd.get('output'))
-            except ValueError:
-                self.module.fail_json(
-                    msg='command not executed due to check_mode, see warnings')
-        return output
+        if undo and command.lower() not in ["quit", "return"]:
+            cmd = "undo " + command
+        else:
+            cmd = command
+
+        self.commands.append(cmd)          # set to device
 
     def get_jumboframe_config(self):
         """ get_jumboframe_config"""
 
-        commands = list()
-        cmd = {'output': None,
-               'command': 'display current-configuration interface %s' % self.interface}
-        commands.append(cmd)
-        output = self.excute_command(commands)
+        flags = list()
+        exp = " all | section inc %s$" % self.interface.upper()
+        flags.append(exp)
+        output = get_config(self.module, flags)
         output = output.replace('*', '')
+
         return self.prase_jumboframe_para(output)
 
     def set_jumboframe(self):
@@ -444,29 +397,19 @@ class Mtu(object):
             jbf_value = [9216, 1518]
 
         # excute commands
-        commands = list()
-        cmd1 = {'output': None, 'command': 'system-view'}
-        commands.append(cmd1)
-
-        cmd2 = {'output': None, 'command': ''}
-        cmd2['command'] = "interface %s" % self.interface
-        commands.append(cmd2)
+        command = "interface %s" % self.interface
+        self.cli_add_command(command)
 
         if len(jbf_value) == 2:
             self.jbf_cli = "jumboframe enable %s %s" % (
                 jbf_value[0], jbf_value[1])
         else:
             self.jbf_cli = "jumboframe enable %s" % (jbf_value[0])
-        cmd3 = {'output': None, 'command': ''}
-        cmd3['command'] = self.jbf_cli
-        commands.append(cmd3)
+        self.cli_add_command(self.jbf_cli)
 
-        cmd4 = {'output': None, 'command': ''}
-        cmd4['command'] = 'commit'
-        commands.append(cmd4)
-        self.excute_command(commands)
-
-        self.changed = True
+        if self.commands:
+            self.cli_load_config(self.commands)
+            self.changed = True
         if self.state == "present":
             if self.jbf_min:
                 self.updates_cmd.append(
@@ -499,14 +442,9 @@ class Mtu(object):
             return
 
         conf_str = build_config_xml(xmlstr)
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_INTF_MTU")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        ret_xml = set_nc_config(self.module, conf_str)
+        self.check_response(ret_xml, "MERGE_INTF_MTU")
+        self.changed = True
 
     def check_params(self):
         """Check all input params"""
@@ -667,9 +605,10 @@ def main():
         jumbo_max=dict(type='str'),
         jumbo_min=dict(type='str'),
     )
-
+    argument_spec.update(ce_argument_spec)
     interface = Mtu(argument_spec)
     interface.work()
+
 
 if __name__ == '__main__':
     main()

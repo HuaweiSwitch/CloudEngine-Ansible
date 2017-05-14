@@ -2,6 +2,13 @@
 
 - name: cloudengine netstream template module test
   hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
@@ -11,12 +18,12 @@
 # normal argument test
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "config ipv4 netstream record"
-    ce_netstream_template: state=present type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 1"
@@ -25,7 +32,7 @@
         - data.changed == true
 
   - name: "config ipv4 netstream record again"
-    ce_netstream_template: state=present type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 2"
@@ -34,7 +41,7 @@
         - data.changed == false
 
   - name: "undo ipv4 netstream record"
-    ce_netstream_template: state=absent type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=absent type=ip record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 3"
@@ -43,7 +50,7 @@
         - data.changed == true
 
   - name: "config vxlan netstream record"
-    ce_netstream_template: state=present type=vxlan record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=vxlan record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 4"
@@ -52,7 +59,7 @@
         - data.changed == true
 
   - name: "undo vxlan netstream record"
-    ce_netstream_template: state=absent type=vxlan record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=absent type=vxlan record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 5"
@@ -61,7 +68,7 @@
         - data.changed == true
 
   - name: "config ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz match=tos collect_counter=bytes collect_interface=input description=wdz_netstream host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz match=tos collect_counter=bytes collect_interface=input description=wdz_netstream provider="{{ cli }}"
     register: data
 
   - name: "TEST 6"
@@ -70,7 +77,7 @@
         - data.changed == true
 
   - name: "update ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz match=protocol host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz match=protocol provider="{{ cli }}"
     register: data
 
   - name: "TEST 7"
@@ -79,7 +86,7 @@
         - data.changed == true
 
   - name: "update ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz collect_counter=packets host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz collect_counter=packets provider="{{ cli }}"
     register: data
 
   - name: "TEST 8"
@@ -88,7 +95,7 @@
         - data.changed == true
 
   - name: "update ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz collect_interface=output host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz collect_interface=output provider="{{ cli }}"
     register: data
 
   - name: "TEST 9"
@@ -97,7 +104,7 @@
         - data.changed == true
 
   - name: "update ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz description=wdz_aaaaa host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz description=wdz_aaaaa provider="{{ cli }}"
     register: data
 
   - name: "TEST 10"
@@ -106,7 +113,7 @@
         - data.changed == true
 
   - name: "undo ipv4 netstream record attribute"
-    ce_netstream_template: state=absent type=ip record_name=wdz match=protocol collect_counter=packets collect_interface=output description=wdz_aaaaa host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=absent type=ip record_name=wdz match=protocol collect_counter=packets collect_interface=output description=wdz_aaaaa provider="{{ cli }}"
     register: data
 
   - name: "TEST 11"
@@ -115,7 +122,7 @@
         - data.changed == true
 
   - name: "undo ipv4 netstream record"
-    ce_netstream_template: state=absent type=ip record_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=absent type=ip record_name=wdz provider="{{ cli }}"
     register: data
 
   - name: "TEST 12"
@@ -124,7 +131,7 @@
         - data.changed == true
 
   - name: "config ipv4 netstream record abnormal"
-    ce_netstream_template: state=present type=ip record_name=wdzssssssssssssssssssssssssssssssssssssssssssssssssssss host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdzssssssssssssssssssssssssssssssssssssssssssssssssssss provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -134,7 +141,7 @@
         - data | failed
 
   - name: "config ipv4 netstream record attribute"
-    ce_netstream_template: state=present type=ip record_name=wdz description=wdz_netstreamxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_template: state=present type=ip record_name=wdz description=wdz_netstreamxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx provider="{{ cli }}"
     register: data
     ignore_errors: true
 

@@ -1,15 +1,29 @@
----
-
-- name: cloudengine acl interface module test
+- name: CloudEngine acl interface test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_acl_interface: state=present acl_name=2200 interface=40GE2/0/1 direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Apply acl to interface"
+    ce_acl_interface:
+      state:  present
+      acl_name:  2000
+      interface:  40GE1/0/1
+      direction:  outbound
+      provider: "{{ cli }}"
 
-  - ce_acl_interface: state=absent acl_name=2200 interface=40GE2/0/1 direction=inbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_acl_interface: state=present acl_name=2200 interface=40GE2/0/1 direction=outbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-
-  - ce_acl_interface: state=absent acl_name=2200 interface=40GE2/0/1 direction=outbound host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Undo acl from interface"
+    ce_acl_interface:
+      state:  absent
+      acl_name:  2000
+      interface:  40GE1/0/1
+      direction:  outbound
+      provider: "{{ cli }}"

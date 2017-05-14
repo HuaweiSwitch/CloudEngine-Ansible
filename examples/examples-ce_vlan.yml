@@ -1,14 +1,34 @@
 ---
 
-- hosts: cloudengine
+- name: vlan module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    test_range: "2-10,20,50,55-60,100-150"
-    test_vlan: 50
-  
-  tasks:  
-  - ce_vlan: vlan_range={{test_range}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-  - ce_vlan: vlan_id={{test_vlan}} name="WEB" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  tasks:
 
-  - ce_vlan: vlan_id={{test_vlan}} state="absent" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: Ensure a range of VLANs are not present on the switch
+    ce_vlan:
+      vlan_range: "2-10,20,50,55-60,100-150"
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: Ensure VLAN 50 exists with the name WEB
+    ce_vlan:
+      vlan_id: 50
+      name: WEB
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: Ensure VLAN is NOT on the device
+    ce_vlan:
+      vlan_id: 50
+      state: absent
+      provider: "{{ cli }}"

@@ -1,48 +1,33 @@
 ---
 
-- hosts: ce128
+- name: vxlan vap module test
+  hosts: ce128
+  connection: local
   gather_facts: no
   vars:
-    l2sub_intf: "10GE3/0/41.1"
-    bd_id: 100
-    vlan_all: "100,101,102"
-    bind_vid: 100
-    ce_vid: 101
-    pe_vid: 102
-    
-  
-  tasks:  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-  - ce_interface: interface={{l2sub_intf}} l2sub=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vlan: vlan_range={{vlan_all}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: bridge_domain_id={{bd_id}} bind_vlan_id={{bind_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
- 
-  - ce_vxlan_vap: bridge_domain_id={{bd_id}} l2_sub_interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=dot1q ce_vid={{ce_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_vap: l2_sub_interface={{l2sub_intf}} encapsulation=qinq ce_vid={{ce_vid}} pe_vid={{pe_vid}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vlan: vlan_range={{vlan_all}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_interface: interface={{l2sub_intf}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  tasks:
+
+  - name: Create a papping between a VLAN and a BD
+    ce_vxlan_vap:
+      bridge_domain_id: 100
+      bind_vlan_id: 99
+      provider: "{{ cli }}"
+
+  - name: Bind a Layer 2 sub-interface to a BD
+    ce_vxlan_vap:
+      bridge_domain_id: 100
+      l2_sub_interface: 10GE 2/0/20.1
+      provider: "{{ cli }}"
+
+  - name: Configure an encapsulation type on a Layer 2 sub-interface
+    ce_vxlan_vap:
+      l2_sub_interface: 10GE 2/0/20.1
+      encapsulation: dot1q
+      provider: "{{ cli }}"

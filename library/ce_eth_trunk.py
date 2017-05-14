@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_eth_trunk
-version_added: "2.3"
-short_description: Manages Eth-Trunk interfaces.
+version_added: "2.4"
+short_description: Manages Eth-Trunk interfaces on HUAWEI CloudEngine switches.
 description:
-    - Manages Eth-Trunk specific configuration parameters.
-extends_documentation_fragment: cloudengine
+    - Manages Eth-Trunk specific configuration parameters on HUAWEI CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
 notes:
     - C(state=absent) removes the Eth-Trunk config and interface if it
@@ -40,7 +39,7 @@ options:
         description:
             - Eth-Trunk interface number.
               The value is an integer.
-              The value range depends on the assign forward eth-trunk mode { 256 | 512 | 1024 } command.
+              The value range depends on the assign forward eth-trunk mode command.
               When 256 is specified, the value ranges from 0 to 255.
               When 512 is specified, the value ranges from 0 to 511.
               When 1024 is specified, the value ranges from 0 to 1023.
@@ -76,7 +75,6 @@ options:
               declared in the members param. This can be used to remove
               members.
         required: false
-        choices: ['true', 'false']
         default: false
     state:
         description:
@@ -86,15 +84,26 @@ options:
         choices: ['present','absent']
 '''
 EXAMPLES = '''
-# Ensure Eth-Trunk100 is created, add two members, and set to mode lacp-static
-- ce_eth_trunk:
-    trunk_id: 100
-    members: ['40GE1/0/24','40GE1/0/25']
-    mode: 'lacp-static'
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: eth_trunk module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Ensure Eth-Trunk100 is created, add two members, and set to mode lacp-static
+    ce_eth_trunk:
+      trunk_id: 100
+      members: ['10GE1/0/24','10GE1/0/25']
+      mode: 'lacp-static'
+      state: present
+      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -102,21 +111,21 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"trunk_id": "100", "members": ['40GE1/0/24','40GE1/0/25'], "mode": "lacp-static"}
+    sample: {"trunk_id": "100", "members": ['10GE1/0/24','10GE1/0/25'], "mode": "lacp-static"}
 existing:
-    description:
-        - k/v pairs of existing Eth-Trunk
+    description: k/v pairs of existing Eth-Trunk
+    returned: always
     type: dict
     sample: {"trunk_id": "100", "hash_type": "mac", "members_detail": [
-            {"memberIfName": "40GE1/0/25", "memberIfState": "Down"}],
+            {"memberIfName": "10GE1/0/25", "memberIfState": "Down"}],
             "min_links": "1", "mode": "manual"}
 end_state:
     description: k/v pairs of Eth-Trunk info after module execution
     returned: always
     type: dict
     sample: {"trunk_id": "100", "hash_type": "mac", "members_detail": [
-            {"memberIfName": "40GE1/0/24", "memberIfState": "Down"},
-            {"memberIfName": "40GE1/0/25", "memberIfState": "Down"}],
+            {"memberIfName": "10GE1/0/24", "memberIfState": "Down"},
+            {"memberIfName": "10GE1/0/25", "memberIfState": "Down"}],
             "min_links": "1", "mode": "lacp-static"}
 updates:
     description: command sent to the device
@@ -124,7 +133,7 @@ updates:
     type: list
     sample: ["interface Eth-Trunk 100",
              "mode lacp-static",
-             "interface 40GE1/0/25",
+             "interface 10GE1/0/25",
              "eth-trunk 100"]
 changed:
     description: check to see if a change was made on the device
@@ -134,16 +143,8 @@ changed:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
-
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_TRUNK = """
 <filter type="subtree">
@@ -237,6 +238,7 @@ HASH_XML2CLI = {"IP": "src-dst-ip", "MAC": "src-dst-mac", "Enhanced": "enhanced"
 HASH_CLI2XML = {"src-dst-ip": "IP", "src-dst-mac": "MAC", "enhanced": "Enhanced",
                 "dst-ip": "Desip", "dst-mac": "Desmac", "src-ip": "Sourceip", "src-mac": "Sourcemac"}
 
+
 def get_interface_type(interface):
     """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
 
@@ -286,6 +288,7 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
+
 def mode_xml_to_cli_str(mode):
     """convert mode to cli format string"""
 
@@ -293,6 +296,7 @@ def mode_xml_to_cli_str(mode):
         return ""
 
     return MODE_XML2CLI.get(mode)
+
 
 def hash_type_xml_to_cli_str(hash_type):
     """convert trunk hash type netconf xml to cli format string"""
@@ -302,6 +306,7 @@ def hash_type_xml_to_cli_str(hash_type):
 
     return HASH_XML2CLI.get(hash_type)
 
+
 class EthTrunk(object):
     """
     Manages Eth-Trunk interfaces.
@@ -310,7 +315,6 @@ class EthTrunk(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.__init_module__()
 
         # module input info
@@ -321,11 +325,6 @@ class EthTrunk(object):
         self.members = self.module.params['members']
         self.state = self.module.params['state']
         self.force = self.module.params['force']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -338,78 +337,28 @@ class EthTrunk(object):
         # interface info
         self.trunk_info = dict()
 
-        # init netconf connect
-        self.__init_netconf__()
-
     def __init_module__(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
-
-    def __init_netconf__(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
-
-        xml_str = con_obj.xml
-        if "<ok/>" not in xml_str:
-            self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def netconf_set_config(self, xml_str, xml_name):
         """ netconf set config """
 
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, xml_str)
 
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
+        if "<ok/>" not in recv_xml:
+            self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
     def get_trunk_dict(self, trunk_id):
         """ get one interface attributes dict."""
 
         trunk_info = dict()
         conf_str = CE_NC_GET_TRUNK % trunk_id
-        con_obj = self.netconf_get_config(conf_str)
+        recv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in recv_xml:
             return trunk_info
 
         # get trunk base info
@@ -421,7 +370,7 @@ class EthTrunk(object):
             r'<hashType>(.*)</hashType>.*\s*'
             r'<workMode>(.*)</workMode>.*\s*'
             r'<upMemberIfNum>(.*)</upMemberIfNum>.*\s*'
-            r'<memberIfNum>(.*)</memberIfNum>.*', con_obj.xml)
+            r'<memberIfNum>(.*)</memberIfNum>.*', recv_xml)
 
         if base:
             trunk_info = dict(ifName=base[0][0],
@@ -437,7 +386,7 @@ class EthTrunk(object):
         # get trunk member interface info
         member = re.findall(
             r'.*<memberIfName>(.*)</memberIfName>.*\s*'
-            r'<memberIfState>(.*)</memberIfState>.*', con_obj.xml)
+            r'<memberIfState>(.*)</memberIfState>.*', recv_xml)
         trunk_info["TrunkMemberIfs"] = list()
 
         for mem in member:
@@ -574,7 +523,7 @@ class EthTrunk(object):
         # deal force:
         # When true it forces Eth-Trunk members to match
         # what is declared in the members param.
-        if self.force == "true" and self.trunk_info["TrunkMemberIfs"]:
+        if self.force and self.trunk_info["TrunkMemberIfs"]:
             mem_xml = ""
             for mem in self.trunk_info["TrunkMemberIfs"]:
                 if not self.members or mem["memberIfName"].replace(" ", "").upper() not in self.members:
@@ -717,12 +666,12 @@ def main():
                                 'dst-ip', 'dst-mac', 'src-ip', 'src-mac'],
                        type='str'),
         members=dict(required=False, default=None, type='list'),
-        force=dict(required=False, default='false', type='str',
-                   choices=['true', 'false']),
+        force=dict(required=False, default=False, type='bool'),
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = EthTrunk(argument_spec)
     module.work()
 

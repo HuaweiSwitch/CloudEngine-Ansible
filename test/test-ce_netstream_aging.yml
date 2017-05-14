@@ -2,17 +2,24 @@
 
 - name: cloudengine netstream aging module test
   hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
   tasks:
   - name: "rollback"
-    ce_Configure: lines='return,rollback Configureuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "Configure netstream ip timeout active interval , the interval is 40 minutes."
-    ce_netstream_aging: timeout_interval=40 type=ip timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=40 type=ip timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -21,7 +28,7 @@
       that:
         - data.changed == true
   - name: "Configure netstream vxlan timeout active interval , the interval is 40 minutes."
-    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -31,7 +38,7 @@
         - data.changed == true
 
   - name: "Configure netstream ip timeout active interval , the interval is 40 minutes."
-    ce_netstream_aging: timeout_interval=40 type=ip timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=40 type=ip timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -40,7 +47,7 @@
       that:
         - data.changed == false
   - name: "Configure netstream vxlan timeout active interval , the interval is 40 minutes."
-    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -50,7 +57,7 @@
         - data.changed == false
 
   - name: "Delete netstream ip timeout active interval , set the interval to 30 minutes."
-    ce_netstream_aging: type=ip timeout_type=active state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: type=ip timeout_type=active state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -60,7 +67,7 @@
         - data.changed == true
 
   - name: "Delete netstream vxlan timeout active interval ,set the interval to 30 minutes."
-    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=40 type=vxlan timeout_type=active state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -70,7 +77,7 @@
         - data.changed == true
 
   - name: "Configure netstream ip timeout active interval , set the interval to 30 minutes."
-    ce_netstream_aging: timeout_interval=30 type=ip timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=30 type=ip timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -80,7 +87,7 @@
         - data.changed == false
 
   - name: "Configure netstream vxlan timeout active interval ,set the interval to 30 minutes."
-    ce_netstream_aging: timeout_interval=30 type=vxlan timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=30 type=vxlan timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -90,7 +97,7 @@
         - data.changed == false
 
   - name: "Configure netstream ip timeout inactive interval , the interval is 300 seconds."
-    ce_netstream_aging: timeout_interval=300 type=ip timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=300 type=ip timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -99,7 +106,7 @@
       that:
         - data.changed == true
   - name: "Configure netstream vxlan timeout inactive interval , the interval is 300 seconds."
-    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -109,7 +116,7 @@
         - data.changed == true
 
   - name: "Configure netstream ip timeout inactive interval , the interval is 300 seconds."
-    ce_netstream_aging: timeout_interval=300 type=ip timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=300 type=ip timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -118,7 +125,7 @@
       that:
         - data.changed == false
   - name: "Configure netstream vxlan timeout inactive interval , the interval is 300 seconds."
-    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -128,7 +135,7 @@
         - data.changed == false
 
   - name: "Delete netstream ip timeout inactive interval , set the interval to 30 seconds."
-    ce_netstream_aging: type=ip timeout_type=inactive state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: type=ip timeout_type=inactive state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -138,7 +145,7 @@
         - data.changed == true
 
   - name: "Delete netstream vxlan timeout active interval ,set the interval to 30 seconds."
-    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=300 type=vxlan timeout_type=inactive state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -148,7 +155,7 @@
         - data.changed == true
 
   - name: "Configure netstream ip timeout inactive interval , set the interval to 30 minutes."
-    ce_netstream_aging: timeout_interval=30 type=ip timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=30 type=ip timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -158,7 +165,7 @@
         - data.changed == false
 
   - name: "Configure netstream vxlan timeout inactive interval ,set the interval to 30 minutes."
-    ce_netstream_aging: timeout_interval=30 type=vxlan timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=30 type=vxlan timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -168,7 +175,7 @@
         - data.changed == false
 
   - name: "Enable netstream vxlan timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -178,7 +185,7 @@
         - data.changed == true
 
   - name: "Enable netstream ip timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=ip state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=ip state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -188,7 +195,7 @@
         - data.changed == true
 
   - name: "Enable netstream vxlan timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -198,7 +205,7 @@
         - data.changed == false
 
   - name: "Enable netstream ip timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=ip state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=ip state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -208,7 +215,7 @@
         - data.changed == false
 
   - name: "Disable netstream ip timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=ip state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=ip state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -218,7 +225,7 @@
         - data.changed == true
 
   - name: "Disable netstream vxlan timeout by tcp session."
-    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -228,7 +235,7 @@
         - data.changed == true
 
   - name: "Disable netstream vxlan timeout by tcp session,change should be false."
-    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=tcp-session type=vxlan state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -238,7 +245,7 @@
         - data.changed == false
 
   - name: "Manual reset netstream vxlan timeout."
-    ce_netstream_aging: timeout_type=manual type=vxlan manual_slot=1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=manual type=vxlan manual_slot=1 provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -248,7 +255,7 @@
         - data.changed == true
 
   - name: "Manual reset netstream ip timeout."
-    ce_netstream_aging: timeout_type=manual type=ip manual_slot=1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_type=manual type=ip manual_slot=1 provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -258,7 +265,7 @@
         - data.changed == true
 
   - name: "Configure netstream ip timeout active interval , the interval is 400 minutes."
-    ce_netstream_aging: timeout_interval=400 type=ip timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=400 type=ip timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -267,7 +274,7 @@
       that:
         - data | failed
   - name: "Configure netstream vxlan timeout active interval , the interval is 61 minutes."
-    ce_netstream_aging: timeout_interval=61 type=vxlan timeout_type=active state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=61 type=vxlan timeout_type=active state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -277,7 +284,7 @@
         - data | failed
 
   - name: "Configure netstream ip timeout inactive interval , the interval is 601 seconds."
-    ce_netstream_aging: timeout_interval=601 type=ip timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=601 type=ip timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -286,7 +293,7 @@
       that:
         - data | failed
   - name: "Configure netstream vxlan timeout active interval , the interval is 0 seconds."
-    ce_netstream_aging: timeout_interval=0 type=vxlan timeout_type=inactive state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: timeout_interval=0 type=vxlan timeout_type=inactive state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -296,7 +303,7 @@
         - data | failed
 
   - name: "Manual reset netstream vxlan timeout."
-    ce_netstream_aging: type=vxlan timeout_type=manual manual_slot=100 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: type=vxlan timeout_type=manual manual_slot=100 provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -306,7 +313,7 @@
         - data | failed
 
   - name: "Manual reset netstream ip timeout."
-    ce_netstream_aging: type=ip timeout_type=manual manual_slot=100 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_netstream_aging: type=ip timeout_type=manual manual_slot=100 provider="{{ cli }}"
     register: data
     ignore_errors: true
 

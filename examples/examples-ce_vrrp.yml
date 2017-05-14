@@ -1,0 +1,83 @@
+---
+
+- name: vrrp module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: set vrrp version
+    ce_vrrp:
+      version: v3
+      provider: "{{ cli }}"
+
+  - name: set vrrp gratuitous-arp interval
+    ce_vrrp:
+      gratuitous_arp_interval: 40
+      mlag_id: 4
+      provider: "{{ cli }}"
+
+  - name: set vrrp recover-delay
+    ce_vrrp:
+      recover_delay: 10
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid virtual-ip
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      virtual_ip: 10.14.2.7
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid admin
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      vrrp_type: admin
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid fast_resume
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      fast_resume: enable
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid holding-multiplier
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      holding_multiplier: 4
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid preempt timer delay
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      preempt_timer_delay: 10
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid admin-vrrp
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      admin_interface: 40GE2/0/9
+      admin_vrid: 2
+      vrrp_type: member
+      provider: "{{ cli }}"
+
+  - name: set vrrp vrid authentication-mode
+    ce_vrrp:
+      interface: 40GE2/0/8
+      vrid: 1
+      is_plain: true
+      auth_mode: simple
+      auth_key: aaa
+      provider: "{{ cli }}"

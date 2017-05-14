@@ -1,19 +1,32 @@
----
-
-- name: cloudengine snmp traps module test
+- name: CloudEngine snmp traps test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_snmp_traps: feature_name=all host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP trap all enable"
+    ce_snmp_traps:
+      state:  present
+      feature_name:  all
+      provider: "{{ cli }}"
 
-  - ce_snmp_traps: feature_name=all host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP trap interface"
+    ce_snmp_traps:
+      state:  present
+      interface_type:  40GE
+      interface_number:  1/0/1
+      provider: "{{ cli }}"
 
-  - ce_snmp_traps: interface_type=40GE interface_number=2/0/1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
-
-  - ce_snmp_traps: interface_type=40GE interface_number=2/0/1 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
-
-  - ce_snmp_traps: port_number=2222 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
-
-  - ce_snmp_traps: port_number=2222 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP trap port"
+    ce_snmp_traps:
+      state:  present
+      port_number:  2222
+      provider: "{{ cli }}"

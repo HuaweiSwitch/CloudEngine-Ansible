@@ -1,0 +1,37 @@
+---
+
+- name: startup module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Display startup information
+    ce_startup:
+      action: display
+      provider: "{{ cli }}"
+
+  - name: Set startup patch file
+    ce_startup:
+      patch_file: 2.PAT
+      slot: all
+      provider: "{{ cli }}"
+
+  - name: Set startup software file
+    ce_startup:
+      software_file: aa.cc
+      slot: 1
+      provider: "{{ cli }}"
+
+  - name: Set startup cfg file
+    ce_startup:
+      cfg_file: 2.cfg
+      slot: 1
+      provider: "{{ cli }}"

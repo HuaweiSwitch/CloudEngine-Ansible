@@ -1,15 +1,43 @@
----
-
-- name: cloudengine info center debug module test
+- name: CloudEngine info center debug test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_info_center_debug: state=present debug_time_stamp=date_boot host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config debug time stamp"
+    ce_info_center_debug:
+      state:  present
+      debug_time_stamp:  date_boot
+      provider: "{{ cli }}"
 
-  - ce_info_center_debug: state=absent debug_time_stamp=date_boot host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Undo debug time stamp"
+    ce_info_center_debug:
+      state:  absent
+      debug_time_stamp:  date_boot
+      provider: "{{ cli }}"
 
-  - ce_info_center_debug: state=present module_name=aaa chnl_id=9 debug_enable=true debug_level=alert host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config debug module log level"
+    ce_info_center_debug:
+      state:  present
+      module_name:  aaa
+      channel_id:  1
+      debug_enable:  true
+      debug_level:  error
+      provider: "{{ cli }}"
 
-  - e_info_center_debug: state=absent module_name=aaa chnl_id=9 debug_enable=true debug_level=alert host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Undo debug module log level"
+    ce_info_center_debug:
+      state:  absent
+      module_name:  aaa
+      channel_id:  1
+      debug_enable:  true
+      debug_level:  error
+      provider: "{{ cli }}"

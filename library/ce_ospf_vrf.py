@@ -28,7 +28,6 @@ short_description: Manages configuration of an OSPF VPN instance.
 description:
     - Manages configuration of an OSPF VPN instance.
 author: Yang yang (@CloudEngine Ansible)
-extends_documentation_fragment: cloudengine
 options:
     ospf:
         description:
@@ -63,34 +62,33 @@ options:
     lsaalflag:
         description:
             - Specifies the mode of timer to calculate interval of arrive LSA.
-              If set the parameter but not specifies value ,the default will be used.
-              If true use general timer
-              If false use intelligent timer
+              If set the parameter but not specifies value,the default will be used.
+              If true use general timer.
+              If false use intelligent timer.
         required: false
-        choices: ['true','false']
-        default: false
+        default: False
     lsaainterval:
         description:
             - Specifies the interval of arrive LSA when use the general timer.
-              Valid value is an integer , in millisecond , from 0 to 10000.
+              Valid value is an integer, in millisecond, from 0 to 10000.
         required: false
         default: null
     lsaamaxinterval:
         description:
             - Specifies the max interval of arrive LSA when use the intelligent timer.
-              Valid value is an integer , in millisecond , from 0 to 10000, the default value is 1000.
+              Valid value is an integer, in millisecond, from 0 to 10000, the default value is 1000.
         required: false
         default: null
     lsaastartinterval:
         description:
             - Specifies the start interval of arrive LSA when use the intelligent timer.
-              Valid value is an integer , in millisecond , from 0 to 10000, the default value is 500.
+              Valid value is an integer, in millisecond, from 0 to 10000, the default value is 500.
         required: false
         default: null
     lsaaholdinterval:
         description:
             - Specifies the hold interval of arrive LSA when use the intelligent timer.
-              Valid value is an integer , in millisecond , from 0 to 10000, the default value is 500.
+              Valid value is an integer, in millisecond, from 0 to 10000, the default value is 500.
         required: false
         default: null
     lsaointervalflag:
@@ -98,72 +96,71 @@ options:
             - Specifies whether cancel the interval of LSA originate or not.
               If set the parameter but noe specifies value ,the default will be used.
               true:cancel the interval of LSA originate,the interval is 0.
-              false:do not cancel the interval of LSA originate
+              false:do not cancel the interval of LSA originate.
         required: false
-        choices: ['true','false']
-        default: false
+        default: False
     lsaointerval:
         description:
             - Specifies the interval of originate LSA .
-              Valid value is an integer , in second , from 0 to 10, the default value is 5.
+              Valid value is an integer, in second, from 0 to 10, the default value is 5.
         required: false
         default: null
     lsaomaxinterval:
         description:
             - Specifies the max interval of originate LSA .
-              Valid value is an integer , in millisecond , from 1 to 10000, the default value is 5000.
+              Valid value is an integer, in millisecond, from 1 to 10000, the default value is 5000.
         required: false
         default: null
     lsaostartinterval:
         description:
             - Specifies the start interval of originate LSA .
-              Valid value is an integer , in millisecond , from 0 to 1000, the default value is 500.
+              Valid value is an integer, in millisecond, from 0 to 1000, the default value is 500.
         required: false
         default: null
     lsaoholdinterval:
         description:
             - Specifies the hold interval of originate LSA .
-              Valid value is an integer , in millisecond , from 0 to 5000, the default value is 1000.
+              Valid value is an integer, in millisecond, from 0 to 5000, the default value is 1000.
         required: false
         default: null
     spfintervaltype:
         description:
             - Specifies the mode of timer which used to calculate SPF.
-              If set the parameter but noe specifies value ,the default will be used.
-              If is intelligent-timer, then use intelligent timer
-              If is timer, then use second level  timer
-              If is millisecond, then use millisecond  level timer
+              If set the parameter but noe specifies value, the default will be used.
+              If is intelligent-timer, then use intelligent timer.
+              If is timer, then use second level timer.
+              If is millisecond, then use millisecond level timer.
         required: false
         choices: ['intelligent-timer','timer','millisecond']
         default: intelligent-timer
     spfinterval:
         description:
             - Specifies the interval to calculate SPF when use second level  timer.
-              Valid value is an integer , in second , from 1 to 10.
+              Valid value is an integer, in second, from 1 to 10.
         required: false
         default: null
     spfintervalmi:
         description:
             - Specifies the interval to calculate SPF when use millisecond level  timer.
-              Valid value is an integer , in millisecond , from 1 to 10000.
+              Valid value is an integer, in millisecond, from 1 to 10000.
         required: false
         default: null
     spfmaxinterval:
         description:
             - Specifies the max interval to calculate SPF when use intelligent timer.
-              Valid value is an integer , in millisecond , from 1 to 20000, the default value is 5000.
+              Valid value is an integer, in millisecond, from 1 to 20000, the default value is 5000.
         required: false
         default: null
     spfstartinterval:
         description:
             - Specifies the start interval to calculate SPF when use intelligent timer.
-              Valid value is an integer , in millisecond , from 1 to 1000, the default value is 50.
+              Valid value is an integer, in millisecond, from 1 to 1000, the default value is 50.
         required: false
         default: null
     spfholdinterval:
         description:
             - Specifies the hold interval to calculate SPF when use intelligent timer.
-              Valid value is an integer , in millisecond , from 1 to 5000, the default value is 200.
+              Valid value is an integer, in millisecond, from 1 to 5000, the default value is 200.
         required: false
         default: null
     state:
@@ -175,14 +172,27 @@ options:
 '''
 
 EXAMPLES = '''
-- ce_ospf_vrf:
-    ospf=2
-    route_id=2.2.2.2
-    lsaointervalflag=false
-    lsaointerval=2
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: ospf vrf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configure ospf route id
+    ce_ospf_vrf:
+      ospf: 2
+      route_id: 2.2.2.2
+      lsaointervalflag: False
+      lsaointerval: 2
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -197,10 +207,10 @@ proposed:
         "lsaainterval": null,
         "lsaamaxinterval": "1000",
         "lsaastartinterval": "500",
-        "lsaalflag": "false",
+        "lsaalflag": "False",
         "lsaoholdinterval": "1000",
         "lsaointerval": "2",
-        "lsaointervalflag": "false",
+        "lsaointervalflag": "False",
         "lsaomaxinterval": "5000",
         "lsaostartinterval": "500",
         "process_id": "2",
@@ -278,17 +288,10 @@ changed:
     type: boolean
     sample: False
 '''
-import sys
-from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
 
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from xml.etree import ElementTree
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_OSPF_VRF = """
     <filter type="subtree">
@@ -386,7 +389,6 @@ class OspfVrf(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -413,11 +415,6 @@ class OspfVrf(object):
         self.spfholdinterval = self.module.params['spfholdinterval']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # ospf info
         self.ospf_info = dict()
 
@@ -435,32 +432,16 @@ class OspfVrf(object):
         self.bandwidth_changed = False
         self.description_changed = False
         self.vrf_changed = False
-        # init netconf connect
-        self.init_netconf()
 
     def init_module(self):
         """" init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -975,10 +956,7 @@ class OspfVrf(object):
             if not self.is_valid_bandwidth():
                 self.module.fail_json(
                     msg='Error: The ospf bandwidth reference should between 1 - 2147483648.')
-        if self.lsaalflag == '':
-            self.module.fail_json(
-                msg='Error: The ospf lsa arrival flag should not be null.')
-        if self.lsaalflag == 'true':
+        if self.lsaalflag is True:
             if not self.is_valid_lsa_arrival_interval():
                 self.module.fail_json(
                     msg='Error: The ospf lsa arrival interval should between 0 - 10000.')
@@ -986,7 +964,7 @@ class OspfVrf(object):
                 self.module.fail_json(
                     msg='Error: Non-Intelligent Timer and Intelligent Timer Interval of '
                         'lsa-arrival-interval can not configured at the same time.')
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             if self.lsaainterval:
                 self.module.fail_json(
                     msg='Error: The parameter of lsa arrival interval command is invalid, '
@@ -1006,10 +984,7 @@ class OspfVrf(object):
                 if not self.isvalidlsaholdarrivalinterval():
                     self.module.fail_json(
                         msg='Error: The ospf lsa arrival hold interval should between 1 - 5000.')
-        if self.lsaointervalflag == '':
-            self.module.fail_json(
-                msg='Error: The ospf lsa originate interval flag should not be null.')
-        if self.lsaointervalflag == 'true':
+        if self.lsaointervalflag is True:
             if self.lsaointerval or self.lsaomaxinterval \
                     or self.lsaostartinterval or self.lsaoholdinterval:
                 self.module.fail_json(
@@ -1094,15 +1069,11 @@ class OspfVrf(object):
         self.ospf_info["ospfsite"] = list()
 
         getxmlstr = CE_NC_GET_OSPF_VRF
-        try:
-            get_obj = self.netconf.get_config(filter=getxmlstr)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        if 'data/' in get_obj.xml:
+        xml_str = get_nc_config(self.module, getxmlstr)
+        if 'data/' in xml_str:
             return
-        xml_str = get_obj.xml.replace('\r', '').replace('\n', '').\
+
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -1219,12 +1190,9 @@ class OspfVrf(object):
                 configxmlstr = CE_NC_DELETE_OSPF % (
                     self.ospf, self.get_exist_route(), self.get_exist_vrf())
                 conf_str = build_config_xml(configxmlstr)
-                try:
-                    con_obj = self.netconf.set_config(config=conf_str)
-                    self.check_response(con_obj, "OPERATE_VRF_AF")
-                except RPCError:
-                    err = sys.exc_info()[1]
-                    self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+
+                recv_xml = set_nc_config(self.module, conf_str)
+                self.check_response(recv_xml, "OPERATE_VRF_AF")
                 self.changed = True
                 return
         if self.vrf != '_public_':
@@ -1240,12 +1208,8 @@ class OspfVrf(object):
                 configxmlstr = CE_NC_DELETE_OSPF % (
                     self.ospf, self.get_exist_route(), self.get_exist_vrf())
                 conf_str = build_config_xml(configxmlstr)
-                try:
-                    con_obj = self.netconf.set_config(config=conf_str)
-                    self.check_response(con_obj, "OPERATE_VRF_AF")
-                except RPCError:
-                    err = sys.exc_info()[1]
-                    self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+                recv_xml = set_nc_config(self.module, conf_str)
+                self.check_response(recv_xml, "OPERATE_VRF_AF")
                 self.changed = True
                 return
         if self.bandwidth:
@@ -1272,7 +1236,7 @@ class OspfVrf(object):
                 self.description_changed = True
                 description = ''
 
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             lsa_in_interval = ''
             if self.state == 'present':
                 if self.lsaamaxinterval:
@@ -1311,7 +1275,10 @@ class OspfVrf(object):
                         self.lsa_arrival_changed = True
         else:
             if self.state == 'present':
-                if self.lsaalflag != self.get_exist_lsa_a_interval_flag():
+                lsaalflag = "false"
+                if self.lsaalflag is True:
+                    lsaalflag = "true"
+                if lsaalflag != self.get_exist_lsa_a_interval_flag():
                     self.lsa_arrival_changed = True
                     if self.lsaainterval is None:
                         self.module.fail_json(
@@ -1328,11 +1295,11 @@ class OspfVrf(object):
                     if self.lsaainterval != self.get_exist_lsa_a_interval():
                         self.module.fail_json(
                             msg='Error: The lsaainterval %s is not exist.' % self.lsaainterval)
-                    self.lsaalflag = 'false'
+                    self.lsaalflag = False
                     lsa_in_interval = ''
                     self.lsa_arrival_changed = True
 
-        if self.lsaointervalflag == 'false':
+        if self.lsaointervalflag is False:
             if self.state == 'present':
                 if self.lsaomaxinterval:
                     if self.lsaomaxinterval != self.getexistlsaomaxinterval():
@@ -1389,7 +1356,7 @@ class OspfVrf(object):
                     lsa_originate_hold_interval = '1000'
             else:
                 if self.getexistlsaointerval_flag() == 'true':
-                    self.lsaointervalflag = 'false'
+                    self.lsaointervalflag = False
                     self.lsa_originate_changed = True
         if self.spfintervaltype != self.get_exist_spf_interval_type():
             self.spf_changed = True
@@ -1468,24 +1435,24 @@ class OspfVrf(object):
             return
         else:
             self.changed = True
-
+        lsaointervalflag = "false"
+        lsaalflag = "false"
+        if self.lsaointervalflag is True:
+            lsaointervalflag = "true"
+        if self.lsaalflag is True:
+            lsaalflag = "true"
         configxmlstr = CE_NC_CREATE_OSPF_VRF % (
             self.ospf, config_route_id_xml, vrf,
-            description, bandwidth_reference, self.lsaalflag,
+            description, bandwidth_reference, lsaalflag,
             lsa_in_interval, lsa_arrival_max_interval, lsa_arrival_start_interval,
-            lsa_arrival_hold_interval, self.lsaointervalflag, lsa_originate_interval,
+            lsa_arrival_hold_interval, lsaointervalflag, lsa_originate_interval,
             lsa_originate_max_interval, lsa_originate_start_interval, lsa_originate_hold_interval,
             self.spfintervaltype, spf_interval, spf_interval_milli,
             spf_max_interval, spf_start_interval, spf_hold_interval)
 
         conf_str = build_config_xml(configxmlstr)
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "OPERATE_VRF_AF")
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        recv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(recv_xml, "OPERATE_VRF_AF")
 
     def get_existing(self):
         """get existing info"""
@@ -1541,7 +1508,7 @@ class OspfVrf(object):
                         'bandwidth-reference %s' % (self.get_exist_bandwidth()))
             else:
                 self.updates_cmd.append('undo bandwidth-reference')
-        if self.lsaalflag == 'true':
+        if self.lsaalflag is True:
             if self.lsa_arrival_changed:
                 if self.state == 'present':
                     self.updates_cmd.append(
@@ -1550,7 +1517,7 @@ class OspfVrf(object):
                     self.updates_cmd.append(
                         'undo lsa-arrival-interval')
 
-        if self.lsaalflag == 'false':
+        if self.lsaalflag is False:
             if self.lsa_arrival_changed:
                 if self.state == 'present':
                     if self.get_exist_lsa_a_max_interval() != '1000' \
@@ -1566,7 +1533,7 @@ class OspfVrf(object):
                             and self.get_exist_lsa_a_hold_interval() == '500':
                         self.updates_cmd.append(
                             'undo lsa-arrival-interval')
-        if self.lsaointervalflag == 'false':
+        if self.lsaointervalflag is False:
             if self.lsa_originate_changed:
                 if self.state == 'present':
                     if self.getexistlsaointerval() != '5' \
@@ -1581,7 +1548,7 @@ class OspfVrf(object):
                 else:
                     self.updates_cmd.append(
                         'undo lsa-originate-interval')
-        if self.lsaointervalflag == 'true':
+        if self.lsaointervalflag is True:
             if self.lsa_originate_changed:
                 if self.state == 'present':
                     self.updates_cmd.append('lsa-originate-interval 0 ')
@@ -1654,14 +1621,12 @@ def main():
         vrf=dict(required=False, type='str', default='_public_'),
         description=dict(required=False, type='str'),
         bandwidth=dict(required=False, type='str'),
-        lsaalflag=dict(required=False, default='false',
-                       choices=['true', 'false']),
+        lsaalflag=dict(type='bool', default=False),
         lsaainterval=dict(required=False, type='str'),
         lsaamaxinterval=dict(required=False, type='str'),
         lsaastartinterval=dict(required=False, type='str'),
         lsaaholdinterval=dict(required=False, type='str'),
-        lsaointervalflag=dict(
-            required=False, default='false', choices=['true', 'false']),
+        lsaointervalflag=dict(type='bool', default=False),
         lsaointerval=dict(required=False, type='str'),
         lsaomaxinterval=dict(required=False, type='str'),
         lsaostartinterval=dict(required=False, type='str'),
@@ -1676,6 +1641,7 @@ def main():
         state=dict(required=False, choices=['present', 'absent'], default='present'),
     )
 
+    argument_spec.update(ce_argument_spec)
     module = OspfVrf(argument_spec)
     module.work()
 

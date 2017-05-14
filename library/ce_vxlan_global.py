@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = """
 ---
 module: ce_vxlan_global
-version_added: "2.3"
-short_description: Manages global attributes of VXLAN and bridge domain.
+version_added: "2.4"
+short_description: Manages global attributes of VXLAN and bridge domain on HUAWEI CloudEngine devices.
 description:
-    - Manages global attributes of VXLAN and bridge domain.
+    - Manages global attributes of VXLAN and bridge domain on HUAWEI CloudEngine devices.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     bridge_domain_id:
         description:
@@ -90,13 +89,25 @@ options:
 """
 
 EXAMPLES = '''
-# Create bridge domain and set tunnel mode to VXLAN
-- ce_vxlan_global:
-    bridge_domain_id: 100
-    nvo3_acl_extend: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan global module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Create bridge domain and set tunnel mode to VXLAN
+    ce_vxlan_global:
+      bridge_domain_id: 100
+      nvo3_acl_extend: enable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -129,17 +140,11 @@ changed:
 '''
 
 import re
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_netconf, get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config, get_nc_config
+from ansible.module_utils.ce import ce_argument_spec
 
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
 
 CE_NC_GET_BRIDGE_DOMAIN = """
     <filter type="subtree">
@@ -162,6 +167,7 @@ def is_config_exist(cmp_cfg, test_cfg):
 
     return bool(test_cfg in cmp_cfg)
 
+
 def get_nvo3_gw_enhanced(cmp_cfg):
     """get the Layer 3 VXLAN Gateway to Work in Non-loopback Mode """
 
@@ -172,6 +178,7 @@ def get_nvo3_gw_enhanced(cmp_cfg):
     else:
         return get[0]
 
+
 class VxlanGlobal(object):
     """
     Manages global attributes of VXLAN and bridge domain.
@@ -180,7 +187,6 @@ class VxlanGlobal(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -194,11 +200,6 @@ class VxlanGlobal(object):
         self.bridge_domain_id = self.module.params['bridge_domain_id']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.config = ""  # current config
         self.bd_info = list()
@@ -210,55 +211,25 @@ class VxlanGlobal(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
-
-    def init_netconf(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
 
-        exp = " | include vxlan|assign | exclude undo"
-        return self.module.config.get_config(include_defaults=True, regular=exp)
+        flags = list()
+        exp = " include-default | include vxlan|assign | exclude undo"
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -277,12 +248,11 @@ class VxlanGlobal(object):
 
         bd_info = list()
         conf_str = CE_NC_GET_BRIDGE_DOMAIN
-        con_obj = self.netconf_get_config(conf_str)
-
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return bd_info
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -583,7 +553,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanGlobal(argument_spec)
     module.work()
 

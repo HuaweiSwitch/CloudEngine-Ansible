@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_file_copy
-version_added: "2.3"
-short_description: Copy a file to a remote cloudengine device over SCP.
+version_added: "2.4"
+short_description: Copy a file to a remote cloudengine device over SCP on HUAWEI CloudEngine switches.
 description:
-    - Copy a file to a remote cloudengine device over SCP.
-extends_documentation_fragment: cloudengine
+    - Copy a file to a remote cloudengine device over SCP on HUAWEI CloudEngine switches.
 author:
     - Zhou Zhijin (@CloudEngine-Ansible)
 notes:
@@ -63,8 +62,26 @@ options:
 '''
 
 EXAMPLES = '''
-#Copy a local file to remote device
-- ce_file_copy: local_file=/usr/vrpcfg.cfg remote_file=/vrpcfg.cfg file_system=flash:
+- name: File copy test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Copy a local file to remote device"
+    ce_file_copy:
+      local_file: /usr/vrpcfg.cfg
+      remote_file: /vrpcfg.cfg
+      file_system: 'flash:'
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -90,26 +107,14 @@ remote_file:
     sample: '/vrpcfg.zip'
 '''
 
-import sys
 import re
 import os
 import time
 from xml.etree import ElementTree
 import paramiko
 from ansible.module_utils.shell import ShellError
-from ansible.module_utils.basic import get_exception
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.netcli import FailedConditionsError, FailedConditionalError
-from ansible.module_utils.netcli import AddCommandError
-from ansible.module_utils.cloudengine import get_netconf
-from ansible.module_utils.netcli import CommandRunner
-from ansible.module_utils.cloudengine import get_cli_exception
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import get_exception, AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, run_commands, get_nc_config
 
 try:
     from scp import SCPClient
@@ -142,13 +147,48 @@ CE_NC_GET_SCP_ENABLE = """
 """
 
 
+def get_cli_exception(exc=None):
+    """Get cli exception message"""
+
+    msg = list()
+    if not exc:
+        exc = get_exception()
+    if exc:
+        errs = str(exc).split("\r\n")
+        for err in errs:
+            if not err:
+                continue
+            if "matched error in response:" in err:
+                continue
+            if " at '^' position" in err:
+                err = err.replace(" at '^' position", "")
+            if err.replace(" ", "") == "^":
+                continue
+            if len(err) > 2 and err[0] in ["<", "["] and err[-1] in [">", "]"]:
+                continue
+            if err[-1] == ".":
+                err = err[:-1]
+            if err.replace(" ", "") == "":
+                continue
+            msg.append(err)
+    else:
+        msg = ["Error: Fail to get cli exception message."]
+
+    while msg[-1][-1] == ' ':
+        msg[-1] = msg[-1][:-1]
+
+    if msg[-1][-1] != ".":
+        msg[-1] += "."
+
+    return ", ".join(msg).capitalize()
+
+
 class FileCopy(object):
-    """file copy function class"""
+    """File copy function class"""
 
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # file copy parameters
@@ -156,80 +196,29 @@ class FileCopy(object):
         self.remote_file = self.module.params['remote_file']
         self.file_system = self.module.params['file_system']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.transfer_result = None
         self.changed = False
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
-        """ init_module"""
+        """Init module"""
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init_netconf"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def check_response(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
-
-        xml_str = con_obj.xml
-        if "<ok/>" not in xml_str:
-            self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace('\r\n', ''))
-
-        return con_obj
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace('\r\n', ''))
-
-        return con_obj
-
     def remote_file_exists(self, dst, file_system='flash:'):
-        """ remote file whether exists """
+        """Remote file whether exists"""
 
         full_path = file_system + dst
         file_name = os.path.basename(full_path)
         file_path = os.path.dirname(full_path)
         file_path = file_path + '/'
         xml_str = CE_NC_GET_FILE_INFO % (file_name, file_path)
-        con_obj = self.netconf_get_config(xml_str)
-        if "<data/>" in con_obj.xml:
+        ret_xml = get_nc_config(self.module, xml_str)
+        if "<data/>" in ret_xml:
             return False, 0
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = ret_xml.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -246,58 +235,23 @@ class FileCopy(object):
         return False, 0
 
     def local_file_exists(self):
-        """ local file whether exists """
+        """Local file whether exists"""
 
         return os.path.isfile(self.local_file)
 
-    def excute_command(self, commands):
-        """ excute_command"""
-
-        output = ''
-        runner = CommandRunner(self.module)
-        for cmd in commands:
-            try:
-                runner.add_command(**cmd)
-            except AddCommandError:
-                self.module.fail_json(
-                    msg='duplicate command detected: %s' % cmd)
-
-        try:
-            runner.run()
-        except FailedConditionsError:
-            exc = get_exception()
-            self.module.fail_json(
-                msg=get_cli_exception(exc), failed_conditions=exc.failed_conditions)
-        except FailedConditionalError:
-            exc = get_exception()
-            self.module.fail_json(
-                msg=get_cli_exception(exc), failed_conditional=exc.failed_conditional)
-        except NetworkError:
-            exc = get_exception()
-            self.module.fail_json(msg=get_cli_exception(exc))
-
-        for cmd in commands:
-            try:
-                output = runner.get_command(cmd['command'], cmd.get('output'))
-            except ValueError:
-                self.module.fail_json(
-                    msg='command not executed due to check_mode, see warnings')
-        return output
-
     def enough_space(self):
-        """ whether device has enough space"""
+        """Whether device has enough space"""
 
         commands = list()
-        cmd = {'output': None, 'command': 'dir %s' % self.file_system}
+        cmd = 'dir %s' % self.file_system
         commands.append(cmd)
-        output = self.excute_command(commands)
+        output = run_commands(self.module, commands)
         if not output:
             return True
 
-        match = re.search(r'\((.*) KB free\)', output)
+        match = re.search(r'\((.*) KB free\)', output[0])
         kbytes_free = match.group(1)
         kbytes_free = kbytes_free.replace(',', '')
-
         file_size = os.path.getsize(self.local_file)
         if int(kbytes_free) * 1024 > file_size:
             return True
@@ -305,7 +259,7 @@ class FileCopy(object):
         return False
 
     def transfer_file(self, dest):
-        """ begin to transfer file by scp"""
+        """Begin to transfer file by scp"""
 
         if not self.local_file_exists():
             self.module.fail_json(
@@ -315,16 +269,14 @@ class FileCopy(object):
             self.module.fail_json(
                 msg='Could not transfer file. Not enough space on device.')
 
-        hostname = self.module.params['host']
-        username = self.module.params['username']
-        password = self.module.params['password']
-        port = self.module.params['port']
+        hostname = self.module.params['provider']['host']
+        username = self.module.params['provider']['username']
+        password = self.module.params['provider']['password']
+        port = self.module.params['provider']['port']
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname=hostname, username=username,
-                    password=password, port=port)
-
+        ssh.connect(hostname=hostname, username=username, password=password, port=port)
         full_remote_path = '{}{}'.format(self.file_system, dest)
         scp = SCPClient(ssh.get_transport())
         try:
@@ -346,14 +298,14 @@ class FileCopy(object):
         return True
 
     def get_scp_enable(self):
-        """ get scp enable state"""
+        """Get scp enable state"""
 
         xml_str = CE_NC_GET_SCP_ENABLE
-        con_obj = self.netconf_get_config(xml_str)
-        if "<data/>" in con_obj.xml:
+        ret_xml = get_nc_config(self.module, xml_str)
+        if "<data/>" in ret_xml:
             return False
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = ret_xml.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -370,7 +322,7 @@ class FileCopy(object):
         return False
 
     def work(self):
-        """ excute task """
+        """Excute task """
 
         if not HAS_SCP:
             self.module.fail_json(
@@ -427,15 +379,17 @@ class FileCopy(object):
 
 
 def main():
-    """ main function entry"""
+    """Main function entry"""
+
     argument_spec = dict(
         local_file=dict(required=True),
         remote_file=dict(required=False),
         file_system=dict(required=False, default='flash:')
     )
-
+    argument_spec.update(ce_argument_spec)
     filecopy_obj = FileCopy(argument_spec)
     filecopy_obj.work()
+
 
 if __name__ == '__main__':
     main()

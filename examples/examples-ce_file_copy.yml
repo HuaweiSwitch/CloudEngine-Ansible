@@ -3,6 +3,12 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   
   tasks:  
-  - ce_file_copy: local_file=/usr/zzj.cfg remote_file=/zzj.cfg file_system='flash:' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_file_copy: local_file=/usr/zzj.cfg remote_file=/zzj.cfg file_system='flash:' provider="{{ cli }}"

@@ -18,17 +18,17 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = """
 ---
 module: ce_vxlan_gateway
-version_added: "2.3"
-short_description: Manages gateway for the VXLAN network.
+version_added: "2.4"
+short_description: Manages gateway for the VXLAN network on HUAWEI CloudEngine devices.
 description:
-    - Configuring Centralized All-Active Gateways or Distributed Gateway for the VXLAN Network.
+    - Configuring Centralized All-Active Gateways or Distributed Gateway for
+      the VXLAN Network on HUAWEI CloudEngine devices.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 notes:
     - Ensure All-Active Gateways or Distributed Gateway for the VXLAN Network can not configure at the same time.
 options:
@@ -49,7 +49,7 @@ options:
             - Specifies the name of a VPN instance bound to a DFS group.
               The value is a string of 1 to 31 case-sensitive characters without spaces.
               If the character string is quoted by double quotation marks, the character string can contain spaces.
-              The value _public_ is reserved and cannot be used as the VPN instance name.
+              The value C(_public_) is reserved and cannot be used as the VPN instance name.
         required: false
         default: null
     dfs_udp_port:
@@ -75,7 +75,7 @@ options:
             - Specifies the name of the VPN instance that is associated with all-active gateway peer.
               The value is a string of 1 to 31 case-sensitive characters, spaces not supported.
               When double quotation marks are used around the string, spaces are allowed in the string.
-              The value _public_ is reserved and cannot be used as the VPN instance name.
+              The value C(_public_) is reserved and cannot be used as the VPN instance name.
         required: false
         default: null
     vpn_instance:
@@ -83,7 +83,7 @@ options:
             - Specifies the name of a VPN instance.
               The value is a string of 1 to 31 case-sensitive characters, spaces not supported.
               When double quotation marks are used around the string, spaces are allowed in the string.
-              The value _public_ is reserved and cannot be used as the VPN instance name.
+              The value C(_public_) is reserved and cannot be used as the VPN instance name.
         required: false
         default: null
     vpn_vni:
@@ -103,14 +103,14 @@ options:
             - Specifies the name of the VPN instance that is associated with the interface.
               The value is a string of 1 to 31 case-sensitive characters, spaces not supported.
               When double quotation marks are used around the string, spaces are allowed in the string.
-              The value _public_ is reserved and cannot be used as the VPN instance name.
+              The value C(_public_) is reserved and cannot be used as the VPN instance name.
         required: false
         default: null
     vbdif_mac:
         description:
             - Specifies a MAC address for a VBDIF interface.
-              The value is in the format of H-H-H. Each H is a 4-digit hexadecimal number, such as 00e0 or fc01.
-              If an H contains less than four digits, 0s are added ahead. For example, e0 is equal to 00e0.
+              The value is in the format of H-H-H. Each H is a 4-digit hexadecimal number, such as C(00e0) or C(fc01).
+              If an H contains less than four digits, 0s are added ahead. For example,  C(e0) is equal to C(00e0).
               A MAC address cannot be all 0s or 1s or a multicast MAC address.
         required: false
         default: null
@@ -136,31 +136,39 @@ options:
 """
 
 EXAMPLES = '''
-# Configuring Centralized All-Active Gateways for the VXLAN Network
-- ce_vxlan_gateway:
-    dfs_id: 1
-    dfs_source_ip: 6.6.6.6
-    dfs_all_active: enable
-    dfs_peer_ip: 7.7.7.7
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Bind the VPN instance to a Layer 3 gateway, enable distributed gateway, and configure host route advertisement.
-- ce_vxlan_gateway:
-    vbdif_name: Vbdif100
-    vbdif_bind_vpn: vpn1
-    arp_distribute_gateway: enable
-    arp_direct_route: enable
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Assign a VNI to a VPN instance.
-- ce_vxlan_gateway:
-    vpn_instance: vpn1
-    vpn_vni: 100
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan gateway module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configuring Centralized All-Active Gateways for the VXLAN Network
+    ce_vxlan_gateway:
+      dfs_id: 1
+      dfs_source_ip: 6.6.6.6
+      dfs_all_active: enable
+      dfs_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+  - name: Bind the VPN instance to a Layer 3 gateway, enable distributed gateway, and configure host route advertisement.
+    ce_vxlan_gateway:
+      vbdif_name: Vbdif100
+      vbdif_bind_vpn: vpn1
+      arp_distribute_gateway: enable
+      arp_direct_route: enable
+      provider: "{{ cli }}"
+  - name: Assign a VNI to a VPN instance.
+    ce_vxlan_gateway:
+      vpn_instance: vpn1
+      vpn_vni: 100
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -196,8 +204,10 @@ changed:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
+
 
 def is_config_exist(cmp_cfg, test_cfg):
     """is configuration exist?"""
@@ -341,6 +351,7 @@ def get_vbdif_mac(config):
     else:
         return get[0]
 
+
 class VxlanGateway(object):
     """
     Manages Gateway for the VXLAN Network.
@@ -386,29 +397,26 @@ class VxlanGateway(object):
     def init_module(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
 
+        flags = list()
         exp = " | ignore-case section include dfs-group"
         if self.vpn_instance:
             exp += "|^ip vpn-instance %s$" % self.vpn_instance
         if self.vbdif_name:
             exp += "|^interface %s$" % self.vbdif_name
-
-        return self.module.config.get_config(include_defaults=False, regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""
@@ -682,7 +690,7 @@ class VxlanGateway(object):
 
         if vpname == "_public_":
             self.module.fail_json(
-                msg="Error: The value _public_ is reserved and cannot be used as the VPN instance name.")
+                msg="Error: The value C(_public_) is reserved and cannot be used as the VPN instance name.")
 
         if len(vpname) < 1 or len(vpname) > 31:
             self.module.fail_json(
@@ -930,7 +938,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanGateway(argument_spec)
     module.work()
 

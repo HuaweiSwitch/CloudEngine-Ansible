@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_acl_interface
-version_added: "2.3"
-short_description: Manages applying ACLs to interfaces.
+version_added: "2.4"
+short_description: Manages applying ACLs to interfaces on HUAWEI CloudEngine switches.
 description:
-    - Manages applying ACLs to interfaces on CloudEngine switches.
-extends_documentation_fragment: cloudengine
+    - Manages applying ACLs to interfaces on HUAWEI CloudEngine switches.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -57,26 +56,36 @@ options:
 '''
 
 EXAMPLES = '''
-# apply acl to interface
-  - name: "apply acl to interface"
+
+- name: CloudEngine acl interface test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Apply acl to interface"
     ce_acl_interface:
-        state:  present
-        acl_name:  2000
-        interface:  40GE2/0/1
-        direction:  outbound
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo acl from interface
-  - name: "undo acl from interface"
+      state:  present
+      acl_name:  2000
+      interface:  40GE1/0/1
+      direction:  outbound
+      provider: "{{ cli }}"
+
+  - name: "Undo acl from interface"
     ce_acl_interface:
-        state:  absent
-        acl_name:  2000
-        interface:  40GE2/0/1
-        direction:  outbound
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      acl_name:  2000
+      interface:  40GE1/0/1
+      direction:  outbound
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -94,8 +103,8 @@ proposed:
              "interface": "40GE2/0/1",
              "state": "present"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {"acl interface": "traffic-filter acl lb inbound"}
 end_state:
@@ -112,9 +121,9 @@ updates:
 '''
 
 
-from ansible.module_utils.cloudengine import get_cli_exception
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.network import NetworkError
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config
+from ansible.module_utils.ce import ce_argument_spec
 
 
 class AclInterface(object):
@@ -126,8 +135,7 @@ class AclInterface(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # config
         self.cur_cfg = dict()
@@ -186,11 +194,11 @@ class AclInterface(object):
 
         regular = "| ignore-case section include ^interface %s$ | include traffic-filter" % self.interface
         result = self.cli_get_config(regular)
+
         end = []
         if result:
             tmp = result.split('\n')
             for item in tmp:
-                item = item[1:-1]
                 end.append(item)
             self.cur_cfg["acl interface"] = end
             self.existing["acl interface"] = end
@@ -212,17 +220,14 @@ class AclInterface(object):
         """ Cli method to load config """
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_get_config(self, regular):
         """ Cli method to get config """
 
-        tmp_cfg = self.module.config.get_config(
-            include_all=True, regular=regular)
+        flags = list()
+        flags.append(regular)
+        tmp_cfg = get_config(self.module, flags)
 
         return tmp_cfg
 
@@ -282,6 +287,7 @@ def main():
         direction=dict(choices=['inbound', 'outbound'], required=True)
     )
 
+    argument_spec.update(ce_argument_spec)
     module = AclInterface(argument_spec=argument_spec)
     module.work()
 

@@ -18,39 +18,51 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_reboot
-version_added: 2.3
-short_description: Reboot a network device.
+version_added: 2.4
+short_description: Reboot a HUAWEI CloudEngine switches.
 description:
-    - Reboot a network device.
-extends_documentation_fragment: cloudengine
-author:
-    - Gong Jianjun (@CloudEngine-Ansible)
-notes:
-    - The network device.
+    - Reboot a HUAWEI CloudEngine switches.
+author: Gong Jianjun (@CloudEngine-Ansible)
+requirements: ["ncclient"]
 options:
     confirm:
         description:
             - Safeguard boolean. Set to true if you're sure you want to reboot.
         required: true
+        type: bool
+        default: false
     save_config:
         description:
             - Flag indicating whether to save the configuration.
         required: false
+        type: bool
         default: false
 '''
 
 EXAMPLES = '''
-- ce_reboot:
-    confirm: true
-    save_config: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: reboot module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Reboot the device
+    ce_reboot:
+      confirm: true
+      save_config: true
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -62,10 +74,9 @@ rebooted:
 '''
 
 
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import execute_nc_action, ce_argument_spec
 
-HAS_NCCLIENT = False
 try:
     from ncclient.operations.errors import TimeoutExpiredError
     HAS_NCCLIENT = True
@@ -93,38 +104,19 @@ class Reboot(object):
         self.netconf = None
         self.init_network_module(**kwargs)
 
-        # host info
-        self.host = self.network_module.params['host']
-        self.port = self.network_module.params['port']
-        self.username = self.network_module.params['username']
-        self.password = self.network_module.params['password']
-
         self.confirm = self.network_module.params['confirm']
         self.save_config = self.network_module.params['save_config']
-
-        self.init_netconf(host=self.host, port=self.port,
-                          username=self.username, password=self.password)
 
     def init_network_module(self, **kwargs):
         """ init network module """
 
-        self.network_module = NetworkModule(**kwargs)
-
-    def init_netconf(self, **kwargs):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(**kwargs)
-        if not self.netconf:
-            self.network_module.fail_json(msg='Error: Netconf init failed.')
+        self.network_module = AnsibleModule(**kwargs)
 
     def netconf_set_action(self, xml_str):
         """ netconf execute action """
 
         try:
-            self.netconf.execute_action(action=xml_str)
+            execute_nc_action(self.network_module, xml_str)
         except TimeoutExpiredError:
             pass
 
@@ -135,7 +127,7 @@ class Reboot(object):
             self.network_module.fail_json(
                 msg='Error: Confirm must be set to true for this module to work.')
 
-        xml_str = CE_NC_XML_EXECUTE_REBOOT % self.save_config
+        xml_str = CE_NC_XML_EXECUTE_REBOOT % str(self.save_config).lower()
         self.netconf_set_action(xml_str)
 
 
@@ -143,12 +135,15 @@ def main():
     """ main """
 
     argument_spec = dict(
-        confirm=dict(required=True, type='bool'),
-        save_config=dict(required=False, default='false',
-                         type='str', choices=['true', 'false'])
+        confirm=dict(required=True, type='bool', default='false'),
+        save_config=dict(required=False, type='bool', default='false')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = Reboot(argument_spec=argument_spec, supports_check_mode=True)
+
+    if not HAS_NCCLIENT:
+        module.network_module.fail_json(msg='Error: The ncclient library is required.')
 
     changed = False
     rebooted = False

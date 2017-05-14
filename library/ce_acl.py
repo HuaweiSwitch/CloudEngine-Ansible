@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_acl
-version_added: "2.3"
-short_description: Manages base ACL configuration.
+version_added: "2.4"
+short_description: Manages base ACL configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages base ACL configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
+    - Manages base ACL configurations on HUAWEI CloudEngine switches.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -124,57 +123,63 @@ options:
         description:
             - Flag of logging matched data packets.
         required: false
-        default: null
+        default: false
         choices: ['true', 'false']
 '''
 
 EXAMPLES = '''
-# config ACL
-  - name: "config ACL"
+
+- name: CloudEngine acl test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config ACL"
     ce_acl:
-        state:  present
-        acl_name:  2200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL
-  - name: "undo ACL"
+      state:  present
+      acl_name:  2200
+      provider: "{{ cli }}"
+
+  - name: "Undo ACL"
     ce_acl:
-        state:  delete_acl
-        acl_name:  2200
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# config ACL base rule
-  - name: "config ACL base rule"
+      state:  delete_acl
+      acl_name:  2200
+      provider: "{{ cli }}"
+
+  - name: "Config ACL base rule"
     ce_acl:
-        state:  present
-        acl_name:  2200
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        time_range:  wdz_acl_time
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo ACL base rule
+      state:  present
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"
+
   - name: "undo ACL base rule"
     ce_acl:
-        state:  absent
-        acl_name:  2200
-        rule_name:  test_rule
-        rule_id:  111
-        rule_action:  permit
-        source_ip:  10.10.10.10
-        src_mask:  24
-        frag_type:  fragment
-        time_range:  wdz_acl_time
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      acl_name:  2200
+      rule_name:  test_rule
+      rule_id:  111
+      rule_action:  permit
+      source_ip:  10.10.10.10
+      src_mask:  24
+      frag_type:  fragment
+      time_range:  wdz_acl_time
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -189,8 +194,8 @@ proposed:
     type: dict
     sample: {"acl_name": "test", "state": "delete_acl"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {"aclNumOrName": "test", "aclType": "Basic"}
 end_state:
@@ -208,14 +213,8 @@ updates:
 import socket
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 # get acl
@@ -348,15 +347,10 @@ class BaseAcl(object):
         # argument spec
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # module args
         self.state = self.module.params['state']
-        self.host = self.module.params['host']
-        self.port = self.module.params['port']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
         self.acl_name = self.module.params['acl_name'] or None
         self.acl_num = self.module.params['acl_num'] or None
         self.acl_type = None
@@ -372,7 +366,7 @@ class BaseAcl(object):
         self.vrf_name = self.module.params['vrf_name'] or None
         self.time_range = self.module.params['time_range'] or None
         self.rule_description = self.module.params['rule_description'] or None
-        self.log_flag = self.module.params['log_flag'] or None
+        self.log_flag = self.module.params['log_flag']
 
         # cur config
         self.cur_acl_cfg = dict()
@@ -386,40 +380,19 @@ class BaseAcl(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # netconf
-        if not HAS_NCCLIENT:
-            raise Exception("Error: The ncclient library is required.")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.password)
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed.')
-
     def netconf_get_config(self, conf_str):
         """ Get configure by netconf """
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s.' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, conf_str):
         """ Set configure by netconf """
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s.' %
-                                  err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(self.module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def get_wildcard_mask(self):
         """ convert mask length to ip address wildcard mask, i.e. 24 to 0.0.0.255 """
@@ -510,13 +483,13 @@ class BaseAcl(object):
                 conf_str += "<aclDescription></aclDescription>"
 
             conf_str += CE_GET_ACL_TAIL
-            con_obj = self.netconf_get_config(conf_str=conf_str)
+            recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 find_flag = False
 
             else:
-                xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -651,17 +624,16 @@ class BaseAcl(object):
                     conf_str += "<aclTimeName></aclTimeName>"
                 if self.rule_description:
                     conf_str += "<aclRuleDescription></aclRuleDescription>"
-                if self.log_flag:
-                    conf_str += "<aclLogFlag></aclLogFlag>"
+                conf_str += "<aclLogFlag></aclLogFlag>"
 
                 conf_str += CE_GET_ACL_BASE_RULE_TAIL
-                con_obj = self.netconf_get_config(conf_str=conf_str)
+                recv_xml = self.netconf_get_config(conf_str=conf_str)
 
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     find_flag = False
 
                 else:
-                    xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+                    xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                         replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                         replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -714,7 +686,7 @@ class BaseAcl(object):
                                 find_flag = False
                             if self.rule_description and tmp.get("aclRuleDescription") != self.rule_description:
                                 find_flag = False
-                            if self.log_flag and tmp.get("aclLogFlag") != self.log_flag:
+                            if tmp.get("aclLogFlag") != str(self.log_flag).lower():
                                 find_flag = False
 
                             if find_flag:
@@ -798,9 +770,9 @@ class BaseAcl(object):
 
         conf_str += CE_MERGE_ACL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge acl failed.')
 
         if self.acl_name.isdigit():
@@ -840,9 +812,9 @@ class BaseAcl(object):
 
         conf_str += CE_DELETE_ACL_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Delete acl failed.')
 
         if self.acl_description:
@@ -883,14 +855,13 @@ class BaseAcl(object):
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_MERGE_ACL_BASE_RULE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge acl base rule failed.')
 
         if self.rule_action:
@@ -906,7 +877,7 @@ class BaseAcl(object):
                 cmd += " time-range %s" % self.time_range
             if self.vrf_name:
                 cmd += " vpn-instance %s" % self.vrf_name
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -939,14 +910,13 @@ class BaseAcl(object):
             conf_str += "<aclTimeName>%s</aclTimeName>" % self.time_range
         if self.rule_description:
             conf_str += "<aclRuleDescription>%s</aclRuleDescription>" % self.rule_description
-        if self.log_flag:
-            conf_str += "<aclLogFlag>%s</aclLogFlag>" % self.log_flag
+        conf_str += "<aclLogFlag>%s</aclLogFlag>" % str(self.log_flag).lower()
 
         conf_str += CE_DELETE_ACL_BASE_RULE_TAIL
 
-        con_obj = self.netconf_set_config(conf_str=conf_str)
+        recv_xml = self.netconf_set_config(conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Delete acl base rule failed.')
 
         if self.rule_description:
@@ -985,7 +955,7 @@ class BaseAcl(object):
                 cmd += " time-range %s" % self.time_range
             if self.vrf_name:
                 cmd += " vpn-instance %s" % self.vrf_name
-            if self.log_flag == "true":
+            if self.log_flag:
                 cmd += " logging"
             self.updates_cmd.append(cmd)
 
@@ -1043,9 +1013,10 @@ def main():
         vrf_name=dict(type='str'),
         time_range=dict(type='str'),
         rule_description=dict(type='str'),
-        log_flag=dict(choices=['true', 'false'])
+        log_flag=dict(required=False, default=False, type='bool')
     )
 
+    argument_spec.update(ce_argument_spec)
     module = BaseAcl(argument_spec=argument_spec)
     module.work()
 

@@ -1,19 +1,32 @@
 ---
-
-- name: cloudengine command test
+- name: cloudengine command provider test
   hosts: cloudengine
   connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config:
+      lines: 'return,rollback configuration to label ansible_test'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: false
 
   - name: "display device"
-    ce_command: commands='display device' host={{inventory_hostname}} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    ce_command:
+      commands: 'display device'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
 
   - name: "TEST 1"
@@ -22,37 +35,48 @@
         - data.changed == false
 
   - name: "FAIL DUE TO NOT EXISTENT CONFIGURATION"
-    ce_command: commands='display 123' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    ce_command:
+      commands: 'display 123'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: true
 
   - name: "TEST 2"
     assert:
       that:
-        - data.changed == false
+        - data.failed == true
 
   - name: "ENSURE FAIL WITH COMMANDS AN THE SAME TIME"
-    ce_command: commands='sys,interface loop 11,ip add 11.11.11.11 255.255.255.255,com,dis int loop 11' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    ce_command:
+      commands: 'sys,interface loop 11,ip add 11.11.11.11 255.255.255.255,com,dis int loop 11'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
     ignore_errors: true
   
   - name: "TEST 3"
     assert:
       that:
-        - data | failed
+        - data.changed == false
 
   - name: "ENSURE 'DISPLAY' FAILS WITHOUT COMMANDS AT THE SAME TIME"
-    ce_command: host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    ce_command:
+      provider: "{{ cli }}"
+      transport: cli
     register: date
     ignore_errors: true
- 
+
   - name: "TEST 4"
     assert:
       that:
-        - data | failed
+        - data.changed == false
 
   - name: "ENSURE SUPPORTED COMMAND FORMAT"
-    ce_command: commands='di trapbu size 10,dis al ac | incl Major' host={{ inventory_hostname }} port={{ansible_ssh_port}} username={{username}} password={{password}}
+    ce_command:
+      commands: 'di trapbu size 10,dis al ac | incl Major'
+      provider: "{{ cli }}"
+      transport: cli
     register: data
 
   - name: "TEST5"

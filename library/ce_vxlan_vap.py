@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = """
 ---
 module: ce_vxlan_vap
-version_added: "2.3"
-short_description: Manages VXLAN virtual access point.
+version_added: "2.4"
+short_description: Manages VXLAN virtual access point on HUAWEI CloudEngine Devices.
 description:
-    - Manages VXLAN Virtual access point.
+    - Manages VXLAN Virtual access point on HUAWEI CloudEngine Devices.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     bridge_domain_id:
         description:
@@ -38,7 +37,7 @@ options:
         default: null
     bind_vlan_id:
         description:
-            - Specifies the vlan binding to a BD(Bridge Domain).
+            - Specifies the VLAN binding to a BD(Bridge Domain).
               The value is an integer ranging ranging from 1 to 4094.
         required: false
         default: null
@@ -56,15 +55,15 @@ options:
         default: null
     ce_vid:
         description:
-            - When C(encapsulation) is 'dot1q', specifies a VLAN ID in the outer VLAN tag.
-              When C(encapsulation) is 'qinq', specifies an outer VLAN ID for
+            - When I(encapsulation) is 'dot1q', specifies a VLAN ID in the outer VLAN tag.
+              When I(encapsulation) is 'qinq', specifies an outer VLAN ID for
               double-tagged packets to be received by a Layer 2 sub-interface.
               The value is an integer ranging from 1 to 4094.
         required: false
         default: null
     pe_vid:
         description:
-            - When C(encapsulation) is 'qinq', specifies an inner VLAN ID for
+            - When I(encapsulation) is 'qinq', specifies an inner VLAN ID for
               double-tagged packets to be received by a Layer 2 sub-interface.
               The value is an integer ranging from 1 to 4094.
         required: false
@@ -79,29 +78,37 @@ options:
 """
 
 EXAMPLES = '''
-# Create a papping between a VLAN and a BD
-- ce_vxlan_vap:
-    bridge_domain_id: 100
-    bind_vlan_id: 99
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan vap module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Bind a Layer 2 sub-interface to a BD
-- ce_vxlan_vap:
-    bridge_domain_id: 100
-    l2_sub_interface: 10GE3/0/40.1
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  tasks:
 
-# Configure an encapsulation type on a Layer 2 sub-interface
-- ce_vxlan_vap:
-    l2_sub_interface: 10GE3/0/40.1
-    encapsulation: dot1q
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: Create a papping between a VLAN and a BD
+    ce_vxlan_vap:
+      bridge_domain_id: 100
+      bind_vlan_id: 99
+      provider: "{{ cli }}"
+
+  - name: Bind a Layer 2 sub-interface to a BD
+    ce_vxlan_vap:
+      bridge_domain_id: 100
+      l2_sub_interface: 10GE2/0/20.1
+      provider: "{{ cli }}"
+
+  - name: Configure an encapsulation type on a Layer 2 sub-interface
+    ce_vxlan_vap:
+      l2_sub_interface: 10GE2/0/20.1
+      encapsulation: dot1q
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -114,13 +121,13 @@ existing:
     description: k/v pairs of existing configuration
     returned: verbose mode
     type: dict
-    sample: {"bridge_domain_id": "100", "bind_intf_list": ["10GE3/0/40.1", "10GE3/0/40.2"],
+    sample: {"bridge_domain_id": "100", "bind_intf_list": ["10GE2/0/20.1", "10GE2/0/20.2"],
              "bind_vlan_list": []}
 end_state:
     description: k/v pairs of configuration after module execution
     returned: verbose mode
     type: dict
-    sample: {"bridge_domain_id": "100", "bind_intf_list": ["10GE3/0/40.1", "10GE3/0/40.2"],
+    sample: {"bridge_domain_id": "100", "bind_intf_list": ["110GE2/0/20.1", "10GE2/0/20.2"],
              "bind_vlan_list": ["99"]}
 updates:
     description: commands sent to the device
@@ -135,16 +142,9 @@ changed:
     sample: true
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_BD_VAP = """
     <filter type="subtree">
@@ -300,7 +300,7 @@ CE_NC_SET_ENCAP_QINQ = """
 
 
 def vlan_vid_to_bitmap(vid):
-    """convert vlan list to vlan bitmap"""
+    """convert VLAN list to VLAN bitmap"""
 
     vlan_bit = ['0'] * 1024
     int_vid = int(vid)
@@ -312,7 +312,7 @@ def vlan_vid_to_bitmap(vid):
 
 
 def bitmap_to_vlan_list(bitmap):
-    """convert vlan bitmap to vlan list"""
+    """convert VLAN bitmap to VLAN list"""
 
     tmp = list()
     if not bitmap:
@@ -336,7 +336,7 @@ def bitmap_to_vlan_list(bitmap):
 
 
 def is_vlan_bitmap_empty(bitmap):
-    """check vlan bitmap empty"""
+    """check VLAN bitmap empty"""
 
     if not bitmap or len(bitmap) == 0:
         return True
@@ -349,7 +349,7 @@ def is_vlan_bitmap_empty(bitmap):
 
 
 def is_vlan_in_bitmap(vid, bitmap):
-    """check is vlan id in bitmap"""
+    """check is VLAN id in bitmap"""
 
     if is_vlan_bitmap_empty(bitmap):
         return False
@@ -422,7 +422,6 @@ class VxlanVap(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.__init_module__()
 
         # module input info
@@ -433,11 +432,6 @@ class VxlanVap(object):
         self.pe_vid = self.module.params['pe_vid']
         self.encapsulation = self.module.params['encapsulation']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         # state
         self.vap_info = dict()
@@ -450,87 +444,34 @@ class VxlanVap(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.__init_netconf__()
-
     def __init_module__(self):
         """init module"""
 
-        self.module = NetworkModule(
+        required_together = [()]
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def __init_netconf__(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: Netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def get_bd_vap_dict(self):
         """get virtual access point info"""
 
         vap_info = dict()
         conf_str = CE_NC_GET_BD_VAP % self.bridge_domain_id
-        con_obj = self.netconf_get_config(conf_str)
+        xml_str = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in xml_str:
             return vap_info
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
-        # get vap: vlan
+        # get vap: VLAN
         vap_info["bdId"] = self.bridge_domain_id
         root = ElementTree.fromstring(xml_str)
         vap_info["vlanList"] = ""
@@ -561,12 +502,12 @@ class VxlanVap(object):
             return intf_info
 
         conf_str = CE_NC_GET_ENCAP % ifname
-        con_obj = self.netconf_get_config(conf_str)
+        xml_str = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in xml_str:
             return intf_info
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -639,8 +580,8 @@ class VxlanVap(object):
         if not xml_str:
             self.updates_cmd.pop()
             return
-
-        self.netconf_set_config(xml_str, "CONFIG_INTF_ENCAP_DOT1Q")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CONFIG_INTF_ENCAP_DOT1Q")
         self.changed = True
 
     def config_traffic_encap_qinq(self):
@@ -696,15 +637,15 @@ class VxlanVap(object):
         if not xml_str:
             self.updates_cmd.pop()
             return
-
-        self.netconf_set_config(xml_str, "CONFIG_INTF_ENCAP_QINQ")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CONFIG_INTF_ENCAP_QINQ")
         self.changed = True
 
     def config_traffic_encap(self):
         """configure traffic encapsulation types"""
 
         if not self.l2sub_info:
-            self.module.fail_json(msg="Error: Interface does not exist.")
+            self.module.fail_json(msg="Error: Interface %s does not exist." % self.l2_sub_interface)
 
         if not self.encapsulation:
             return
@@ -745,15 +686,15 @@ class VxlanVap(object):
 
         if not xml_str:
             return
-
-        self.netconf_set_config(xml_str, "CONFIG_INTF_ENCAP")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CONFIG_INTF_ENCAP")
         self.changed = True
 
     def config_vap_sub_intf(self):
         """configure a Layer 2 sub-interface as a service access point"""
 
         if not self.vap_info:
-            self.module.fail_json(msg="Error: Bridge domain does not exist.")
+            self.module.fail_json(msg="Error: Bridge domain %s does not exist." % self.bridge_domain_id)
 
         xml_str = ""
         if self.state == "present":
@@ -773,15 +714,15 @@ class VxlanVap(object):
 
         if not xml_str:
             return
-
-        self.netconf_set_config(xml_str, "CONFIG_VAP_SUB_INTERFACE")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CONFIG_VAP_SUB_INTERFACE")
         self.changed = True
 
     def config_vap_vlan(self):
         """configure a VLAN as a service access point"""
 
         if not self.vap_info:
-            self.module.fail_json(msg="Error: Bridge domain does not exist.")
+            self.module.fail_json(msg="Error: Bridge domain %s does not exist." % self.bridge_domain_id)
 
         xml_str = ""
         if self.state == "present":
@@ -805,12 +746,12 @@ class VxlanVap(object):
 
         if not xml_str:
             return
-
-        self.netconf_set_config(xml_str, "CONFIG_VAP_VLAN")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CONFIG_VAP_VLAN")
         self.changed = True
 
     def is_vlan_valid(self, vid, name):
-        """check vlan id"""
+        """check VLAN id"""
 
         if not vid:
             return
@@ -1001,7 +942,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanVap(argument_spec)
     module.work()
 

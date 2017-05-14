@@ -1,0 +1,219 @@
+---
+
+- name: cloudengine mlag interface module test
+  hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+  connection: local
+  gather_facts: no
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure interface Eth-Trunk2"
+    ce_config: lines='interface Eth-Trunk2, portswitch' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "Ensure interface Eth-Trunk3"
+    ce_config: lines='interface Eth-Trunk3, portswitch, mode lacp-static' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "create dfs group id"
+    ce_mlag_config: dfs_group_id=1 state=present provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "Eth-Trunk 1 does not exist"
+    ce_mlag_interface: eth_trunk_id=1 dfs_group_id=1 mlag_id=4 provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "create an mlag, eth_trunk_id=2,m-lag=4"
+    ce_mlag_interface: eth_trunk_id=2 dfs_group_id=1 mlag_id=4 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "modify an mlag, eth_trunk_id=2,m-lag=5"
+    ce_mlag_interface: eth_trunk_id=2 dfs_group_id=1 mlag_id=5 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete an mlag"
+    ce_mlag_interface: eth_trunk_id=2 dfs_group_id=1 mlag_id=5 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set mlag error-down"
+    ce_mlag_interface: interface=10GE1/0/1 mlag_error_down=enable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set mlag error-down again"
+    ce_mlag_interface: interface=10GE1/0/1 mlag_error_down=enable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "undo mlag error-down"
+    ce_mlag_interface: interface=10GE1/0/1 mlag_error_down=disable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set mlag error-down, Eth-Trunk3"
+    ce_mlag_interface: interface=Eth-Trunk3 mlag_error_down=enable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "undo mlag error-down, Eth-Trunk3"
+    ce_mlag_interface: interface=Eth-Trunk3 mlag_error_down=disable provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "eth-trunk2's mode is not lacp-dynamic or lacp-static"
+    ce_mlag_interface: eth_trunk_id=2 mlag_system_id=0020-1409-0400 provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "The port of eth-trunk3 does not exist in the M-LAG"
+    ce_mlag_interface: eth_trunk_id=3 mlag_system_id=0020-1409-0400 provider="{{ cli }}"
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: "modify an mlag, eth_trunk_id=3,m-lag=5"
+    ce_mlag_interface: eth_trunk_id=3 dfs_group_id=1 mlag_id=5 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set eth-trunk3 atrribute mlag systemID"
+    ce_mlag_interface: eth_trunk_id=3 mlag_system_id=0020-1409-0400 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set eth-trunk3 atrribute mlag priorityID"
+    ce_mlag_interface: eth_trunk_id=3 mlag_priority_id=2 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete eth-trunk3 atrribute mlag priorityID and systemID"
+    ce_mlag_interface: eth_trunk_id=3 mlag_priority_id=2 mlag_system_id=0020-1409-0400 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set global atrribute mlag priorityID and systemID"
+    ce_mlag_interface: mlag_priority_id=2 mlag_system_id=0020-1409-0400 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "set global atrribute mlag priorityID"
+    ce_mlag_interface: mlag_priority_id=3 provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: "delete global atrribute mlag priorityID"
+    ce_mlag_interface: mlag_priority_id=3 state=absent provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == true

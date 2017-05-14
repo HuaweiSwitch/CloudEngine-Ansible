@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_ospf
-version_added: "2.3"
-short_description: Manages configuration of an OSPF instance.
+version_added: "2.4"
+short_description: Manages configuration of an OSPF instance on HUAWEI CloudEngine switches.
 description:
-    - Manages configuration of an OSPF instance.
+    - Manages configuration of an OSPF instance on HUAWEI CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     process_id:
         description:
@@ -106,13 +105,26 @@ options:
 '''
 
 EXAMPLES = '''
-- ce_ospf:
-    process_id: 1
-    area: 100
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: ospf module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configure ospf
+    ce_ospf:
+      process_id: 1
+      area: 100
+      state: present
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -145,17 +157,9 @@ changed:
     sample: true
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-HAS_NCCLIENT = False
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -362,7 +366,6 @@ class OSPF(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -379,11 +382,6 @@ class OSPF(object):
         self.max_load_balance = self.module.params['max_load_balance']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # ospf info
         self.ospf_info = dict()
 
@@ -395,69 +393,22 @@ class OSPF(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, supports_check_mode=True)
+        required_together = [
+            ("addr", "mask"),
+            ("auth_key_id", "auth_text_md5"),
+            ("nexthop_addr", "nexthop_weight")
+        ]
+        self.module = AnsibleModule(
+            argument_spec=self.spec, required_together=required_together, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def get_wildcard_mask(self):
         """convert mask length to ip address wildcard mask, i.e. 24 to 0.0.0.255"""
@@ -502,12 +453,11 @@ class OSPF(object):
 
         ospf_info = dict()
         conf_str = CE_NC_GET_OSPF % process_id
-        con_obj = self.netconf_get_config(conf_str)
-
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return ospf_info
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -684,14 +634,16 @@ class OSPF(object):
 
         xml_str = CE_NC_XML_BUILD_MERGE_PROCESS % (
             self.process_id, xml_topo + xml_area)
-        self.netconf_set_config(xml_str, "CREATE_PROCESS")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "CREATE_PROCESS")
         self.changed = True
 
     def delete_process(self):
         """Delete ospf process"""
 
         xml_str = CE_NC_DELETE_PROCESS % self.process_id
-        self.netconf_set_config(xml_str, "DELETE_PROCESS")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "DELETE_PROCESS")
         self.updates_cmd.append("undo ospf %s" % self.process_id)
         self.changed = True
 
@@ -763,7 +715,8 @@ class OSPF(object):
         if xml_area or xml_topo:
             xml_str = CE_NC_XML_BUILD_MERGE_PROCESS % (
                 self.process_id, xml_topo + xml_area)
-            self.netconf_set_config(xml_str, "MERGE_PROCESS")
+            recv_xml = set_nc_config(self.module, xml_str)
+            self.check_response(recv_xml, "MERGE_PROCESS")
             self.changed = True
 
     def remove_area_network(self):
@@ -776,7 +729,8 @@ class OSPF(object):
             self.addr, self.get_wildcard_mask())
         xml_area = CE_NC_XML_BUILD_AREA % (self.get_area_ip(), xml_network)
         xml_str = CE_NC_XML_BUILD_PROCESS % (self.process_id, xml_area)
-        self.netconf_set_config(xml_str, "DELETE_AREA_NETWORK")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "DELETE_AREA_NETWORK")
         self.updates_cmd.append("ospf %s" % self.process_id)
         self.updates_cmd.append("area %s" % self.get_area_ip())
         self.updates_cmd.append("undo network %s %s" %
@@ -791,7 +745,8 @@ class OSPF(object):
 
         xml_area = CE_NC_XML_BUILD_DELETE_AREA % (self.get_area_ip(), "")
         xml_str = CE_NC_XML_BUILD_PROCESS % (self.process_id, xml_area)
-        self.netconf_set_config(xml_str, "DELETE_AREA")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "DELETE_AREA")
         self.updates_cmd.append("ospf %s" % self.process_id)
         self.updates_cmd.append("undo area %s" % self.get_area_ip())
         self.changed = True
@@ -805,7 +760,8 @@ class OSPF(object):
         xml_nh = CE_NC_XML_DELETE_NEXTHOP % self.nexthop_addr
         xml_topo = CE_NC_XML_BUILD_TOPO % xml_nh
         xml_str = CE_NC_XML_BUILD_PROCESS % (self.process_id, xml_topo)
-        self.netconf_set_config(xml_str, "DELETE_NEXTHOP_WEIGHT")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "DELETE_NEXTHOP_WEIGHT")
         self.updates_cmd.append("ospf %s" % self.process_id)
         self.updates_cmd.append("undo nexthop %s" % self.nexthop_addr)
         self.changed = True
@@ -863,9 +819,6 @@ class OSPF(object):
                 if not self.is_valid_v4addr(self.addr):
                     self.module.fail_json(
                         msg="Error: network addr is invalid.")
-                if not self.mask:
-                    self.module.fail_json(
-                        msg="Error: network mask must be set.")
                 if not self.mask.isdigit():
                     self.module.fail_json(
                         msg="Error: network mask is not digit.")
@@ -880,12 +833,6 @@ class OSPF(object):
                         self.module.fail_json(
                             msg="Error: auth_text_simple is not in the range from 1 to 8.")
                 if self.auth_mode in ["hmac-sha256", "hmac-sha256", "md5"]:
-                    if self.auth_key_id and not self.auth_text_md5:
-                        self.module.fail_json(
-                            msg='Error: auth_key_id and auth_text_md5 should be set at the same time.')
-                    if not self.auth_key_id and self.auth_text_md5:
-                        self.module.fail_json(
-                            msg='Error: auth_key_id and auth_text_md5 should be set at the same time.')
                     if self.auth_key_id:
                         if not self.auth_key_id.isdigit():
                             self.module.fail_json(
@@ -910,9 +857,6 @@ class OSPF(object):
         if self.nexthop_addr:
             if not self.is_valid_v4addr(self.nexthop_addr):
                 self.module.fail_json(msg="Error: nexthop_addr is invalid.")
-            if not self.nexthop_weight:
-                self.module.fail_json(
-                    msg='Error: nexthop_addr and nexthop_weight should be set at the same time.')
             if not self.nexthop_weight.isdigit():
                 self.module.fail_json(
                     msg="Error: nexthop_weight is not digit.")
@@ -1036,7 +980,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = OSPF(argument_spec)
     module.work()
 

@@ -1,11 +1,25 @@
----
-
-- name: cloudengine snmp contact module test
+- name: CloudEngine snmp contact test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_snmp_contact: contact="call Operator at 010-99999999" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP contact"
+    ce_snmp_contact:
+      state:  present
+      contact:  call Operator at 010-99999999
+      provider: "{{ cli }}"
 
-  - ce_snmp_contact: contact="call Operator at 010-99999999" host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Undo SNMP contact"
+    ce_snmp_contact:
+      state:  absent
+      contact:  call Operator at 010-99999999
+      provider: "{{ cli }}"

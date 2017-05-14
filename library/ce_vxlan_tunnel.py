@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_vxlan_tunnel
-version_added: "2.3"
-short_description: Manages VXLAN tunnel configuration.
+version_added: "2.4"
+short_description: Manages VXLAN tunnel configuration on HUAWEI CloudEngine devices.
 description:
     - This module offers the ability to set the VNI and mapped to the BD,
-      and configure an ingress replication list on CloudEngine switch.
-extends_documentation_fragment: cloudengine
+      and configure an ingress replication list on HUAWEI CloudEngine devices.
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -78,15 +77,27 @@ options:
         choices: ['present','absent']
 '''
 EXAMPLES = '''
-# Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
-- ce_vxlan_tunnel:
-    nve_name: Nve1
-    vni_id: 100
-    protocol_type: bgp
-    state: present
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: vxlan tunnel module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Make sure nve_name is exist, ensure vni_id and protocol_type is configured on Nve1 interface.
+    ce_vxlan_tunnel:
+      nve_name: Nve1
+      vni_id: 100
+      protocol_type: bgp
+      state: present
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -120,17 +131,9 @@ end_state:
     sample: {nve_interface_name": "Nve1", nve_mode": "mode-l3", "source_ip": "0.0.0.0"}
 '''
 
-import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
-
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, get_config, ce_argument_spec
 
 CE_NC_GET_VNI_BD_INFO = """
 <filter type="subtree">
@@ -154,6 +157,7 @@ CE_NC_GET_NVE_INFO = """
       </nvo3Nve>
     </nvo3Nves>
   </nvo3>
+</filter>
 </filter>
 """
 
@@ -342,7 +346,6 @@ class VxlanTunnel(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -354,11 +357,6 @@ class VxlanTunnel(object):
         self.protocol_type = self.module.params['protocol_type']
         self.source_ip = self.module.params['source_ip']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -372,69 +370,29 @@ class VxlanTunnel(object):
         self.vni2bd_info = None
         self.nve_info = None
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed.')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def get_current_config(self, vni_id, peer_ip_list):
         """get current configuration"""
 
+        flags = list()
         exp = " | include vni "
         exp += vni_id
         exp += " head-end peer-list "
         for peer_ip in peer_ip_list:
             exp += "| exclude %s " % peer_ip
-        return self.module.config.get_config(regular=exp)
+        flags.append(exp)
+        return get_config(self.module, flags)
 
     def get_vni2bd_dict(self):
         """ get vni2bd attributes dict."""
@@ -442,10 +400,10 @@ class VxlanTunnel(object):
         vni2bd_info = dict()
         # get vni bd info
         conf_str = CE_NC_GET_VNI_BD_INFO
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return vni2bd_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         # get vni to bridge domain id info
@@ -479,10 +437,10 @@ class VxlanTunnel(object):
         nve_info = dict()
         # get nve info
         conf_str = CE_NC_GET_NVE_INFO % nve_name
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return nve_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -646,7 +604,8 @@ class VxlanTunnel(object):
 
         if self.is_vni_bd_change(vni_id, bd_id):
             cfg_xml = CE_NC_MERGE_VNI_BD_ID % (vni_id, bd_id)
-            self.netconf_set_config(cfg_xml, "MERGE_VNI_BD")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "MERGE_VNI_BD")
             self.updates_cmd.append("bridge-domain %s" % bd_id)
             self.updates_cmd.append("vxlan vni %s" % vni_id)
             self.changed = True
@@ -656,8 +615,8 @@ class VxlanTunnel(object):
 
         if self.is_nve_mode_change(nve_name, mode):
             cfg_xml = CE_NC_MERGE_NVE_MODE % (nve_name, mode)
-
-            self.netconf_set_config(cfg_xml, "MERGE_MODE")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "MERGE_MODE")
             self.updates_cmd.append("interface %s" % nve_name)
             self.updates_cmd.append("mode l3")
             self.changed = True
@@ -668,7 +627,8 @@ class VxlanTunnel(object):
         if self.is_nve_source_ip_change(nve_name, source_ip):
             cfg_xml = CE_NC_MERGE_NVE_SOURCE_IP_PROTOCOL % (
                 nve_name, source_ip)
-            self.netconf_set_config(cfg_xml, "MERGE_SOURCE_IP")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "MERGE_SOURCE_IP")
             self.updates_cmd.append("interface %s" % nve_name)
             self.updates_cmd.append("source %s" % source_ip)
             self.changed = True
@@ -682,7 +642,8 @@ class VxlanTunnel(object):
             for peer_ip in peer_ip_list:
                 cfg_xml += CE_NC_MERGE_VNI_PEER_ADDRESS_IP_MERGE % peer_ip
             cfg_xml += CE_NC_MERGE_VNI_PEER_ADDRESS_IP_END
-            self.netconf_set_config(cfg_xml, "MERGE_VNI_PEER_IP")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "MERGE_VNI_PEER_IP")
             self.updates_cmd.append("interface %s" % nve_name)
 
             for peer_ip in peer_ip_list:
@@ -696,7 +657,8 @@ class VxlanTunnel(object):
         if self.is_vni_protocol_change(nve_name, vni_id, protocol_type):
             cfg_xml = CE_NC_MERGE_VNI_PROTOCOL % (
                 nve_name, vni_id, protocol_type)
-            self.netconf_set_config(cfg_xml, "MERGE_VNI_PEER_PROTOCOL")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "MERGE_VNI_PEER_PROTOCOL")
             self.updates_cmd.append("interface %s" % nve_name)
 
             if protocol_type == "bgp":
@@ -713,7 +675,8 @@ class VxlanTunnel(object):
         if not self.is_vni_bd_exist(vni_id, bd_id):
             return
         cfg_xml = CE_NC_DELETE_VNI_BD_ID % (vni_id, bd_id)
-        self.netconf_set_config(cfg_xml, "DELETE_VNI_BD")
+        recv_xml = set_nc_config(self.module, cfg_xml)
+        self.check_response(recv_xml, "DELETE_VNI_BD")
         self.updates_cmd.append(
             "bridge-domain %s" % bd_id)
         self.updates_cmd.append(
@@ -727,10 +690,10 @@ class VxlanTunnel(object):
         if mode == "mode-l3":
             if not self.is_nve_mode_exist(nve_name, mode):
                 return
-            mode = "mode-l2"
-            cfg_xml = CE_NC_MERGE_NVE_MODE % (nve_name, mode)
+            cfg_xml = CE_NC_MERGE_NVE_MODE % (nve_name, "mode-l2")
 
-            self.netconf_set_config(cfg_xml, "DELETE_MODE")
+            recv_xml = set_nc_config(self.module, cfg_xml)
+            self.check_response(recv_xml, "DELETE_MODE")
             self.updates_cmd.append("interface %s" % nve_name)
             self.updates_cmd.append("undo mode l3")
             self.changed = True
@@ -746,8 +709,8 @@ class VxlanTunnel(object):
         ipaddr = "0.0.0.0"
         cfg_xml = CE_NC_MERGE_NVE_SOURCE_IP_PROTOCOL % (
             nve_name, ipaddr)
-        self.netconf_set_config(cfg_xml, "DELETE_SOURCE_IP")
-
+        recv_xml = set_nc_config(self.module, cfg_xml)
+        self.check_response(recv_xml, "DELETE_SOURCE_IP")
         self.updates_cmd.append("interface %s" % nve_name)
         self.updates_cmd.append("undo source %s" % source_ip)
         self.changed = True
@@ -757,7 +720,7 @@ class VxlanTunnel(object):
 
         for peer_ip in peer_ip_list:
             if not self.is_vni_peer_list_exist(nve_name, vni_id, peer_ip):
-                self.module.fail_json(msg='Error: The %s is not exist' % peer_ip)
+                self.module.fail_json(msg='Error: The %s does not exist' % peer_ip)
         config = self.get_current_config(vni_id, peer_ip_list)
         if not config:
             cfg_xml = CE_NC_DELETE_VNI_PEER_ADDRESS_IP_HEAD % (
@@ -771,11 +734,13 @@ class VxlanTunnel(object):
             for peer_ip in peer_ip_list:
                 cfg_xml += CE_NC_DELETE_VNI_PEER_ADDRESS_IP_DELETE % peer_ip
             cfg_xml += CE_NC_DELETE_PEER_ADDRESS_IP_END
-        self.netconf_set_config(cfg_xml, "DELETE_VNI_PEER_IP")
+
+        recv_xml = set_nc_config(self.module, cfg_xml)
+        self.check_response(recv_xml, "DELETE_VNI_PEER_IP")
         self.updates_cmd.append("interface %s" % nve_name)
 
         for peer_ip in peer_ip_list:
-            cmd_output = "undo vni %s head-end peer-list %s" % (vni_id,peer_ip)
+            cmd_output = "undo vni %s head-end peer-list %s" % (vni_id, peer_ip)
             self.updates_cmd.append(cmd_output)
 
         self.changed = True
@@ -787,7 +752,8 @@ class VxlanTunnel(object):
             return
 
         cfg_xml = CE_NC_DELETE_VNI_PROTOCOL % (nve_name, vni_id, protocol_type)
-        self.netconf_set_config(cfg_xml, "DELETE_VNI_PEER_PROTOCOL")
+        recv_xml = set_nc_config(self.module, cfg_xml)
+        self.check_response(recv_xml, "DELETE_VNI_PEER_PROTOCOL")
         self.updates_cmd.append("interface %s" % nve_name)
         self.updates_cmd.append(
             "undo vni %s head-end peer-list protocol bgp " % vni_id)
@@ -817,19 +783,19 @@ class VxlanTunnel(object):
         if self.nve_name:
             if not self.check_nve_name():
                 self.module.fail_json(
-                    msg='Error: Error: Nve interface is invalid.')
+                    msg='Error: Error: NVE interface %s is invalid.' % self.nve_name)
 
         # peer_list_ip check
         if self.peer_list_ip:
             for peer_ip in self.peer_list_ip:
                 if not is_valid_address(peer_ip):
                     self.module.fail_json(
-                        msg='Error: The %s exist invalid ip address' % self.peer_list_ip)
+                        msg='Error: The ip address %s is invalid.' % self.peer_list_ip)
         # source_ip check
         if self.source_ip:
             if not is_valid_address(self.source_ip):
                 self.module.fail_json(
-                    msg='Error: The %s is not a valid ip address' % self.source_ip)
+                    msg='Error: The ip address %s is invalid.' % self.source_ip)
 
     def get_proposed(self):
         """get proposed info"""
@@ -961,7 +927,7 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     module = VxlanTunnel(argument_spec)
     module.work()
 

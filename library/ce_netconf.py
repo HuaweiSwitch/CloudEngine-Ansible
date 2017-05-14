@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Run arbitrary netconf command on cloudengine devices.
 description:
     - Sends an arbitrary netconf command to a cloudengine node and returns the results read from the device.
-extends_documentation_fragment: cloudengine
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 notes:
@@ -35,45 +34,55 @@ notes:
 options:
     rpc:
         description:
-            - the type of rpc.
+            - The type of rpc.
         required: false
         default: null
         choices: ['get', 'edit-config', 'execute-action', 'execute-cli']
     cfg_xml:
         description:
-            - the config xml string.
+            - The config xml string.
         required: true
 '''
 
 EXAMPLES = '''
-# netconf get operation
-  - name: "netconf get operation"
-    ce_netconf:
-        rpc:  get
-        cfg_xml:  "<filter type=\"subtree\">
-                     <vlan xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\">
-                       <vlans>
-                         <vlan>
-                           <vlanId>10</vlanId>
-                           <vlanif>
-                             <ifName></ifName>
-                             <cfgBand></cfgBand>
-                             <dampTime></dampTime>
-                           </vlanif>
-                         </vlan>
-                        </vlans>
-                      </vlan>
-                    </filter>"
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
 
-# netconf edit-config operation
-  - name: "netconf edit-config operation"
+- name: CloudEngine netconf test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Netconf get operation"
     ce_netconf:
-        rpc:  edit-config
-        cfg_xml:  "<config>
+      rpc: get
+      cfg_xml: '<filter type=\"subtree\">
+                  <vlan xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\">
+                    <vlans>
+                      <vlan>
+                        <vlanId>10</vlanId>
+                        <vlanif>
+                          <ifName></ifName>
+                          <cfgBand></cfgBand>
+                          <dampTime></dampTime>
+                        </vlanif>
+                      </vlan>
+                    </vlans>
+                  </vlan>
+                </filter>'
+      provider: "{{ cli }}"
+
+  - name: "Netconf edit-config operation"
+    ce_netconf:
+      rpc: edit-config
+      cfg_xml: '<config>
                     <aaa xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\">
                       <authenticationSchemes>
                         <authenticationScheme operation=\"create\">
@@ -83,40 +92,20 @@ EXAMPLES = '''
                         </authenticationScheme>
                       </authenticationSchemes>
                     </aaa>
-                   </config>"
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+                   </config>'
+      provider: "{{ cli }}"
 
-# netconf execute-action operation
-  - name: "netconf execute-action operation"
+  - name: "Netconf execute-action operation"
     ce_netconf:
-        rpc:  execute-action
-        cfg_xml:  "<action>
+      rpc: execute-action
+      cfg_xml: '<action>
                      <l2mc xmlns=\"http://www.huawei.com/netconf/vrp\" content-version=\"1.0\" format-version=\"1.0\">
                        <l2McResetAllVlanStatis>
                          <addrFamily>ipv4unicast</addrFamily>
                        </l2McResetAllVlanStatis>
                      </l2mc>
-                   </action>"
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
-
-# netconf execute-cli operation
-  - name: "netconf execute-cli operation"
-    ce_netconf:
-        rpc:  execute-cli
-        cfg_xml:  "<cmd>
-                     <id>1</id>
-                     <cmdline>display current-configuration</cmdline>
-                   </cmd>"
-        host:  {{inventory_hostname}}
-        port:  {{ansible_ssh_port}}
-        username:  {{username}}
-        password:  {{password}}
+                   </action>'
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -132,15 +121,9 @@ end_state:
     sample: {"result": ["ok"]}
 '''
 
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config
+from ansible.module_utils.ce import execute_nc_action, ce_argument_spec, execute_nc_cli
 
 
 def main():
@@ -152,43 +135,26 @@ def main():
         cfg_xml=dict(required=True)
     )
 
-    if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
+    argument_spec.update(ce_argument_spec)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
-    module = NetworkModule(argument_spec=argument_spec,
-                           supports_check_mode=True)
-
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     rpc = module.params['rpc']
     cfg_xml = module.params['cfg_xml']
 
     if not rpc or not cfg_xml:
         module.fail_json(msg='please input rpc and cfg_xml.')
 
-    netconf = get_netconf(host=host, port=port,
-                          username=username, password=password)
-
     changed = False
     end_state = dict()
 
-    if not netconf:
-        module.fail_json(msg='ce_netconf start failed.')
-
     if rpc == "get":
 
-        try:
-            response = netconf.get_config(filter=cfg_xml)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        response = get_nc_config(module, cfg_xml)
 
-        if "<data/>" in response.xml:
+        if "<data/>" in response:
             end_state["result"] = "<data/>"
         else:
-            tmp1 = response.xml.split(r"<data>")
+            tmp1 = response.split(r"<data>")
             tmp2 = tmp1[1].split(r"</data>")
             result = tmp2[0].split("\n")
 
@@ -196,13 +162,9 @@ def main():
 
     elif rpc == "edit-config":
 
-        try:
-            response = netconf.set_config(config=cfg_xml)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        response = set_nc_config(module, cfg_xml)
 
-        if "<ok/>" not in response.xml:
+        if "<ok/>" not in response:
             module.fail_json(msg='rpc edit-config failed.')
 
         changed = True
@@ -210,13 +172,9 @@ def main():
 
     elif rpc == "execute-action":
 
-        try:
-            response = netconf.execute_action(action=cfg_xml)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        response = execute_nc_action(module, cfg_xml)
 
-        if "<ok/>" not in response.xml:
+        if "<ok/>" not in response:
             module.fail_json(msg='rpc execute-action failed.')
 
         changed = True
@@ -224,13 +182,9 @@ def main():
 
     elif rpc == "execute-cli":
 
-        try:
-            response = netconf.execute_cli(command=cfg_xml)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        response = execute_nc_cli(module, cfg_xml)
 
-        if "<data/>" in response.xml:
+        if "<data/>" in response:
             end_state["result"] = "<data/>"
         else:
             tmp1 = response.xml.split(r"<data>")

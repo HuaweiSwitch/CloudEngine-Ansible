@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_info_center_global
-version_added: "2.3"
-short_description: Manages outputting logs.
+version_added: "2.4"
+short_description: Manages outputting logs on HUAWEI CloudEngine switches.
 description:
-    - This module offers the ability to be output to the log buffer, log file, console, terminal, or log host on CloudEngine switch.
-extends_documentation_fragment: cloudengine
+    - This module offers the ability to be output to the log buffer, log file, console, terminal, or log host on HUAWEI CloudEngine switches.
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -102,15 +101,14 @@ options:
         default: null
     server_domain:
         description:
-            - server name. The value is a string of 1 to 255 case-sensitive characters.
+            - Server name. The value is a string of 1 to 255 case-sensitive characters.
         required: false
         default: null
     is_default_vpn:
         description:
             - Use the default VPN or not.
         required: false
-        default: null
-        choices: ['true','false']
+        default: False
     vrf_name:
         description:
             - VPN name on a log server. The value is a string of 1 to 31 case-sensitive characters.
@@ -171,96 +169,84 @@ options:
         choices: ['present','absent']
 '''
 EXAMPLES = '''
-# config info-center enable
-- ce_info_center_global:
-    info_center_enable:true
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+- name: info center global module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# config statistic-suppress enable
- - ce_info_center_global:
-    suppress_enable:true
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  tasks:
 
-# config info-center syslog packet-priority 1
- - ce_info_center_global:
-    packet_priority:2
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center enable
+    ce_info_center_global:
+      info_center_enable: true
+      state: present
+      provider: "{{ cli }}"
 
-# config info-center channel 1 name aaa
- - ce_info_center_global:
-    channel_id: 1
-    channel_cfg_name: aaa
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config statistic-suppress enable
+    ce_info_center_global:
+      suppress_enable: true
+      state: present
+      provider: "{{ cli }}"
 
-# config info-center logfile size 10
- - ce_info_center_global:
-    logfile_max_num: 10
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center syslog packet-priority 1
+    ce_info_center_global:
+      packet_priority: 2
+      state: present
+      provider: "{{ cli }}"
 
-# config info-center console channel 1
- - ce_info_center_global:
-    channel_out_direct: console
-    channel_id: 1
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center channel 1 name aaa
+    ce_info_center_global:
+      channel_id: 1
+      channel_cfg_name: aaa
+      state: present
+      provider: "{{ cli }}"
 
-# config info-center filter-id bymodule-alias snmp snmp_ipunlock
- - ce_info_center_global:
-    filter_feature_name: SNMP
-    filter_log_name: SNMP_IPLOCK
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center logfile size 10
+    ce_info_center_global:
+      logfile_max_num: 10
+      state: present
+      provider: "{{ cli }}"
 
-# config info-center max-logfile-number 16
- - ce_info_center_global:
-    logfile_max_size: 16
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center console channel 1
+    ce_info_center_global:
+      channel_out_direct: console
+      channel_id: 1
+      state: present
+      provider: "{{ cli }}"
 
-# config syslog loghost domain.
-- ce_info_center_global:
-    server_domain: aaa
-    vrf_name: aaa
-    channel_id: 1
-    transport_mode: tcp
-    facility: local4
-    server_port: 100
-    level: alert
-    timestamp: UTC
-    state: present
-    host: {{inventory_hostname}}
-    username: {{username}}
-    password: {{password}}
-    port:{{ansible_ssh_port}}
+  - name: Config info-center filter-id bymodule-alias snmp snmp_ipunlock
+    ce_info_center_global:
+      filter_feature_name: SNMP
+      filter_log_name: SNMP_IPLOCK
+      state: present
+      provider: "{{ cli }}"
+
+
+  - name: Config info-center max-logfile-number 16
+    ce_info_center_global:
+      logfile_max_size: 16
+      state: present
+      provider: "{{ cli }}"
+
+  - name: Config syslog loghost domain.
+    ce_info_center_global:
+      server_domain: aaa
+      vrf_name: aaa
+      channel_id: 1
+      transport_mode: tcp
+      facility: local4
+      server_port: 100
+      level: alert
+      timestamp: UTC
+      state: present
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -268,11 +254,10 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"channel_id": "1", "facility": "local4", "is_default_vpn": "true", "level": "alert", "server_domain": "aaa",
+    sample: {"channel_id": "1", "facility": "local4", "is_default_vpn": True, "level": "alert", "server_domain": "aaa",
     "server_port": "100", "state": "present", "timestamp": "localtime", "transport_mode": "tcp"}
 existing:
-    description:
-        - k/v pairs of existing rollback
+    description: k/v pairs of existing rollback
     returned: always
     type: dict
     sample:
@@ -344,14 +329,8 @@ changed:
 import socket
 import sys
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, get_nc_config, set_nc_config
 
 
 CE_NC_GET_CENTER_GLOBAL_INFO_HEADER = """
@@ -637,7 +616,6 @@ class InfoCenterGlobal(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -666,11 +644,6 @@ class InfoCenterGlobal(object):
         self.source_ip = self.module.params['source_ip'] or None
         self.state = self.module.params['state'] or None
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -688,27 +661,11 @@ class InfoCenterGlobal(object):
         self.server_ip_info = None
         self.server_domain_info = None
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
-
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed.')
 
     def check_response(self, con_obj, xml_name):
         """Check if response message is already succeed."""
@@ -717,40 +674,16 @@ class InfoCenterGlobal(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, conf_str):
-        """ netconf_get_config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, conf_str):
-        """ netconf_set_config """
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def get_channel_dict(self):
         """ get channel attributes dict."""
 
         channel_info = dict()
         # get channel info
         conf_str = CE_NC_GET_CHANNEL_INFO % self.channel_id
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return channel_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -787,8 +720,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icChnlCfgName>%s</icChnlCfgName>" % channel_name
 
             conf_str += CE_NC_MERGE_CHANNEL_INFO_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog channel id failed.')
 
@@ -824,8 +757,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icChnlCfgName>%s</icChnlCfgName>" % channel_name
 
             conf_str += CE_NC_MERGE_CHANNEL_INFO_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog channel id failed.')
 
@@ -838,10 +771,10 @@ class InfoCenterGlobal(object):
         channel_direct_info = dict()
         # get channel direct info
         conf_str = CE_NC_GET_CHANNEL_DIRECT_INFO % self.channel_out_direct
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return channel_direct_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -879,8 +812,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icCfgChnlId>%s</icCfgChnlId>" % channel_id
 
             conf_str += CE_NC_MERGE_CHANNEL_DIRECT_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog channel out direct failed.')
 
@@ -914,8 +847,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icCfgChnlId>%s</icCfgChnlId>" % channel_id
 
             conf_str += CE_NC_MERGE_CHANNEL_DIRECT_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog channel out direct failed.')
 
@@ -928,10 +861,10 @@ class InfoCenterGlobal(object):
         filter_info = dict()
         # get filter info
         conf_str = CE_NC_GET_FILTER_INFO
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return filter_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -968,8 +901,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icFilterLogName>%s</icFilterLogName>" % filter_log_name
 
             conf_str += CE_NC_CREATE_CHANNEL_FILTER_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(msg='Error: Merge syslog filter failed.')
 
             self.updates_cmd.append("info-center filter-id bymodule-alias %s %s"
@@ -993,8 +926,8 @@ class InfoCenterGlobal(object):
                 conf_str += "<icFilterLogName>%s</icFilterLogName>" % filter_log_name
 
             conf_str += CE_NC_DELETE_CHANNEL_FILTER_TAIL
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog channel out direct failed.')
             self.updates_cmd.append("undo info-center filter-id bymodule-alias %s %s"
@@ -1006,17 +939,20 @@ class InfoCenterGlobal(object):
 
         server_ip_info = dict()
         # get server ip info
+        is_default_vpn = "false"
         if not self.is_default_vpn:
-            self.is_default_vpn = "false"
+            self.is_default_vpn = False
+        if self.is_default_vpn is True:
+            is_default_vpn = "true"
         if not self.vrf_name:
             self.vrf_name = "_public_"
         conf_str = CE_NC_GET_SERVER_IP_INFO_HEADER % (
-            self.ip_type, self.server_ip, self.vrf_name, self.is_default_vpn)
+            self.ip_type, self.server_ip, self.vrf_name, is_default_vpn)
         conf_str += CE_NC_GET_SERVER_IP_INFO_TAIL
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return server_ip_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -1037,12 +973,15 @@ class InfoCenterGlobal(object):
         """config loghost ip or dns"""
 
         conf_str = ""
+        is_default_vpn = "false"
+        if self.is_default_vpn is True:
+            is_default_vpn = "true"
         if self.ip_type:
             conf_str = CE_NC_MERGE_SERVER_IP_INFO_HEADER % (self.ip_type, self.server_ip, self.vrf_name,
-                                                            self.is_default_vpn)
+                                                            is_default_vpn)
         elif self.server_domain:
             conf_str = CE_NC_MERGE_SERVER_DNS_INFO_HEADER % (
-                self.server_domain, self.vrf_name, self.is_default_vpn)
+                self.server_domain, self.vrf_name, is_default_vpn)
         if self.level:
             conf_str += "<level>%s</level>" % self.level
         if self.server_port:
@@ -1065,8 +1004,8 @@ class InfoCenterGlobal(object):
             conf_str += CE_NC_MERGE_SERVER_IP_INFO_TAIL
         elif self.server_domain:
             conf_str += CE_NC_MERGE_SERVER_DNS_INFO_TAIL
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge server loghost failed.')
 
         cmd = "info-center loghost"
@@ -1104,12 +1043,15 @@ class InfoCenterGlobal(object):
         """delete loghost ip or dns"""
 
         conf_str = ""
+        is_default_vpn = "false"
+        if self.is_default_vpn is True:
+            is_default_vpn = "true"
         if self.ip_type:
             conf_str = CE_NC_DELETE_SERVER_IP_INFO_HEADER % (self.ip_type, self.server_ip, self.vrf_name,
-                                                             self.is_default_vpn)
+                                                             is_default_vpn)
         elif self.server_domain:
             conf_str = CE_NC_DELETE_SERVER_DNS_INFO_HEADER % (
-                self.server_domain, self.vrf_name, self.is_default_vpn)
+                self.server_domain, self.vrf_name, is_default_vpn)
         if self.level:
             conf_str += "<level>%s</level>" % self.level
         if self.server_port:
@@ -1132,8 +1074,8 @@ class InfoCenterGlobal(object):
             conf_str += CE_NC_DELETE_SERVER_IP_INFO_TAIL
         elif self.server_domain:
             conf_str += CE_NC_DELETE_SERVER_DNS_INFO_TAIL
-        con_obj = self.netconf_set_config(conf_str=conf_str)
-        if "<ok/>" not in con_obj.xml:
+        recv_xml = set_nc_config(self.module, conf_str)
+        if "<ok/>" not in recv_xml:
             self.module.fail_json(msg='Error: Merge server loghost failed.')
 
         cmd = "undo info-center loghost"
@@ -1173,15 +1115,15 @@ class InfoCenterGlobal(object):
         server_domain_info = dict()
         # get server domain info
         if not self.is_default_vpn:
-            self.is_default_vpn = "false"
+            self.is_default_vpn = False
         if not self.vrf_name:
             self.vrf_name = "_public_"
         conf_str = CE_NC_GET_SERVER_DNS_INFO_HEADER
         conf_str += CE_NC_GET_SERVER_DNS_INFO_TAIL
-        con_obj = self.netconf_get_config(conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return server_domain_info
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -1234,7 +1176,6 @@ class InfoCenterGlobal(object):
                         find_flag = False
                     if find_flag:
                         break
-
         elif self.server_domain:
             if self.server_domain_info:
                 for tmp in self.server_domain_info["serverAddressInfos"]:
@@ -1284,11 +1225,11 @@ class InfoCenterGlobal(object):
         if self.suppress_enable:
             conf_str += "<suppressEnable></suppressEnable>"
         conf_str += CE_NC_GET_CENTER_GLOBAL_INFO_TAIL
-        con_obj = self.netconf_get_config(conf_str=conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return cur_global_info
         else:
-            xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+            xml_str = xml_str.replace('\r', '').replace('\n', '').\
                 replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                 replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -1350,8 +1291,8 @@ class InfoCenterGlobal(object):
                     self.updates_cmd.append(cmd)
                     self.changed = True
         if self.changed:
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(msg='Error: Merge syslog global failed.')
 
     def get_syslog_logfile(self):
@@ -1365,11 +1306,11 @@ class InfoCenterGlobal(object):
         if self.logfile_max_size:
             conf_str += "<maxFileSize></maxFileSize>"
         conf_str += CE_NC_GET_LOG_FILE_INFO_TAIL
-        con_obj = self.netconf_get_config(conf_str=conf_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, conf_str)
+        if "<data/>" in xml_str:
             return cur_logfile_info
         else:
-            xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+            xml_str = xml_str.replace('\r', '').replace('\n', '').\
                 replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                 replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -1434,9 +1375,8 @@ class InfoCenterGlobal(object):
                     self.changed = True
 
         if self.changed:
-            con_obj = self.netconf_set_config(conf_str=conf_str)
-
-            if "<ok/>" not in con_obj.xml:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
                 self.module.fail_json(
                     msg='Error: Merge syslog logfile failed.')
 
@@ -1711,7 +1651,6 @@ class InfoCenterGlobal(object):
             self.server_domain_info = self.get_server_domain_dict()
         self.get_existing()
         self.get_proposed()
-
         if self.info_center_enable or self.packet_priority or self.suppress_enable:
             self.merge_syslog_global()
 
@@ -1745,17 +1684,17 @@ class InfoCenterGlobal(object):
                 if self.vrf_name and self.vrf_name != "_public_":
                     self.module.fail_json(
                         msg='Error: ipType:ipv6 only support default vpn:_public_.')
-            if self.is_default_vpn == "true":
+            if self.is_default_vpn is True:
                 if self.vrf_name:
                     if self.vrf_name != "_public_":
                         self.module.fail_json(
-                            msg='Error: vrf_name should be _public_ when is_default_vpn is true.')
+                            msg='Error: vrf_name should be _public_ when is_default_vpn is True.')
                 else:
                     self.vrf_name = "_public_"
             else:
                 if self.vrf_name == "_public_":
                     self.module.fail_json(
-                        msg='Error: The default vpn value is _public_, but is_default_vpn is false.')
+                        msg='Error: The default vpn value is _public_, but is_default_vpn is False.')
             if self.state == "present":
                 # info-center channel channel-number name channel-name
                 if self.channel_id and self.channel_cfg_name:
@@ -1770,13 +1709,12 @@ class InfoCenterGlobal(object):
                 if self.filter_feature_name and self.filter_log_name:
                     self.config_merge_filter(
                         self.filter_feature_name, self.filter_log_name)
-
-                if self.ip_type and self.server_ip and self.is_default_vpn:
+                if self.ip_type and self.server_ip:
                     if not self.vrf_name:
                         self.vrf_name = "_public_"
                     if self.check_need_loghost_cfg():
                         self.config_merge_loghost()
-                if self.server_domain and self.is_default_vpn:
+                if self.server_domain:
                     if not self.vrf_name:
                         self.vrf_name = "_public_"
                     if self.check_need_loghost_cfg():
@@ -1792,12 +1730,12 @@ class InfoCenterGlobal(object):
                 if self.filter_feature_name and self.filter_log_name:
                     self.delete_merge_filter(
                         self.filter_feature_name, self.filter_log_name)
-                if self.ip_type and self.server_ip and self.is_default_vpn:
+                if self.ip_type and self.server_ip:
                     if not self.vrf_name:
                         self.vrf_name = "_public_"
                     if self.check_need_loghost_cfg():
                         self.delete_merge_loghost()
-                if self.server_domain and self.is_default_vpn:
+                if self.server_domain:
                     if not self.vrf_name:
                         self.vrf_name = "_public_"
                     if self.check_need_loghost_cfg():
@@ -1835,7 +1773,7 @@ def main():
         ip_type=dict(choices=['ipv4', 'ipv6']),
         server_ip=dict(type='str'),
         server_domain=dict(type='str'),
-        is_default_vpn=dict(choices=['true', 'false']),
+        is_default_vpn=dict(default=False, type='bool'),
         vrf_name=dict(type='str'),
         level=dict(choices=['emergencies', 'alert', 'critical', 'error', 'warning', 'notification',
                             'informational', 'debugging']),
@@ -1850,7 +1788,7 @@ def main():
         state=dict(choices=['present', 'absent'], default='present')
 
     )
-
+    argument_spec.update(ce_argument_spec)
     module = InfoCenterGlobal(argument_spec)
     module.work()
 

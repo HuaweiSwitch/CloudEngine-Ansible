@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_snmp_contact
-version_added: "2.3"
-short_description: Manages SNMP contact configuration.
+version_added: "2.4"
+short_description: Manages SNMP contact configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages SNMP contact configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
+    - Manages SNMP contact configurations on HUAWEI CloudEngine switches.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -36,25 +35,41 @@ options:
             - Contact information.
         required: true
         default: null
+    state:
+        description:
+            - Manage the state of the resource.
+        required: false
+        default: present
+        choices: ['present','absent']
 '''
 
 EXAMPLES = '''
-# config SNMP contact
-  - name: "config SNMP contact"
+
+- name: CloudEngine snmp contact test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config SNMP contact"
     ce_snmp_contact:
-        state:  present
-        contact:  call Operator at 010-99999999
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo SNMP contact
-  - name: "undo SNMP contact"
+      state:  present
+      contact:  call Operator at 010-99999999
+      provider: "{{ cli }}"
+
+  - name: "Undo SNMP contact"
     ce_snmp_contact:
-        state:  absent
-        contact:  call Operator at 010-99999999
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  absent
+      contact:  call Operator at 010-99999999
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -70,8 +85,8 @@ proposed:
     sample: {"contact": "call Operator at 010-99999999",
              "state": "present"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {}
 end_state:
@@ -86,8 +101,8 @@ updates:
     sample: ["snmp-agent sys-info contact call Operator at 010-99999999"]
 '''
 
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config, ce_argument_spec
 
 
 class SnmpContact(object):
@@ -99,8 +114,7 @@ class SnmpContact(object):
         # module
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # config
         self.cur_cfg = dict()
@@ -157,18 +171,15 @@ class SnmpContact(object):
         """ Load configure by cli """
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_get_config(self):
         """ Get configure by cli """
 
         regular = "| include snmp | include contact"
-        tmp_cfg = self.module.config.get_config(
-            include_all=True, regular=regular)
+        flags = list()
+        flags.append(regular)
+        tmp_cfg = get_config(self.module, flags)
 
         return tmp_cfg
 
@@ -178,7 +189,10 @@ class SnmpContact(object):
         cmd = "snmp-agent sys-info contact %s" % self.contact
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def undo_config(self):
@@ -187,7 +201,10 @@ class SnmpContact(object):
         cmd = "undo snmp-agent sys-info contact"
         self.updates_cmd.append(cmd)
 
-        self.cli_load_config(cmd)
+        cmds = list()
+        cmds.append(cmd)
+
+        self.cli_load_config(cmds)
         self.changed = True
 
     def work(self):
@@ -225,6 +242,7 @@ def main():
         contact=dict(type='str', required=True)
     )
 
+    argument_spec.update(ce_argument_spec)
     module = SnmpContact(argument_spec=argument_spec)
     module.work()
 

@@ -1,9 +1,0 @@
----
-
-- hosts: ce78
-  gather_facts: no
-  vars:
-  
-  tasks:  
-  - ce_static_route: prefix=2.2.2.2 mask=24 next_hop=3.3.3.1 nhp_interface=10GE1/0/1 aftype=v4 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_static_route: prefix=2aa1::db8:800:200c:cccb mask=64 next_hop=1::1:1:1:1 nhp_interface=10GE1/0/1 aftype=v6 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}

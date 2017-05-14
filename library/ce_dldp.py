@@ -18,21 +18,20 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 
 module: ce_dldp
-version_added: "2.3"
-short_description: Manages global DLDP configuration.
+version_added: "2.4"
+short_description: Manages global DLDP configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages global DLDP configuration.
-extends_documentation_fragment: cloudengine
+    - Manages global DLDP configuration on HUAWEI CloudEngine switches.
 author:
     - Zhijin Zhou (@CloudEngine-Ansible)
 notes:
-    - The relevant configurations will be deleted if DLDP is disabled using enable=false.
+    - The relevant configurations will be deleted if DLDP is disabled using enable=disable.
     - When using auth_mode=none, it will restore the default DLDP authentication mode(By default,
       DLDP packets are not authenticated.).
     - By default, the working mode of DLDP is enhance, so you are advised to use work_mode=enhance to restore defualt
@@ -45,10 +44,10 @@ options:
             - Set global DLDP enable state.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
     work_mode:
         description:
-            - Set global DLDP work-mode
+            - Set global DLDP work-mode.
         required: false
         default: null
         choices: ['enhance', 'normal']
@@ -77,49 +76,53 @@ options:
             - Specify whether reset DLDP state of disabled interfaces.
         required: false
         default: null
-        choices: ['true', 'false']
+        choices: ['enable', 'disable']
 '''
 
 EXAMPLES = '''
-# Configure global DLDP enable state
-- ce_dldp:
-    enable: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: DLDP test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
-# Configure DLDP work-mode and ensure global DLDP state is already enabled
-- ce_dldp:
-    enable: true
-    work_mode: normal
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  tasks:
 
-# Configure advertisement message time interval in seconds and ensure global DLDP state is already enabled
-- ce_dldp:
-    enable: true
-    time_interval: 6
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: "Configure global DLDP enable state"
+    ce_dldp:
+      enable: enable
+      provider: "{{ cli }}"
 
-# Configure a DLDP authentication mode and ensure global DLDP state is already enabled
-- ce_dldp:
-    enable: true
-    auth_mode: md5
-    auth_pwd: abc
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: "Configure DLDP work-mode and ensure global DLDP state is already enabled"
+    ce_dldp:
+      enable: enable
+      work_mode: normal
+      provider: "{{ cli }}"
 
-# Reset DLDP state of disabled interfaces and ensure global DLDP state is already enabled
-- ce_dldp:
-    enable: true
-    reset: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+  - name: "Configure advertisement message time interval in seconds and ensure global DLDP state is already enabled"
+    ce_dldp:
+      enable: enable
+      time_interval: 6
+      provider: "{{ cli }}"
+
+  - name: "Configure a DLDP authentication mode and ensure global DLDP state is already enabled"
+    ce_dldp:
+      enable: enable
+      auth_mode: md5
+      auth_pwd: abc
+      provider: "{{ cli }}"
+
+  - name: "Reset DLDP state of disabled interfaces and ensure global DLDP state is already enabled"
+    ce_dldp:
+      enable: enable
+      reset: enable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -128,18 +131,18 @@ proposed:
     returned: always
     type: dict
     sample: {
-                "enable": "true",
-                "reset": "true",
+                "enable": "enable",
+                "reset": "enable",
                 "time_internal": "12",
                 "work_mode": "normal"
             }
 existing:
-    description:
-        - k/v pairs of existing global DLDP configration
+    description: k/v pairs of existing global DLDP configration
+    returned: always
     type: dict
     sample: {
-                "enable": "false",
-                "reset": "false",
+                "enable": "disable",
+                "reset": "disable",
                 "time_internal": "5",
                 "work_mode": "enhance"
             }
@@ -148,8 +151,8 @@ end_state:
     returned: always
     type: dict
     sample: {
-                "enable": "true",
-                "reset": "true",
+                "enable": "enable",
+                "reset": "enable",
                 "time_internal": "12",
                 "work_mode": "normal"
             }
@@ -170,17 +173,10 @@ changed:
     sample: true
 '''
 
-import sys
 import copy
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import ce_argument_spec, set_nc_config, get_nc_config, execute_nc_action
 
 CE_NC_ACTION_RESET_DLDP = """
 <action>
@@ -225,10 +221,9 @@ class Dldp(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
-        # dldp global configration info
+        # DLDP global configration info
         self.enable = self.module.params['enable'] or None
         self.work_mode = self.module.params['work_mode'] or None
         self.internal = self.module.params['time_interval'] or None
@@ -238,12 +233,6 @@ class Dldp(object):
 
         self.dldp_conf = dict()
         self.same_conf = False
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -252,11 +241,8 @@ class Dldp(object):
         self.existing = list()
         self.end_state = list()
 
-        # init netconf connect
-        self.init_netconf()
-
     def check_config_if_same(self):
-        """judge whether current config is the same as what we excepted"""
+        """Judge whether current config is the same as what we excepted"""
 
         if self.enable and self.enable != self.dldp_conf['dldpEnable']:
             return False
@@ -277,7 +263,7 @@ class Dldp(object):
             if self.auth_mode == 'none' and self.dldp_conf['dldpAuthMode'] != 'dldpAuthNone':
                 return False
 
-        if self.reset and self.reset == 'true':
+        if self.reset and self.reset == 'enable':
             return False
 
         return True
@@ -289,14 +275,14 @@ class Dldp(object):
                 or (self.auth_pwd and not self.auth_mode):
             self.module.fail_json(msg="Error: auth_mode and auth_pwd must both exist or not exist.")
 
-        if self.dldp_conf['dldpEnable'] == 'false' and not self.enable:
+        if self.dldp_conf['dldpEnable'] == 'disable' and not self.enable:
             if self.work_mode or self.reset or self.internal or self.auth_mode:
                 self.module.fail_json(msg="Error: when DLDP is already disabled globally, "
                                       "work_mode, time_internal auth_mode and reset parameters are not "
                                       "expected to configure.")
 
-        if self.enable == 'false' and (self.work_mode or self.internal or self.reset or self.auth_mode):
-            self.module.fail_json(msg="Error: when using enable=false, work_mode, "
+        if self.enable == 'disable' and (self.work_mode or self.internal or self.reset or self.auth_mode):
+            self.module.fail_json(msg="Error: when using enable=disable, work_mode, "
                                   "time_internal auth_mode and reset parameters are not expected "
                                   "to configure.")
 
@@ -321,81 +307,31 @@ class Dldp(object):
                             'case-sensitive encrypted characters.')
 
     def init_module(self):
-        """init module object"""
-        self.module = NetworkModule(
+        """Init module object"""
+
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """init netconf interface"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-            if not self.netconf:
-                self.module.fail_json(msg='Error: netconf init failed')
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed"""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_config(self, xml_str, xml_name):
-        """netconf set config"""
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """netconf set action"""
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def get_dldp_exist_config(self):
-        """get current dldp existed configuration"""
+        """Get current dldp existed configuration"""
+
         dldp_conf = dict()
         xml_str = CE_NC_GET_GLOBAL_DLDP_CONFIG
-        con_obj = self.netconf_get_config(xml_str)
-        if "<data/>" in con_obj.xml:
+        con_obj = get_nc_config(self.module, xml_str)
+        if "<data/>" in con_obj:
             return dldp_conf
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = con_obj.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
-        # get global dldp info
+        # get global DLDP info
         root = ElementTree.fromstring(xml_str)
         topo = root.find("data/dldp/dldpSys")
         if not topo:
@@ -404,18 +340,30 @@ class Dldp(object):
 
         for eles in topo:
             if eles.tag in ["dldpEnable", "dldpInterval", "dldpWorkMode", "dldpAuthMode"]:
-                dldp_conf[eles.tag] = eles.text
+                if eles.tag == 'dldpEnable':
+                    if eles.text == 'true':
+                        value = 'enable'
+                    else:
+                        value = 'disable'
+                else:
+                    value = eles.text
+                dldp_conf[eles.tag] = value
 
         return dldp_conf
 
     def config_global_dldp(self):
-        """config global dldp"""
+        """Config global dldp"""
+
         if self.same_conf:
             return
 
         enable = self.enable
         if not self.enable:
             enable = self.dldp_conf['dldpEnable']
+        if enable == 'enable':
+            enable = 'true'
+        else:
+            enable = 'false'
 
         internal = self.internal
         if not self.internal:
@@ -454,16 +402,19 @@ class Dldp(object):
                 xml_str += "<dldpPasswords>%s</dldpPasswords>" % self.auth_pwd
 
         xml_str += CE_NC_MERGE_DLDP_GLOBAL_CONFIG_TAIL
-        self.netconf_set_config(xml_str, "MERGE_DLDP_GLOBAL_CONFIG")
+        ret_xml = set_nc_config(self.module, xml_str)
+        self.check_response(ret_xml, "MERGE_DLDP_GLOBAL_CONFIG")
 
-        if self.reset == 'true':
+        if self.reset == 'enable':
             xml_str = CE_NC_ACTION_RESET_DLDP
-            self.netconf_set_action(xml_str, "ACTION_RESET_DLDP")
+            ret_xml = execute_nc_action(self.module, xml_str)
+            self.check_response(ret_xml, "ACTION_RESET_DLDP")
 
         self.changed = True
 
     def get_existing(self):
-        """get existing info"""
+        """Get existing info"""
+
         dldp_conf = dict()
 
         dldp_conf['enable'] = self.dldp_conf.get('dldpEnable', None)
@@ -486,26 +437,26 @@ class Dldp(object):
         else:
             dldp_conf['auth_mode'] = 'hmac-sha256'
 
-        dldp_conf['reset'] = 'false'
+        dldp_conf['reset'] = 'disable'
 
         self.existing = copy.deepcopy(dldp_conf)
 
     def get_proposed(self):
-        """get proposed result"""
+        """Get proposed result"""
 
         self.proposed = dict(enable=self.enable, work_mode=self.work_mode,
                              time_interval=self.internal, reset=self.reset,
                              auth_mode=self.auth_mode, auth_pwd=self.auth_pwd)
 
     def get_update_cmd(self):
-        """get update commands"""
+        """Get update commands"""
         if self.same_conf:
             return
 
         if self.enable and self.enable != self.dldp_conf['dldpEnable']:
-            if self.enable == 'true':
+            if self.enable == 'enable':
                 self.updates_cmd.append("dldp enable")
-            elif self.enable == 'false':
+            elif self.enable == 'disable':
                 self.updates_cmd.append("undo dldp enable")
                 return
 
@@ -527,11 +478,12 @@ class Dldp(object):
             else:
                 self.updates_cmd.append("dldp authentication-mode %s %s" % (self.auth_mode, self.auth_pwd))
 
-        if self.reset and self.reset == 'true':
+        if self.reset and self.reset == 'enable':
             self.updates_cmd.append('dldp reset')
 
     def get_end_state(self):
-        """get end state info"""
+        """Get end state info"""
+
         dldp_conf = dict()
         self.dldp_conf = self.get_dldp_exist_config()
 
@@ -555,13 +507,14 @@ class Dldp(object):
         else:
             dldp_conf['auth_mode'] = 'hmac-sha256'
 
-        dldp_conf['reset'] = 'false'
-        if self.reset == 'true':
-            dldp_conf['reset'] = 'true'
+        dldp_conf['reset'] = 'disable'
+        if self.reset == 'enable':
+            dldp_conf['reset'] = 'enable'
         self.end_state = copy.deepcopy(dldp_conf)
 
     def show_result(self):
-        """show result"""
+        """Show result"""
+
         self.results['changed'] = self.changed
         self.results['proposed'] = self.proposed
         self.results['existing'] = self.existing
@@ -574,7 +527,8 @@ class Dldp(object):
         self.module.exit_json(**self.results)
 
     def work(self):
-        """worker"""
+        """Worker"""
+
         self.dldp_conf = self.get_dldp_exist_config()
         self.check_params()
         self.same_conf = self.check_config_if_same()
@@ -587,18 +541,20 @@ class Dldp(object):
 
 
 def main():
-    """main function entry"""
+    """Main function entry"""
+
     argument_spec = dict(
-        enable=dict(choices=['true', 'false'], type='str'),
+        enable=dict(choices=['enable', 'disable'], type='str'),
         work_mode=dict(choices=['enhance', 'normal'], type='str'),
         time_interval=dict(type='str'),
-        reset=dict(choices=['true', 'false'], type='str'),
+        reset=dict(choices=['enable', 'disable'], type='str'),
         auth_mode=dict(choices=['md5', 'simple', 'sha', 'hmac-sha256', 'none'], type='str'),
         auth_pwd=dict(type='str', no_log=True),
     )
-
+    argument_spec.update(ce_argument_spec)
     dldp_obj = Dldp(argument_spec)
     dldp_obj.work()
+
 
 if __name__ == '__main__':
     main()

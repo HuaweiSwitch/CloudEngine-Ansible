@@ -17,17 +17,16 @@
 #
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_rollback
-version_added: "2.3"
-short_description: Set a checkpoint or rollback to a checkpoint.
+version_added: "2.4"
+short_description: Set a checkpoint or rollback to a checkpoint on HUAWEI CloudEngine switches.
 description:
     - This module offers the ability to set a configuration checkpoint
-      file or rollback to a configuration checkpoint file on CloudEngine switch.
-extends_documentation_fragment: cloudengine
+      file or rollback to a configuration checkpoint file on HUAWEI CloudEngine switches.
 author:
     - Li Yanfeng (@CloudEngine-Ansible)
 options:
@@ -70,14 +69,26 @@ options:
         choices: ['rollback','clear','set','display','commit']
 '''
 EXAMPLES = '''
-# Ensure commit_id is exist, and specifies the label of the configuration
-# rollback point to which system configurations are expected to roll back.
-- ce_rollback:
+- name: rollback module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+- name: Ensure commit_id is exist, and specifies the label of the configuration rollback point to
+        which system configurations are expected to roll back.
+  ce_rollback:
     commit_id: 1000000748
     action: rollback
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+    provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -87,8 +98,7 @@ proposed:
     type: dict
     sample: {"commit_id": "1000000748", "action": "rollback"}
 existing:
-    description:
-        - k/v pairs of existing rollback
+    description: k/v pairs of existing rollback
     returned: sometimes
     type: dict
     sample: {"commitId": "1000000748", "userLabel": "abc"}
@@ -113,17 +123,8 @@ end_state:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkError, NetworkModule
-from ansible.module_utils.cloudengine import get_netconf, get_cli_exception
-from ansible.module_utils.netcli import CommandRunner, AddCommandError
-from ansible.module_utils.basic import get_exception
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, execute_nc_action, ce_argument_spec, run_commands
 
 
 CE_NC_GET_CHECKPOINT = """
@@ -220,7 +221,6 @@ class RollBack(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # module input info
@@ -230,11 +230,6 @@ class RollBack(object):
         self.last = self.module.params['last']
         self.oldest = self.module.params['oldest']
         self.action = self.module.params['action']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -247,86 +242,24 @@ class RollBack(object):
         # configuration rollback points info
         self.rollback_info = None
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed.')
-
-    def excute_command(self, commands):
-        """ excute_command"""
-
-        runner = CommandRunner(self.module)
-        for cmd in commands:
-            try:
-                runner.add_command(**cmd)
-            except AddCommandError:
-                exc = get_exception()
-                self.module.fail_json(msg=get_cli_exception(exc))
-
-        try:
-            runner.run()
-        except NetworkError:
-            err = get_cli_exception()
-            self.module.fail_json(msg=err)
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def get_rollback_dict(self):
         """ get rollback attributes dict."""
 
         rollback_info = dict()
         conf_str = CE_NC_GET_CHECKPOINT
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-        xml_str = con_obj.xml
+        xml_str = get_nc_config(self.module, conf_str)
         rollback_info["RollBackInfos"] = list()
         if "<data/>" in xml_str:
             return rollback_info
@@ -368,7 +301,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "rollback configuration to commit-id %s" % self.commit_id)
         cfg_xml = CE_NC_ACTION_ROLLBACK_COMMIT_ID % self.commit_id
-        self.netconf_set_action(cfg_xml, "ROLLBACK_COMMITID")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "ROLLBACK_COMMITID")
         self.changed = True
 
     def rollback_label(self):
@@ -378,7 +312,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "rollback configuration to label %s" % self.label)
         cfg_xml = CE_NC_ACTION_ROLLBACK_LABEL % self.label
-        self.netconf_set_action(cfg_xml, "ROLLBACK_LABEL")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "ROLLBACK_LABEL")
         self.changed = True
 
     def rollback_filename(self):
@@ -388,7 +323,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "rollback configuration to file %s" % self.filename)
         cfg_xml = CE_NC_ACTION_ROLLBACK_FILE % self.filename
-        self.netconf_set_action(cfg_xml, "ROLLBACK_FILENAME")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "ROLLBACK_FILENAME")
         self.changed = True
 
     def rollback_last(self):
@@ -398,7 +334,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "rollback configuration to last %s" % self.last)
         cfg_xml = CE_NC_ACTION_ROLLBACK_LAST % self.last
-        self.netconf_set_action(cfg_xml, "ROLLBACK_LAST")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "ROLLBACK_LAST")
         self.changed = True
 
     def set_commitid_label(self):
@@ -409,7 +346,8 @@ class RollBack(object):
             "set configuration commit %s label %s" % (self.commit_id, self.label))
         cfg_xml = CE_NC_ACTION_SET_COMMIT_ID_LABEL % (
             self.commit_id, self.label)
-        self.netconf_set_action(cfg_xml, "SET_COMIMIT_LABEL")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "SET_COMIMIT_LABEL")
         self.changed = True
 
     def clear_commitid_label(self):
@@ -419,7 +357,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "clear configuration commit %s label" % self.commit_id)
         cfg_xml = CE_NC_ACTION_CLEAR_COMMIT_ID_LABEL % self.commit_id
-        self.netconf_set_action(cfg_xml, "CLEAR_COMMIT_LABEL")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "CLEAR_COMMIT_LABEL")
         self.changed = True
 
     def clear_oldest(self):
@@ -429,7 +368,8 @@ class RollBack(object):
         self.updates_cmd.append(
             "clear configuration commit oldest %s" % self.oldest)
         cfg_xml = CE_NC_ACTION_CLEAR_OLDEST_COMMIT_ID % self.oldest
-        self.netconf_set_action(cfg_xml, "CLEAR_COMMIT_OLDEST")
+        recv_xml = execute_nc_action(self.module, cfg_xml)
+        self.check_response(recv_xml, "CLEAR_COMMIT_OLDEST")
         self.changed = True
 
     def commit_label(self):
@@ -444,7 +384,7 @@ class RollBack(object):
         commands.append(cmd2)
         self.updates_cmd.append(
             "commit label %s" % self.label)
-        self.excute_command(commands)
+        run_commands(self.module, commands)
         self.changed = True
 
     def check_params(self):
@@ -573,7 +513,7 @@ def main():
         action=dict(required=False, type='str', choices=[
             'rollback', 'clear', 'set', 'commit', 'display']),
     )
-
+    argument_spec.update(ce_argument_spec)
     module = RollBack(argument_spec)
     module.work()
 

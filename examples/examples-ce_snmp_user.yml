@@ -1,15 +1,51 @@
----
-
-- name: cloudengine snmp user module test
+- name: CloudEngine snmp user test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP usm user"
+    ce_snmp_user:
+      state:  present
+      usm_user_name:  wdz_snmp
+      remote_engine_id:  800007DB03389222111200
+      acl_number:  2000
+      user_group:  wdz_group
+      provider: "{{ cli }}"
 
-  - ce_snmp_user: acl_number=2000 usm_user_name=wdz_snmp remote_engine_id=800007DB03389222111200 user_group=wdz_group auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Undo SNMP usm user"
+    ce_snmp_user:
+      state:  absent
+      usm_user_name:  wdz_snmp
+      remote_engine_id:  800007DB03389222111200
+      acl_number:  2000
+      user_group:  wdz_group
+      provider: "{{ cli }}"
 
-  - ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP local user"
+    ce_snmp_user:
+      state:  present
+      aaa_local_user:  wdz_user
+      auth_protocol:  md5
+      auth_key:  huawei123
+      priv_protocol:  des56
+      priv_key:  huawei123
+      provider: "{{ cli }}"
 
-  - ce_snmp_user: aaa_local_user=wdz_user auth_protocol=md5 auth_key=huawei123 priv_protocol=des56 priv_key=huawei123 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP local user"
+    ce_snmp_user:
+      state:  absent
+      aaa_local_user:  wdz_user
+      auth_protocol:  md5
+      auth_key:  huawei123
+      priv_protocol:  des56
+      priv_key:  huawei123
+      provider: "{{ cli }}"

@@ -3,26 +3,32 @@
 - name: cloudengine evpn bgp module test
   hosts: cloudengine
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    register: data
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     ignore_errors: false
 
   - name: "ipv4-family vpn-instance"
-    ce_config: lines='ip vpn-instance abc,ipv4-family' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='ip vpn-instance abc,ipv4-family' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "evpn config"
-    ce_config: lines='evpn-overlay enable,bgp 100,peer 1.1.1.1 as-number 100,group abc internal' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='evpn-overlay enable,bgp 100,peer 1.1.1.1 as-number 100,group abc internal' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "bgp is not exist"
-    ce_evpn_bgp: bgp_instance=200 peer_address=1.1.1.1 as_number=100 peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=200 peer_address=1.1.1.1 as_number=100 peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -33,7 +39,7 @@
         - data | failed
 
   - name: "The peer session 1.1.1.2 does not exist"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.2 as_number=100 peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.2 as_number=100 peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -44,7 +50,7 @@
         - data | failed
 
   - name: "The peer already exists in another as-number"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.2 as_number=aa peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.2 as_number=aa peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -55,7 +61,7 @@
         - data | failed
 
   - name: "peer_address is invalid"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.a as_number=aa peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.a as_number=aa peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -66,7 +72,7 @@
         - data | failed
 
   - name: "peer_address enable"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -76,7 +82,7 @@
         - data.changed == true
 
   - name: "peer_address disbale"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=false provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -86,7 +92,7 @@
         - data.changed == true
 
   - name: "peer_group enable"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -96,7 +102,7 @@
         - data.changed == true
 
   - name: "peer_group disable"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=false provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -106,7 +112,7 @@
         - data.changed == true
 
   - name: "peer_address enable"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -116,7 +122,7 @@
         - data.changed == true
 
   - name: "peer 1.1.1.1 advertise arp"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=arp state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=arp state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -126,7 +132,7 @@
         - data.changed == true
 
   - name: "undo peer 1.1.1.1 advertise arp"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=arp state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=arp state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -136,7 +142,7 @@
         - data.changed == true
 
   - name: "peer 1.1.1.1 advertise irb"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=irb state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=irb state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -146,7 +152,7 @@
         - data.changed == true
 
   - name: "undo peer 1.1.1.1 advertise irb"
-    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=irb state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_address=1.1.1.1 as_number=100 advertise_router_type=irb state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -156,7 +162,7 @@
         - data.changed == true
 
   - name: "The peer does not exist"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -167,7 +173,7 @@
         - data | failed
 
   - name: "peer_group enable"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc peer_enable=true provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -177,7 +183,7 @@
         - data.changed == true
 
   - name: "The peer advertise"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -187,7 +193,7 @@
         - data.changed == true
 
   - name: "undo peer abc advertise irb"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -197,7 +203,7 @@
         - data.changed == true
 
   - name: "undo peer abc advertise irb"
-    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 peer_group_name=abc advertise_router_type=irb state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -207,7 +213,7 @@
         - data.changed == false
 
   - name: "vpn_name:aaa is not exist"
-    ce_evpn_bgp: bgp_instance=100 vpn_name=aaa advertise_l2vpn_evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 vpn_name=aaa advertise_l2vpn_evpn=enable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -218,12 +224,12 @@
         - data | failed
 
   - name: "ipv4-family vpn-instance"
-    ce_config: lines='bgp 100,ipv4-family vpn-instance abc' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='bgp 100,ipv4-family vpn-instance abc' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "advertise l2vpn evpn"
-    ce_evpn_bgp: bgp_instance=100 vpn_name=abc advertise_l2vpn_evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 vpn_name=abc advertise_l2vpn_evpn=enable provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -233,7 +239,7 @@
         - data.changed == true
 
   - name: "undo advertise l2vpn evpn"
-    ce_evpn_bgp: bgp_instance=100 vpn_name=abc advertise_l2vpn_evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp: bgp_instance=100 vpn_name=abc advertise_l2vpn_evpn=disable provider="{{ cli }}"
     register: data
     ignore_errors: false
 

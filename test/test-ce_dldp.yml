@@ -3,6 +3,12 @@
 - name: cloudengine dldp module test
   hosts: cloudengine
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
@@ -10,17 +16,17 @@
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
   
   - name: "ensure DLDP enable state is false"
-    ce_dldp: enable=false  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: enable=disable  provider="{{ cli }}"
     register: data
     ignore_errors: false
 
-  - name: "Config enable=false"
-    ce_dldp: enable=false  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config enable=disable"
+    ce_dldp: enable=disable  provider="{{ cli }}"
     register: data
 
   - name: "TEST 1"
@@ -28,8 +34,8 @@
       that:
         - data.changed == false
     
-  - name: "Config enable=true"
-    ce_dldp: enable=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config enable=enable"
+    ce_dldp: enable=enable  provider="{{ cli }}"
     register: data
  
   - name: "TEST 2"
@@ -37,8 +43,8 @@
       that:
         - data.changed == true 
   
-  - name: "Config enable=true again"
-    ce_dldp: enable=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - name: "Config enable=enable again"
+    ce_dldp: enable=enable  provider="{{ cli }}"
     register: data
  
   - name: "TEST 3"
@@ -47,12 +53,12 @@
         - data.changed == false 
   
   - name: "ensure work-mode is enhance"
-    ce_dldp: work_mode=enhance  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: work_mode=enhance  provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "config work-mode"
-    ce_dldp: work_mode=normal  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: work_mode=normal  provider="{{ cli }}"
     register: data
 
   - name: "TEST 4"
@@ -61,7 +67,7 @@
         - data.changed == true
 
   - name: "config work-mode"
-    ce_dldp: work_mode=enhance  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: work_mode=enhance  provider="{{ cli }}"
     register: data
 
   - name: "TEST 5"
@@ -70,7 +76,7 @@
         - data.changed == true 
   
   - name: "config work-mode again"
-    ce_dldp: work_mode=enhance  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: work_mode=enhance  provider="{{ cli }}"
     register: data
 
   - name: "TEST 6"
@@ -79,11 +85,11 @@
         - data.changed == false 
   
   - name: "config inital value of advertisement packet timer"
-    ce_dldp: time_interval=98  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=98  provider="{{ cli }}"
     register: data
 
   - name: "config the value of advertisement packet timer"
-    ce_dldp: time_interval=99  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=99  provider="{{ cli }}"
     register: data
 
   - name: "TEST 7"
@@ -92,7 +98,7 @@
         - data.changed == true 
 
   - name: "config the value of advertisement packet timer again"
-    ce_dldp: time_interval=99  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=99  provider="{{ cli }}"
     register: data
 
   - name: "TEST 8"
@@ -101,7 +107,7 @@
         - data.changed == false 
 
   - name: "config DLDP authentication mode md5"
-    ce_dldp: auth_mode=md5 auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=abc provider="{{ cli }}"
     register: data
 
   - name: "TEST 9"
@@ -110,7 +116,7 @@
         - data.changed == true
 
   - name: "config DLDP authentication mode md5 gain"
-    ce_dldp: auth_mode=md5 auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=abc provider="{{ cli }}"
     register: data
 
   - name: "TEST 10"
@@ -119,7 +125,7 @@
         - data.changed == true
 
   - name: "config DLDP authentication mode simple"
-    ce_dldp: auth_mode=simple auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=simple auth_pwd=abc provider="{{ cli }}"
     register: data
 
   - name: "TEST 11"
@@ -128,7 +134,7 @@
         - data.changed == true
 
   - name: "config DLDP authentication mode sha"
-    ce_dldp: auth_mode=sha auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=sha auth_pwd=abc provider="{{ cli }}"
     register: data
 
   - name: "TEST 12"
@@ -137,7 +143,7 @@
         - data.changed == true
 
   - name: "config DLDP authentication mode hmac-sha256"
-    ce_dldp: auth_mode=hmac-sha256 auth_pwd=abc host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=hmac-sha256 auth_pwd=abc provider="{{ cli }}"
     register: data
 
   - name: "TEST 13"
@@ -146,7 +152,7 @@
         - data.changed == true
 
   - name: "Unconfig DLDP authentication mode"
-    ce_dldp: auth_mode=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=none provider="{{ cli }}"
     register: data
 
   - name: "TEST 14"
@@ -155,7 +161,7 @@
         - data.changed == true
 
   - name: "Unconfig DLDP authentication mode again"
-    ce_dldp: auth_mode=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=none provider="{{ cli }}"
     register: data
 
   - name: "TEST 15"
@@ -164,7 +170,7 @@
         - data.changed == false
 
   - name: "global dldp reset"
-    ce_dldp: reset=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: reset=enable  provider="{{ cli }}"
     register: data
    
   - name: "TEST 16"
@@ -173,7 +179,7 @@
         - data.changed == true
        
   - name: "global dldp reset again"
-    ce_dldp: reset=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: reset=enable  provider="{{ cli }}"
     register: data
    
   - name: "TEST 17"
@@ -182,7 +188,7 @@
         - data.changed == true
 
   - name: "config all params without reset field"
-    ce_dldp: enable=true work_mode=enhance time_interval=99  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: enable=enable work_mode=enhance time_interval=99  provider="{{ cli }}"
     register: data
    
   - name: "TEST 18"
@@ -191,7 +197,7 @@
         - data.changed == false 
         
   - name: "config all params"
-    ce_dldp: enable=true work_mode=enhance time_interval=99 reset=true  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: enable=enable work_mode=enhance time_interval=99 reset=enable  provider="{{ cli }}"
     register: data
    
   - name: "TEST 19"
@@ -200,7 +206,7 @@
         - data.changed == true
         
   - name: "time_interval:valid value 0"
-    ce_dldp: time_interval=0  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=0  provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -211,7 +217,7 @@
         - data | failed
         
   - name: "time_interval:valid value -1"
-    ce_dldp: time_interval=-1  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=-1  provider="{{ cli }}"
     register: data
     ignore_errors: true
    
@@ -222,7 +228,7 @@
         - data | failed
         
   - name: "time_interval:boundary value 1"
-    ce_dldp: time_interval=1  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=1  provider="{{ cli }}"
     register: data
    
   - name: "TEST 22"
@@ -231,7 +237,7 @@
         - data.changed == true 
 
   - name: "time_interval:boundary value 100"
-    ce_dldp: time_interval=100  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=100  provider="{{ cli }}"
     register: data
     
   - name: "TEST 23"
@@ -240,7 +246,7 @@
         - data.changed == true 
     
   - name: "time_interval value is out of range"
-    ce_dldp: time_interval=101  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=101  provider="{{ cli }}"
     register: data
     ignore_errors: true
  
@@ -251,7 +257,7 @@
         - data | failed
 
   - name: "time_interval value is not digit"
-    ce_dldp: time_interval=aa  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: time_interval=aa  provider="{{ cli }}"
     register: data
     ignore_errors: true
  
@@ -262,7 +268,7 @@
         - data | failed
 
   - name: "auth_pwd include ?"
-    ce_dldp: auth_mode=md5 auth_pwd=12?2  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=12?2  provider="{{ cli }}"
     register: data
     ignore_errors: true
  
@@ -273,7 +279,7 @@
         - data | failed
 
   - name: "auth_pwd boundary length value 1"
-    ce_dldp: auth_mode=md5 auth_pwd=1  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=1  provider="{{ cli }}"
     register: data
     ignore_errors: false
  
@@ -283,7 +289,7 @@
         - data.changed == true
 
   - name: "auth_pwd boundary length value 16"
-    ce_dldp: auth_mode=md5 auth_pwd=1111111111111111  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=1111111111111111  provider="{{ cli }}"
     register: data
     ignore_errors: false
  
@@ -293,7 +299,7 @@
         - data.changed == true
 
   - name: "auth_pwd invalid boundary length value 17"
-    ce_dldp: auth_mode=md5 auth_pwd=11111111111111111  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: auth_mode=md5 auth_pwd=11111111111111111  provider="{{ cli }}"
     register: data
     ignore_errors: true
  
@@ -303,5 +309,5 @@
         - data.changed == false
 
   - name: "Unconfig DLDP enable"
-    ce_dldp: enable=false  host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_dldp: enable=disable  provider="{{ cli }}"
     register: data

@@ -3,16 +3,22 @@
 - hosts: cloudengine
   gather_facts: no
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_evpn_bd_vni: bridge_domain_id=2 evpn=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 route_distinguisher=23:23 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_import=22:22,22:21 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_export=22:22,22:21 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_both=21:21,21:222 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_import=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_export=22:22 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_both=21:21 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 route_distinguisher=23:23 state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  - ce_evpn_bd_vni: bridge_domain_id=2 evpn=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+  - ce_evpn_bd_vni: bridge_domain_id=2 evpn=enable provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 route_distinguisher=23:23 provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_import=22:22,22:21 provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_export=22:22,22:21 provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_both=21:21,21:222 provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_import=22:22 state=absent provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_export=22:22 state=absent provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 vpn_target_both=21:21 state=absent provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 route_distinguisher=23:23 state=absent provider="{{ cli }}"
+  - ce_evpn_bd_vni: bridge_domain_id=2 evpn=disable provider="{{ cli }}"

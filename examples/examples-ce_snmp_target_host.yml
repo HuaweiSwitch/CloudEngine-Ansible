@@ -1,23 +1,30 @@
----
-
-- name: cloudengine snmp target host module test
+- name: CloudEngine snmp target host test
   hosts: cloudengine
+  connection: local
   gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
 
   tasks:
 
-  - ce_snmp_target_host: version=v2cv3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
+  - name: "Config SNMP version"
+    ce_snmp_target_host:
+      state:  present
+      version:  v2cv3
+      provider: "{{ cli }}"
 
-  - ce_snmp_target_host: version=v2cv3 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
-
-  - ce_snmp_target_host: connect_port=12345 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
-
-  - ce_snmp_target_host: connect_port=12345 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
-
-  - ce_snmp_target_host: host_name=test1 address=10.135.182.157 notify_type=trap vpn_name=js security_model=v2c security_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
-
-  - ce_snmp_target_host: host_name=test1 address=10.135.182.157 notify_type=trap vpn_name=js security_model=v2c security_name=wdz host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
-
-  - ce_snmp_target_host: host_name=test2 address=10.135.182.158 notify_type=trap vpn_name=js security_model=v3 security_name_v3=wdz security_level=authentication host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=present
-
-  - ce_snmp_target_host: host_name=test2 address=10.135.182.158 notify_type=trap vpn_name=js security_model=v3 security_name_v3=wdz security_level=authentication host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}} state=absent
+  - name: "Config SNMP target host"
+    ce_snmp_target_host:
+      state:  present
+      host_name:  test1
+      address:  1.1.1.1
+      notify_type:  trap
+      vpn_name:  js
+      security_model:  v2c
+      security_name:  wdz
+      provider: "{{ cli }}"

@@ -1,0 +1,367 @@
+---
+
+- name: cloudengine link status module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+
+  - name: "rollback"
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type 10GE"
+    ce_link_status: provider="{{ cli }}" interface=10GE
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface type 40GE"
+    ce_link_status: provider="{{ cli }}" interface=40GE
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "create Eth-Trunk1 port"
+    ce_config: provider="{{ cli }}" lines='interface Eth-Trunk1'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type Eth-Trunk"
+    ce_link_status: provider="{{ cli }}" interface=Eth-Trunk
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "create FCoE-Port port"
+    ce_config: provider="{{ cli }}" lines='interface FCoE-Port1'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type FCoE-Port"
+    ce_link_status: provider="{{ cli }}" interface=FCoE-Port
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface type Fabric-Port"
+    ce_link_status: provider="{{ cli }}" interface=Fabric-Port
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "query interface type LoopBack"
+    ce_link_status: provider="{{ cli }}" interface=LoopBack
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface type MEth"
+    ce_link_status: provider="{{ cli }}" interface=MEth
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface type NULL"
+    ce_link_status: provider="{{ cli }}" interface=NULL
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "create nve1 port"
+    ce_config: provider="{{ cli }}" lines='interface nve1'
+    register: data
+    ignore_errors: false
+
+  - name: "create nve2 port"
+    ce_config: provider="{{ cli }}" lines='interface nve2'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type Nve"
+    ce_link_status: provider="{{ cli }}" interface=Nve
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "create Stack-Port1/1 port"
+    ce_config: provider="{{ cli }}" lines='interface Stack-Port1/1'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type Stack-Port"
+    ce_link_status: provider="{{ cli }}" interface=Stack-Port
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "create Tunnel1 port"
+    ce_config: provider="{{ cli }}" lines='interface Tunnel1'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type Tunnel"
+    ce_link_status: provider="{{ cli }}" interface=Tunnel 
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+
+
+  - name: "query interface type Vbdif"
+    ce_link_status: provider="{{ cli }}" interface=Vbdif
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "create vlanif1 port"
+    ce_config: provider="{{ cli }}" lines='interface vlanif1'
+    register: data
+    ignore_errors: false
+
+  - name: "query interface type Vlanif"
+    ce_link_status: provider="{{ cli }}" interface=Vlanif
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface type Vlanif"
+    ce_link_status: provider="{{ cli }}" interface=Vlanif
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface 10GE1/0/1"
+    ce_link_status: provider="{{ cli }}" interface=10GE1/0/1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface 40GE1/0/1"
+    ce_link_status: provider="{{ cli }}" interface=40GE1/0/1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface Eth-Trunk1"
+    ce_link_status: provider="{{ cli }}" interface=Eth-Trunk1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface FCoE-Port1"
+    ce_link_status: provider="{{ cli }}" interface=FCoE-Port1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface LoopBack1"
+    ce_link_status: provider="{{ cli }}" interface=LoopBack1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface MEth0/0/0"
+    ce_link_status: provider="{{ cli }}" interface=MEth0/0/0
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface NULL0"
+    ce_link_status: provider="{{ cli }}" interface=NULL0
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface Nve1"
+    ce_link_status: provider="{{ cli }}" interface=Nve1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface Stack-Port2/1"
+    ce_link_status: provider="{{ cli }}" interface=Stack-Port1/1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface Tunnel1"
+    ce_link_status: provider="{{ cli }}" interface=Tunnel1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "query interface Vbdif2"
+    ce_link_status: provider="{{ cli }}" interface=Vbdif2
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "query interface Vlanif1"
+    ce_link_status: provider="{{ cli }}" interface=Vlanif1
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+
+  - name: "invalid interface name all1"
+    ce_link_status: provider="{{ cli }}" interface='all1'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "invalid interface name 40GEF"
+    ce_link_status: provider="{{ cli }}" interface='40GEF'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "invalid interface name 40GE1/0/7"
+    ce_link_status: provider="{{ cli }}" interface='40GE1/0/7'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "invalid interface name is empty"
+    ce_link_status: provider="{{ cli }}" interface=
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.failed == true
+
+  - name: "show all interface information"
+    ce_link_status: provider="{{ cli }}" interface=all
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false

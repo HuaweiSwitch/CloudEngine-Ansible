@@ -2,18 +2,25 @@
 
 - name: cloudengine vrf module test
   hosts: cloudengine
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "Config a vpn named vpna, description is test"
-    ce_vrf: vrf=vpna description=test state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna description=test state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -23,7 +30,7 @@
         - data.changed == true
 
   - name: "Config a vpn named vpna"
-    ce_vrf: vrf=vpna state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna state=present provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -33,7 +40,7 @@
         - data.changed == true
 
   - name: "Delete a vpn named vpna"
-    ce_vrf: vrf=vpna state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna state=absent provider="{{ cli }}"
     register: data
     ignore_errors: false
 
@@ -43,7 +50,7 @@
         - data.changed == true
 
   - name: "Config a vpn install named _public_, description is test"
-    ce_vrf: vrf=_public_ description=test state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=_public_ description=test state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -53,7 +60,7 @@
         - data | failed
 
   - name: "Delete a vpn install named _public_, description is test"
-    ce_vrf: vrf=_public_ state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=_public_ state=absent provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -63,7 +70,7 @@
         - data | failed
 
   - name: "Config avpn install named vpna, description is error"
-    ce_vrf: vrf=vpna description='1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111' state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=vpna description='1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111' state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -73,7 +80,7 @@
         - data | failed
 
   - name: "Config an error vpn install name"
-    ce_vrf: vrf=111111111111111111111111111111111111111 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_vrf: vrf=111111111111111111111111111111111111111 state=present provider="{{ cli }}"
     register: data
     ignore_errors: true
 

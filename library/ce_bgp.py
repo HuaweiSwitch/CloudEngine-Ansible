@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_bgp
-version_added: "2.3"
-short_description: Manages BGP configuration.
+version_added: "2.4"
+short_description: Manages BGP configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages BGP configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
+    - Manages BGP configurations on HUAWEI CloudEngine switches.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -47,8 +46,8 @@ options:
         description:
             - Enable GR of the BGP speaker in the specified address family, peer address, or peer group.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     time_wait_for_rib:
         description:
             - Period of waiting for the End-Of-RIB flag.
@@ -64,8 +63,8 @@ options:
         description:
             - Check the first AS in the AS_Path of the update messages from EBGP peers.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     confed_id_number:
         description:
             - Confederation ID.
@@ -76,14 +75,14 @@ options:
         description:
             - Configure the device to be compatible with devices in a nonstandard confederation.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     bgp_rid_auto_sel:
         description:
             - The function to automatically select router IDs for all VPN BGP instances is enabled.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     keep_all_routes:
         description:
             - If the value is true, the system stores all route update messages received from all peers (groups) after
@@ -91,26 +90,26 @@ options:
               If the value is false, the system stores only BGP update messages that are received from peers and pass
               the configured import policy.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     memory_limit:
         description:
             - Support BGP RIB memory protection.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     gr_peer_reset:
         description:
             - Peer disconnection through GR.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     is_shutdown:
         description:
             - Interrupt BGP all neighbor.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     suppress_interval:
         description:
             - Suppress interval.
@@ -142,8 +141,8 @@ options:
             - If the value is true, VPN BGP instances are enabled to automatically select router IDs.
               If the value is false, VPN BGP instances are disabled from automatically selecting router IDs.
         required: false
-        default: null
-        choices: ['true','false']
+        default: no_use
+        choices: ['no_use','true','false']
     router_id:
         description:
             - ID of a router that is in IPv4 address format.
@@ -177,50 +176,52 @@ options:
               If the value is  false, After the fast EBGP interface awareness function is enabled, EBGP sessions
               on an interface are not deleted immediately when the interface goes Down.
         required: false
-        default: null
+        default: no_use
+        choices: ['no_use','true','false']
     default_af_type:
         description:
             - Type of a created address family, which can be IPv4 unicast or IPv6 unicast.
               The default type is IPv4 unicast.
         required: false
         default: null
+        choices: ['ipv4uni','ipv6uni']
 '''
 
 EXAMPLES = '''
-# enable BGP
-  - name: "enable BGP"
+
+- name: CloudEngine BGP test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Enable BGP"
     ce_bgp:
-        state:  present
-        as_number:  100
-        confed_id_number:  250
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# disable BGP
-  - name: "disable BGP"
+      state:  present
+      as_number:  100
+      confed_id_number:  250
+      provider: "{{ cli }}"
+
+  - name: "Disable BGP"
     ce_bgp:
-        state:  absent
-        as_number:  100
-        confed_id_number:  250
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# create confederation peer AS num
-  - name: "create confederation peer AS num"
+      state:  absent
+      as_number:  100
+      confed_id_number:  250
+      provider: "{{ cli }}"
+
+  - name: "Create confederation peer AS num"
     ce_bgp:
-        state:  present
-        confed_peer_as_num:  260
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}
-# undo confederation peer AS num
-  - name: "undo confederation peer AS num"
-    ce_bgp:
-        state:  absent
-        confed_peer_as_num:  260
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}
+      state:  present
+      confed_peer_as_num:  260
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -235,8 +236,8 @@ proposed:
     type: dict
     sample: {"as_number": "100", state": "present"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {"bgp_enable": [["100"], ["true"]]}
 end_state:
@@ -252,15 +253,8 @@ updates:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 SUCCESS = """success"""
@@ -508,24 +502,15 @@ def check_bgp_confed_args(**kwargs):
 class Bgp(object):
     """ Manages BGP configuration """
 
-    def __init__(self, **kwargs):
-        """ __init__ """
-
-        self.netconf = get_netconf(**kwargs)
-
     def netconf_get_config(self, **kwargs):
         """ netconf_get_config """
 
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = get_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def netconf_set_config(self, **kwargs):
         """ netconf_set_config """
@@ -533,13 +518,9 @@ class Bgp(object):
         module = kwargs["module"]
         conf_str = kwargs["conf_str"]
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        xml_str = set_nc_config(module, conf_str)
 
-        return con_obj
+        return xml_str
 
     def check_bgp_enable_other_args(self, **kwargs):
         """ check_bgp_enable_other_args """
@@ -550,17 +531,17 @@ class Bgp(object):
         need_cfg = False
 
         graceful_restart = module.params['graceful_restart']
-        if graceful_restart:
+        if graceful_restart != 'no_use':
 
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<gracefulRestart></gracefulRestart>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<gracefulRestart>(.*)</gracefulRestart>.*', con_obj.xml)
+                    r'.*<gracefulRestart>(.*)</gracefulRestart>.*', recv_xml)
 
                 if re_find:
                     result["graceful_restart"] = re_find
@@ -577,15 +558,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<timeWaitForRib></timeWaitForRib>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<timeWaitForRib>(.*)</timeWaitForRib>.*', con_obj.xml)
+                            r'.*<timeWaitForRib>(.*)</timeWaitForRib>.*', recv_xml)
 
                         if re_find:
                             result["time_wait_for_rib"] = re_find
@@ -594,11 +575,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<timeWaitForRib>(.*)</timeWaitForRib>.*', con_obj.xml)
+                            r'.*<timeWaitForRib>(.*)</timeWaitForRib>.*', recv_xml)
 
                         if re_find:
                             result["time_wait_for_rib"] = re_find
@@ -613,15 +594,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<asPathLimit></asPathLimit>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<asPathLimit>(.*)</asPathLimit>.*', con_obj.xml)
+                            r'.*<asPathLimit>(.*)</asPathLimit>.*', recv_xml)
 
                         if re_find:
                             result["as_path_limit"] = re_find
@@ -630,11 +611,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<asPathLimit>(.*)</asPathLimit>.*', con_obj.xml)
+                            r'.*<asPathLimit>(.*)</asPathLimit>.*', recv_xml)
 
                         if re_find:
                             result["as_path_limit"] = re_find
@@ -642,16 +623,16 @@ class Bgp(object):
                                 need_cfg = True
 
         check_first_as = module.params['check_first_as']
-        if check_first_as:
+        if check_first_as != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<checkFirstAs></checkFirstAs>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<checkFirstAs>(.*)</checkFirstAs>.*', con_obj.xml)
+                    r'.*<checkFirstAs>(.*)</checkFirstAs>.*', recv_xml)
 
                 if re_find:
                     result["check_first_as"] = re_find
@@ -668,15 +649,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<confedIdNumber></confedIdNumber>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<confedIdNumber>(.*)</confedIdNumber>.*', con_obj.xml)
+                            r'.*<confedIdNumber>(.*)</confedIdNumber>.*', recv_xml)
 
                         if re_find:
                             result["confed_id_number"] = re_find
@@ -685,11 +666,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<confedIdNumber>(.*)</confedIdNumber>.*', con_obj.xml)
+                            r'.*<confedIdNumber>(.*)</confedIdNumber>.*', recv_xml)
 
                         if re_find:
                             result["confed_id_number"] = re_find
@@ -697,16 +678,16 @@ class Bgp(object):
                                 need_cfg = True
 
         confed_nonstanded = module.params['confed_nonstanded']
-        if confed_nonstanded:
+        if confed_nonstanded != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<confedNonstanded></confedNonstanded>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<confedNonstanded>(.*)</confedNonstanded>.*', con_obj.xml)
+                    r'.*<confedNonstanded>(.*)</confedNonstanded>.*', recv_xml)
 
                 if re_find:
                     result["confed_nonstanded"] = re_find
@@ -716,16 +697,16 @@ class Bgp(object):
                     need_cfg = True
 
         bgp_rid_auto_sel = module.params['bgp_rid_auto_sel']
-        if bgp_rid_auto_sel:
+        if bgp_rid_auto_sel != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<bgpRidAutoSel></bgpRidAutoSel>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<bgpRidAutoSel>(.*)</bgpRidAutoSel>.*', con_obj.xml)
+                    r'.*<bgpRidAutoSel>(.*)</bgpRidAutoSel>.*', recv_xml)
 
                 if re_find:
                     result["bgp_rid_auto_sel"] = re_find
@@ -735,16 +716,16 @@ class Bgp(object):
                     need_cfg = True
 
         keep_all_routes = module.params['keep_all_routes']
-        if keep_all_routes:
+        if keep_all_routes != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<keepAllRoutes></keepAllRoutes>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<keepAllRoutes>(.*)</keepAllRoutes>.*', con_obj.xml)
+                    r'.*<keepAllRoutes>(.*)</keepAllRoutes>.*', recv_xml)
 
                 if re_find:
                     result["keep_all_routes"] = re_find
@@ -754,16 +735,16 @@ class Bgp(object):
                     need_cfg = True
 
         memory_limit = module.params['memory_limit']
-        if memory_limit:
+        if memory_limit != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<memoryLimit></memoryLimit>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<memoryLimit>(.*)</memoryLimit>.*', con_obj.xml)
+                    r'.*<memoryLimit>(.*)</memoryLimit>.*', recv_xml)
 
                 if re_find:
                     result["memory_limit"] = re_find
@@ -773,16 +754,16 @@ class Bgp(object):
                     need_cfg = True
 
         gr_peer_reset = module.params['gr_peer_reset']
-        if gr_peer_reset:
+        if gr_peer_reset != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<grPeerReset></grPeerReset>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<grPeerReset>(.*)</grPeerReset>.*', con_obj.xml)
+                    r'.*<grPeerReset>(.*)</grPeerReset>.*', recv_xml)
 
                 if re_find:
                     result["gr_peer_reset"] = re_find
@@ -792,16 +773,16 @@ class Bgp(object):
                     need_cfg = True
 
         is_shutdown = module.params['is_shutdown']
-        if is_shutdown:
+        if is_shutdown != 'no_use':
             conf_str = CE_GET_BGP_ENABLE_HEADER + \
                 "<isShutdown></isShutdown>" + CE_GET_BGP_ENABLE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
-            if "<data/>" in con_obj.xml:
+            if "<data/>" in recv_xml:
                 need_cfg = True
             else:
                 re_find = re.findall(
-                    r'.*<isShutdown>(.*)</isShutdown>.*', con_obj.xml)
+                    r'.*<isShutdown>(.*)</isShutdown>.*', recv_xml)
 
                 if re_find:
                     result["is_shutdown"] = re_find
@@ -825,15 +806,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<suppressInterval></suppressInterval>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<suppressInterval>(.*)</suppressInterval>.*', con_obj.xml)
+                            r'.*<suppressInterval>(.*)</suppressInterval>.*', recv_xml)
 
                         if re_find:
                             result["suppress_interval"] = re_find
@@ -842,11 +823,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<suppressInterval>(.*)</suppressInterval>.*', con_obj.xml)
+                            r'.*<suppressInterval>(.*)</suppressInterval>.*', recv_xml)
 
                         if re_find:
                             result["suppress_interval"] = re_find
@@ -865,15 +846,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<holdInterval></holdInterval>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<holdInterval>(.*)</holdInterval>.*', con_obj.xml)
+                            r'.*<holdInterval>(.*)</holdInterval>.*', recv_xml)
 
                         if re_find:
                             result["hold_interval"] = re_find
@@ -882,11 +863,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<holdInterval>(.*)</holdInterval>.*', con_obj.xml)
+                            r'.*<holdInterval>(.*)</holdInterval>.*', recv_xml)
 
                         if re_find:
                             result["hold_interval"] = re_find
@@ -905,15 +886,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_ENABLE_HEADER + \
                     "<clearInterval></clearInterval>" + CE_GET_BGP_ENABLE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<clearInterval>(.*)</clearInterval>.*', con_obj.xml)
+                            r'.*<clearInterval>(.*)</clearInterval>.*', recv_xml)
 
                         if re_find:
                             result["clear_interval"] = re_find
@@ -922,11 +903,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<clearInterval>(.*)</clearInterval>.*', con_obj.xml)
+                            r'.*<clearInterval>(.*)</clearInterval>.*', recv_xml)
 
                         if re_find:
                             result["clear_interval"] = re_find
@@ -950,16 +931,16 @@ class Bgp(object):
                     msg='the len of vrf_name %s is out of [1 - 31].' % vrf_name)
             conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                 "<vrfName></vrfName>" + CE_GET_BGP_INSTANCE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             check_vrf_name = (vrf_name)
 
             if state == "present":
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     need_cfg = True
                 else:
                     re_find = re.findall(
-                        r'.*<vrfName>(.*)</vrfName>.*', con_obj.xml)
+                        r'.*<vrfName>(.*)</vrfName>.*', recv_xml)
 
                     if re_find:
                         if check_vrf_name not in re_find:
@@ -967,11 +948,11 @@ class Bgp(object):
                     else:
                         need_cfg = True
             else:
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     pass
                 else:
                     re_find = re.findall(
-                        r'.*<vrfName>(.*)</vrfName>.*', con_obj.xml)
+                        r'.*<vrfName>(.*)</vrfName>.*', recv_xml)
 
                     if re_find:
                         if check_vrf_name in re_find:
@@ -1002,14 +983,14 @@ class Bgp(object):
 
             conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                 "<routerId></routerId>" + CE_GET_BGP_INSTANCE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if state == "present":
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     need_cfg = True
                 else:
                     re_find = re.findall(
-                        r'.*<routerId>(.*)</routerId>.*', con_obj.xml)
+                        r'.*<routerId>(.*)</routerId>.*', recv_xml)
 
                     if re_find:
                         result["router_id"] = re_find
@@ -1018,11 +999,11 @@ class Bgp(object):
                     else:
                         need_cfg = True
             else:
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     pass
                 else:
                     re_find = re.findall(
-                        r'.*<routerId>(.*)</routerId>.*', con_obj.xml)
+                        r'.*<routerId>(.*)</routerId>.*', recv_xml)
 
                     if re_find:
                         result["router_id"] = re_find
@@ -1030,7 +1011,7 @@ class Bgp(object):
                             need_cfg = True
 
         vrf_rid_auto_sel = module.params['vrf_rid_auto_sel']
-        if vrf_rid_auto_sel:
+        if vrf_rid_auto_sel != 'no_use':
 
             if not vrf_name:
                 module.fail_json(
@@ -1038,14 +1019,14 @@ class Bgp(object):
 
             conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                 "<vrfRidAutoSel></vrfRidAutoSel>" + CE_GET_BGP_INSTANCE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if state == "present":
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     need_cfg = True
                 else:
                     re_find = re.findall(
-                        r'.*<vrfRidAutoSel>(.*)</vrfRidAutoSel>.*', con_obj.xml)
+                        r'.*<vrfRidAutoSel>(.*)</vrfRidAutoSel>.*', recv_xml)
 
                     if re_find:
                         result["vrf_rid_auto_sel"] = re_find
@@ -1068,15 +1049,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                     "<keepaliveTime></keepaliveTime>" + CE_GET_BGP_INSTANCE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<keepaliveTime>(.*)</keepaliveTime>.*', con_obj.xml)
+                            r'.*<keepaliveTime>(.*)</keepaliveTime>.*', recv_xml)
 
                         if re_find:
                             result["keepalive_time"] = re_find
@@ -1085,11 +1066,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<keepaliveTime>(.*)</keepaliveTime>.*', con_obj.xml)
+                            r'.*<keepaliveTime>(.*)</keepaliveTime>.*', recv_xml)
 
                         if re_find:
                             result["keepalive_time"] = re_find
@@ -1109,15 +1090,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                     "<holdTime></holdTime>" + CE_GET_BGP_INSTANCE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<holdTime>(.*)</holdTime>.*', con_obj.xml)
+                            r'.*<holdTime>(.*)</holdTime>.*', recv_xml)
 
                         if re_find:
                             result["hold_time"] = re_find
@@ -1126,11 +1107,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<holdTime>(.*)</holdTime>.*', con_obj.xml)
+                            r'.*<holdTime>(.*)</holdTime>.*', recv_xml)
 
                         if re_find:
                             result["hold_time"] = re_find
@@ -1150,15 +1131,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                     "<minHoldTime></minHoldTime>" + CE_GET_BGP_INSTANCE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<minHoldTime>(.*)</minHoldTime>.*', con_obj.xml)
+                            r'.*<minHoldTime>(.*)</minHoldTime>.*', recv_xml)
 
                         if re_find:
                             result["min_hold_time"] = re_find
@@ -1167,11 +1148,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<minHoldTime>(.*)</minHoldTime>.*', con_obj.xml)
+                            r'.*<minHoldTime>(.*)</minHoldTime>.*', recv_xml)
 
                         if re_find:
                             result["min_hold_time"] = re_find
@@ -1191,15 +1172,15 @@ class Bgp(object):
             else:
                 conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                     "<connRetryTime></connRetryTime>" + CE_GET_BGP_INSTANCE_TAIL
-                con_obj = self.netconf_get_config(
+                recv_xml = self.netconf_get_config(
                     module=module, conf_str=conf_str)
 
                 if state == "present":
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         need_cfg = True
                     else:
                         re_find = re.findall(
-                            r'.*<connRetryTime>(.*)</connRetryTime>.*', con_obj.xml)
+                            r'.*<connRetryTime>(.*)</connRetryTime>.*', recv_xml)
 
                         if re_find:
                             result["conn_retry_time"] = re_find
@@ -1208,11 +1189,11 @@ class Bgp(object):
                         else:
                             need_cfg = True
                 else:
-                    if "<data/>" in con_obj.xml:
+                    if "<data/>" in recv_xml:
                         pass
                     else:
                         re_find = re.findall(
-                            r'.*<connRetryTime>(.*)</connRetryTime>.*', con_obj.xml)
+                            r'.*<connRetryTime>(.*)</connRetryTime>.*', recv_xml)
 
                         if re_find:
                             result["conn_retry_time"] = re_find
@@ -1222,7 +1203,7 @@ class Bgp(object):
                             pass
 
         ebgp_if_sensitive = module.params['ebgp_if_sensitive']
-        if ebgp_if_sensitive:
+        if ebgp_if_sensitive != 'no_use':
 
             if not vrf_name:
                 module.fail_json(
@@ -1230,14 +1211,14 @@ class Bgp(object):
 
             conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                 "<ebgpIfSensitive></ebgpIfSensitive>" + CE_GET_BGP_INSTANCE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if state == "present":
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     need_cfg = True
                 else:
                     re_find = re.findall(
-                        r'.*<ebgpIfSensitive>(.*)</ebgpIfSensitive>.*', con_obj.xml)
+                        r'.*<ebgpIfSensitive>(.*)</ebgpIfSensitive>.*', recv_xml)
 
                     if re_find:
                         result["ebgp_if_sensitive"] = re_find
@@ -1246,11 +1227,11 @@ class Bgp(object):
                     else:
                         need_cfg = True
             else:
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     pass
                 else:
                     re_find = re.findall(
-                        r'.*<ebgpIfSensitive>(.*)</ebgpIfSensitive>.*', con_obj.xml)
+                        r'.*<ebgpIfSensitive>(.*)</ebgpIfSensitive>.*', recv_xml)
 
                     if re_find:
                         result["ebgp_if_sensitive"] = re_find
@@ -1268,14 +1249,14 @@ class Bgp(object):
 
             conf_str = CE_GET_BGP_INSTANCE_HEADER + \
                 "<defaultAfType></defaultAfType>" + CE_GET_BGP_INSTANCE_TAIL
-            con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
+            recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if state == "present":
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     need_cfg = True
                 else:
                     re_find = re.findall(
-                        r'.*<defaultAfType>(.*)</defaultAfType>.*', con_obj.xml)
+                        r'.*<defaultAfType>(.*)</defaultAfType>.*', recv_xml)
 
                     if re_find:
                         result["default_af_type"] = re_find
@@ -1284,11 +1265,11 @@ class Bgp(object):
                     else:
                         need_cfg = True
             else:
-                if "<data/>" in con_obj.xml:
+                if "<data/>" in recv_xml:
                     pass
                 else:
                     re_find = re.findall(
-                        r'.*<defaultAfType>(.*)</defaultAfType>.*', con_obj.xml)
+                        r'.*<defaultAfType>(.*)</defaultAfType>.*', recv_xml)
 
                     if re_find:
                         result["default_af_type"] = re_find
@@ -1307,9 +1288,7 @@ class Bgp(object):
 
         conf_str = CE_GET_BGP_ENABLE
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
-
-        xml_str = con_obj.xml
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
         result = list()
 
         if "<data/>" in xml_str:
@@ -1342,9 +1321,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_ENABLE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp enable failed.')
 
         cmds = []
@@ -1365,7 +1344,7 @@ class Bgp(object):
         cmds = []
 
         graceful_restart = module.params['graceful_restart']
-        if graceful_restart:
+        if graceful_restart != 'no_use':
             conf_str += "<gracefulRestart>%s</gracefulRestart>" % graceful_restart
 
             if graceful_restart == "true":
@@ -1389,7 +1368,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         check_first_as = module.params['check_first_as']
-        if check_first_as:
+        if check_first_as != 'no_use':
             conf_str += "<checkFirstAs>%s</checkFirstAs>" % check_first_as
 
             if check_first_as == "true":
@@ -1406,7 +1385,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         confed_nonstanded = module.params['confed_nonstanded']
-        if confed_nonstanded:
+        if confed_nonstanded != 'no_use':
             conf_str += "<confedNonstanded>%s</confedNonstanded>" % confed_nonstanded
 
             if confed_nonstanded == "true":
@@ -1416,7 +1395,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         bgp_rid_auto_sel = module.params['bgp_rid_auto_sel']
-        if bgp_rid_auto_sel:
+        if bgp_rid_auto_sel != 'no_use':
             conf_str += "<bgpRidAutoSel>%s</bgpRidAutoSel>" % bgp_rid_auto_sel
 
             if bgp_rid_auto_sel == "true":
@@ -1426,7 +1405,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         keep_all_routes = module.params['keep_all_routes']
-        if keep_all_routes:
+        if keep_all_routes != 'no_use':
             conf_str += "<keepAllRoutes>%s</keepAllRoutes>" % keep_all_routes
 
             if keep_all_routes == "true":
@@ -1436,7 +1415,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         memory_limit = module.params['memory_limit']
-        if memory_limit:
+        if memory_limit != 'no_use':
             conf_str += "<memoryLimit>%s</memoryLimit>" % memory_limit
 
             if memory_limit == "true":
@@ -1446,7 +1425,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         gr_peer_reset = module.params['gr_peer_reset']
-        if gr_peer_reset:
+        if gr_peer_reset != 'no_use':
             conf_str += "<grPeerReset>%s</grPeerReset>" % gr_peer_reset
 
             if gr_peer_reset == "true":
@@ -1456,7 +1435,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         is_shutdown = module.params['is_shutdown']
-        if is_shutdown:
+        if is_shutdown != 'no_use':
             conf_str += "<isShutdown>%s</isShutdown>" % is_shutdown
 
             if is_shutdown == "true":
@@ -1483,9 +1462,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_ENABLE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp enable failed.')
 
         return cmds
@@ -1499,7 +1478,7 @@ class Bgp(object):
         cmds = []
 
         graceful_restart = module.params['graceful_restart']
-        if graceful_restart:
+        if graceful_restart != 'no_use':
             conf_str += "<gracefulRestart>%s</gracefulRestart>" % graceful_restart
 
             if graceful_restart == "true":
@@ -1523,7 +1502,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         check_first_as = module.params['check_first_as']
-        if check_first_as:
+        if check_first_as != 'no_use':
             conf_str += "<checkFirstAs>%s</checkFirstAs>" % check_first_as
 
             if check_first_as == "true":
@@ -1540,7 +1519,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         confed_nonstanded = module.params['confed_nonstanded']
-        if confed_nonstanded:
+        if confed_nonstanded != 'no_use':
             conf_str += "<confedNonstanded>%s</confedNonstanded>" % confed_nonstanded
 
             if confed_nonstanded == "true":
@@ -1550,7 +1529,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         bgp_rid_auto_sel = module.params['bgp_rid_auto_sel']
-        if bgp_rid_auto_sel:
+        if bgp_rid_auto_sel != 'no_use':
             conf_str += "<bgpRidAutoSel>%s</bgpRidAutoSel>" % bgp_rid_auto_sel
 
             if bgp_rid_auto_sel == "true":
@@ -1560,7 +1539,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         keep_all_routes = module.params['keep_all_routes']
-        if keep_all_routes:
+        if keep_all_routes != 'no_use':
             conf_str += "<keepAllRoutes>%s</keepAllRoutes>" % keep_all_routes
 
             if keep_all_routes == "true":
@@ -1570,7 +1549,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         memory_limit = module.params['memory_limit']
-        if memory_limit:
+        if memory_limit != 'no_use':
             conf_str += "<memoryLimit>%s</memoryLimit>" % memory_limit
 
             if memory_limit == "true":
@@ -1580,7 +1559,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         gr_peer_reset = module.params['gr_peer_reset']
-        if gr_peer_reset:
+        if gr_peer_reset != 'no_use':
             conf_str += "<grPeerReset>%s</grPeerReset>" % gr_peer_reset
 
             if gr_peer_reset == "true":
@@ -1590,7 +1569,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         is_shutdown = module.params['is_shutdown']
-        if is_shutdown:
+        if is_shutdown != 'no_use':
             conf_str += "<isShutdown>%s</isShutdown>" % is_shutdown
 
             if is_shutdown == "true":
@@ -1617,9 +1596,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_ENABLE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete bgp enable failed.')
 
         return cmds
@@ -1631,9 +1610,7 @@ class Bgp(object):
 
         conf_str = CE_GET_BGP_CONFED_PEER_AS
 
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
-
-        xml_str = con_obj.xml
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
         result = list()
 
         if "<data/>" in xml_str:
@@ -1655,9 +1632,9 @@ class Bgp(object):
 
         conf_str = CE_MERGE_BGP_CONFED_PEER_AS % confed_peer_as_num
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp confed peer as failed.')
 
         cmds = []
@@ -1674,9 +1651,9 @@ class Bgp(object):
 
         conf_str = CE_CREATE_BGP_CONFED_PEER_AS % confed_peer_as_num
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create bgp confed peer as failed.')
 
         cmds = []
@@ -1693,9 +1670,9 @@ class Bgp(object):
 
         conf_str = CE_DELETE_BGP_CONFED_PEER_AS % confed_peer_as_num
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete bgp confed peer as failed.')
 
         cmds = []
@@ -1709,9 +1686,7 @@ class Bgp(object):
 
         module = kwargs["module"]
         conf_str = CE_GET_BGP_INSTANCE
-        con_obj = self.netconf_get_config(module=module, conf_str=conf_str)
-
-        xml_str = con_obj.xml
+        xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
         result = list()
 
         if "<data/>" in xml_str:
@@ -1736,9 +1711,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp instance failed.')
 
     def create_bgp_instance(self, **kwargs):
@@ -1753,9 +1728,9 @@ class Bgp(object):
 
         conf_str += CE_CREATE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Create bgp instance failed.')
 
         cmds = []
@@ -1778,9 +1753,9 @@ class Bgp(object):
 
         conf_str += CE_DELETE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Delete bgp instance failed.')
 
         cmds = []
@@ -1802,7 +1777,7 @@ class Bgp(object):
         cmds = []
 
         vrf_rid_auto_sel = module.params['vrf_rid_auto_sel']
-        if vrf_rid_auto_sel:
+        if vrf_rid_auto_sel != 'no_use':
             conf_str += "<vrfRidAutoSel>%s</vrfRidAutoSel>" % vrf_rid_auto_sel
 
             if vrf_rid_auto_sel == "true":
@@ -1847,7 +1822,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         ebgp_if_sensitive = module.params['ebgp_if_sensitive']
-        if ebgp_if_sensitive:
+        if ebgp_if_sensitive != 'no_use':
             conf_str += "<ebgpIfSensitive>%s</ebgpIfSensitive>" % ebgp_if_sensitive
 
             if ebgp_if_sensitive == "true":
@@ -1874,9 +1849,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(msg='Error: Merge bgp instance other failed.')
 
         return cmds
@@ -1900,7 +1875,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         vrf_rid_auto_sel = module.params['vrf_rid_auto_sel']
-        if vrf_rid_auto_sel:
+        if vrf_rid_auto_sel != 'no_use':
             conf_str += "<vrfRidAutoSel>%s</vrfRidAutoSel>" % vrf_rid_auto_sel
 
             cmd = "undo router-id vpn-instance auto-select"
@@ -1935,7 +1910,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         ebgp_if_sensitive = module.params['ebgp_if_sensitive']
-        if ebgp_if_sensitive:
+        if ebgp_if_sensitive != 'no_use':
             conf_str += "<ebgpIfSensitive>%s</ebgpIfSensitive>" % ebgp_if_sensitive
 
             cmd = "undo ebgp-interface-sensitive"
@@ -1959,9 +1934,9 @@ class Bgp(object):
 
         conf_str += CE_DELETE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(
                 msg='Error: Delete common vpn bgp instance other args failed.')
 
@@ -1986,7 +1961,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         vrf_rid_auto_sel = module.params['vrf_rid_auto_sel']
-        if vrf_rid_auto_sel:
+        if vrf_rid_auto_sel != 'no_use':
             conf_str += "<vrfRidAutoSel>%s</vrfRidAutoSel>" % vrf_rid_auto_sel
 
             cmd = "undo router-id vpn-instance auto-select"
@@ -2021,7 +1996,7 @@ class Bgp(object):
             cmds.append(cmd)
 
         ebgp_if_sensitive = module.params['ebgp_if_sensitive']
-        if ebgp_if_sensitive:
+        if ebgp_if_sensitive != 'no_use':
             conf_str += "<ebgpIfSensitive>%s</ebgpIfSensitive>" % "true"
 
             cmd = "undo ebgp-interface-sensitive"
@@ -2045,9 +2020,9 @@ class Bgp(object):
 
         conf_str += CE_MERGE_BGP_INSTANCE_TAIL
 
-        con_obj = self.netconf_set_config(module=module, conf_str=conf_str)
+        recv_xml = self.netconf_set_config(module=module, conf_str=conf_str)
 
-        if "<ok/>" not in con_obj.xml:
+        if "<ok/>" not in recv_xml:
             module.fail_json(
                 msg='Error: Delete default vpn bgp instance other args failed.')
 
@@ -2060,37 +2035,34 @@ def main():
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
         as_number=dict(type='str'),
-        graceful_restart=dict(type='str', choices=['true', 'false']),
+        graceful_restart=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         time_wait_for_rib=dict(type='str'),
         as_path_limit=dict(type='str'),
-        check_first_as=dict(type='str', choices=['true', 'false']),
+        check_first_as=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         confed_id_number=dict(type='str'),
-        confed_nonstanded=dict(type='str', choices=['true', 'false']),
-        bgp_rid_auto_sel=dict(type='str', choices=['true', 'false']),
-        keep_all_routes=dict(type='str', choices=['true', 'false']),
-        memory_limit=dict(type='str', choices=['true', 'false']),
-        gr_peer_reset=dict(type='str', choices=['true', 'false']),
-        is_shutdown=dict(type='str', choices=['true', 'false']),
+        confed_nonstanded=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        bgp_rid_auto_sel=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        keep_all_routes=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        memory_limit=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        gr_peer_reset=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
+        is_shutdown=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         suppress_interval=dict(type='str'),
         hold_interval=dict(type='str'),
         clear_interval=dict(type='str'),
         confed_peer_as_num=dict(type='str'),
         vrf_name=dict(type='str'),
-        vrf_rid_auto_sel=dict(type='str', choices=['true', 'false']),
+        vrf_rid_auto_sel=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         router_id=dict(type='str'),
         keepalive_time=dict(type='str'),
         hold_time=dict(type='str'),
         min_hold_time=dict(type='str'),
         conn_retry_time=dict(type='str'),
-        ebgp_if_sensitive=dict(type='str', choices=['true', 'false']),
+        ebgp_if_sensitive=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         default_af_type=dict(type='str', choices=['ipv4uni', 'ipv6uni'])
     )
 
-    if not HAS_NCCLIENT:
-        raise Exception("the ncclient library is required")
-
-    module = NetworkModule(argument_spec=argument_spec,
-                           supports_check_mode=True)
+    argument_spec.update(ce_argument_spec)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     changed = False
     proposed = dict()
@@ -2099,10 +2071,6 @@ def main():
     updates = []
 
     state = module.params['state']
-    host = module.params['host']
-    port = module.params['port']
-    username = module.params['username']
-    password = module.params['password']
     as_number = module.params['as_number']
     graceful_restart = module.params['graceful_restart']
     time_wait_for_rib = module.params['time_wait_for_rib']
@@ -2129,7 +2097,7 @@ def main():
     ebgp_if_sensitive = module.params['ebgp_if_sensitive']
     default_af_type = module.params['default_af_type']
 
-    ce_bgp_obj = Bgp(host=host, port=port, username=username, password=password)
+    ce_bgp_obj = Bgp()
 
     if not ce_bgp_obj:
         module.fail_json(msg='Error: Init module failed.')
@@ -2138,27 +2106,27 @@ def main():
     proposed["state"] = state
     if as_number:
         proposed["as_number"] = as_number
-    if graceful_restart:
+    if graceful_restart != 'no_use':
         proposed["graceful_restart"] = graceful_restart
     if time_wait_for_rib:
         proposed["time_wait_for_rib"] = time_wait_for_rib
     if as_path_limit:
         proposed["as_path_limit"] = as_path_limit
-    if check_first_as:
+    if check_first_as != 'no_use':
         proposed["check_first_as"] = check_first_as
     if confed_id_number:
         proposed["confed_id_number"] = confed_id_number
-    if confed_nonstanded:
+    if confed_nonstanded != 'no_use':
         proposed["confed_nonstanded"] = confed_nonstanded
-    if bgp_rid_auto_sel:
+    if bgp_rid_auto_sel != 'no_use':
         proposed["bgp_rid_auto_sel"] = bgp_rid_auto_sel
-    if keep_all_routes:
+    if keep_all_routes != 'no_use':
         proposed["keep_all_routes"] = keep_all_routes
-    if memory_limit:
+    if memory_limit != 'no_use':
         proposed["memory_limit"] = memory_limit
-    if gr_peer_reset:
+    if gr_peer_reset != 'no_use':
         proposed["gr_peer_reset"] = gr_peer_reset
-    if is_shutdown:
+    if is_shutdown != 'no_use':
         proposed["is_shutdown"] = is_shutdown
     if suppress_interval:
         proposed["suppress_interval"] = suppress_interval
@@ -2172,7 +2140,7 @@ def main():
         proposed["router_id"] = router_id
     if vrf_name:
         proposed["vrf_name"] = vrf_name
-    if vrf_rid_auto_sel:
+    if vrf_rid_auto_sel != 'no_use':
         proposed["vrf_rid_auto_sel"] = vrf_rid_auto_sel
     if keepalive_time:
         proposed["keepalive_time"] = keepalive_time
@@ -2182,7 +2150,7 @@ def main():
         proposed["min_hold_time"] = min_hold_time
     if conn_retry_time:
         proposed["conn_retry_time"] = conn_retry_time
-    if ebgp_if_sensitive:
+    if ebgp_if_sensitive != 'no_use':
         proposed["ebgp_if_sensitive"] = ebgp_if_sensitive
     if default_af_type:
         proposed["default_af_type"] = default_af_type

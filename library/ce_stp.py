@@ -18,16 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_stp
-version_added: "2.3"
-short_description: Manages STP configuration
+version_added: "2.4"
+short_description: Manages STP configuration on HUAWEI CloudEngine switches.
 description:
-    - Manages STP configurations on CloudEngine switches.
-extends_documentation_fragment: cloudengine
+    - Manages STP configurations on HUAWEI CloudEngine switches.
 author:
     - wangdezhuang (@CloudEngine-Ansible)
 options:
@@ -81,13 +80,13 @@ options:
     tc_protection_threshold:
         description:
             - Set the maximum number of TC BPDUs that the MSTP can handle.
-              The value is an integer ranging from 1 to 255. The default value is 1.
+              The value is an integer ranging from 1 to 255. The default value is 1 on the switch.
         required: false
         default: null
     interface:
         description:
             - Interface name.
-              If the value is all, will apply configuration to all interfaces.
+              If the value is C(all), will apply configuration to all interfaces.
               if the value is a special name, only support input the full name.
         required: false
         default: null
@@ -124,38 +123,44 @@ options:
 '''
 
 EXAMPLES = '''
-# config stp mode
-  - name: "config stp mode"
+
+- name: CloudEngine stp test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Config stp mode"
     ce_stp:
-        state:  present
-        stp_mode:  stp
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# undo stp mode
-  - name: "undo stp mode"
+      state:  present
+      stp_mode:  stp
+      provider: "{{ cli }}"
+
+  - name: "Undo stp mode"
     ce_stp:
-        state:  absent
-        stp_mode:  stp
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# enable bpdu protection
-  - name: "enable bpdu protection"
+      state:  absent
+      stp_mode:  stp
+      provider: "{{ cli }}"
+
+  - name: "Enable bpdu protection"
     ce_stp:
-        state:  present
-        bpdu_protection:  enable
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
-# disable bpdu protection
-  - name: "disable bpdu protection"
+      state:  present
+      bpdu_protection:  enable
+      provider: "{{ cli }}"
+
+  - name: "Disable bpdu protection"
     ce_stp:
-        state:  present
-        bpdu_protection:  disable
-        host:  {{inventory_hostname}}
-        username:  {{username}}
-        password:  {{password}}
+      state:  present
+      bpdu_protection:  disable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -171,8 +176,8 @@ proposed:
     sample: {"bpdu_protection": "enable",
              "state": "present"}
 existing:
-    description:
-        - k/v pairs of existing aaa server
+    description: k/v pairs of existing aaa server
+    returned: always
     type: dict
     sample: {"bpdu_protection": "disable"}
 end_state:
@@ -188,8 +193,8 @@ updates:
 '''
 
 import re
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_cli_exception
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_config, load_config, ce_argument_spec
 
 
 class Stp(object):
@@ -201,8 +206,7 @@ class Stp(object):
         # module
         argument_spec = kwargs["argument_spec"]
         self.spec = argument_spec
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(argument_spec=self.spec, supports_check_mode=True)
 
         # config
         self.cur_cfg = dict()
@@ -237,24 +241,25 @@ class Stp(object):
         """ Cli load configuration """
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def cli_get_stp_config(self):
         """ Cli get stp configuration """
 
         regular = "| include stp"
-        self.stp_cfg = self.module.config.get_config(regular=regular)
+
+        flags = list()
+        flags.append(regular)
+        self.stp_cfg = get_config(self.module, flags)
 
     def cli_get_interface_stp_config(self):
         """ Cli get interface's stp configuration """
 
         if self.interface:
             regular = "| ignore-case section include ^interface %s$" % self.interface
-            tmp_cfg = self.module.config.get_config(regular=regular)
+            flags = list()
+            flags.append(regular)
+            tmp_cfg = get_config(self.module, flags)
 
             if not tmp_cfg:
                 self.module.fail_json(
@@ -266,8 +271,8 @@ class Stp(object):
 
             self.interface_stp_cfg = tmp_cfg
 
-    def check_args(self):
-        """ Check module args """
+    def check_params(self):
+        """ Check module params """
 
         if self.cost:
             if self.cost.isdigit():
@@ -915,7 +920,7 @@ class Stp(object):
     def work(self):
         """ Work function """
 
-        self.check_args()
+        self.check_params()
         self.get_proposed()
         self.get_existing()
 
@@ -955,6 +960,7 @@ def main():
         loop_protection=dict(choices=['enable', 'disable'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = Stp(argument_spec=argument_spec)
     module.work()
 

@@ -1,11 +1,22 @@
 ---
 
-- hosts: cloudengine
+- name: ospf module test
+  hosts: cloudengine
+  connection: local
   gather_facts: no
   vars:
-    process: 10
-  
-  tasks:  
-  - ce_ospf: process_id={{process}} area=100 state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_ospf: process_id={{process}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configure ospf
+    ce_ospf:
+      process_id: 1
+      area: 100
+      state: present
+      provider: "{{ cli }}"

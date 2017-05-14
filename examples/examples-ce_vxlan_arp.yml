@@ -1,51 +1,41 @@
 ---
 
-- hosts: ce128
+- name: vxlan arp module test
+  hosts: ce128
+  connection: local
   gather_facts: no
   vars:
-    vbdif_name: Vbdif100
-    evn_source_ip: "7.7.7.7"
-    evn_peer_ip: "8.8.8.8"
-    bd_id: 100
-    
-  
-  tasks:  
-  
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_interface: interface={{vbdif_name}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-   
-  - ce_vxlan_arp: evn_bgp=disable state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-    
-  - ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_source_ip={{evn_source_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} evn_reflect_client=true state=present host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_peer_ip={{evn_peer_ip}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_server=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: evn_bgp=enable evn_server=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-   
-  - ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-   
-  - ce_vxlan_arp: vbdif_name={{vbdif_name}} arp_collect_host=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: host_collect_protocol=bgp host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-   
-  - ce_vxlan_arp: host_collect_protocol=bgp state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=enable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-   
-  - ce_vxlan_arp: bridge_domain_id={{bd_id}} arp_suppress=disable host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_interface: interface={{vbdif_name}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
-  - ce_vxlan_global: bridge_domain_id={{bd_id}} state=absent host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
-  
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: Configure EVN BGP on Layer 2 and Layer 3 VXLAN gateways to establish EVN BGP peer relationships.
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_source_ip: 6.6.6.6
+      evn_peer_ip: 7.7.7.7
+      provider: "{{ cli }}"
+  - name: Configure a Layer 3 VXLAN gateway as a BGP RR.
+    ce_vxlan_arp:
+      evn_bgp: enable
+      evn_server: enable
+      provider: "{{ cli }}"
+  - name: Enable EVN BGP on a Layer 3 VXLAN gateway to collect host information.
+    ce_vxlan_arp:
+      vbdif_name: Vbdif100
+      arp_collect_host: enable
+      provider: "{{ cli }}"
+  - name: Enable Layer 2 and Layer 3 VXLAN gateways to use EVN BGP to advertise host information.
+    ce_vxlan_arp:
+      host_collect_protocol: bgp
+      provider: "{{ cli }}"
+  - name: Enable ARP broadcast suppression on a Layer 2 VXLAN gateway.
+    ce_vxlan_arp:
+      bridge_domain_id: 100
+      arp_suppress: enable
+      provider: "{{ cli }}"

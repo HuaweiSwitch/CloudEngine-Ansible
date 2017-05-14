@@ -18,19 +18,18 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = """
 ---
 module: ce_sflow
-version_added: "2.3"
-short_description: Manages sFlow configuration.
+version_added: "2.4"
+short_description: Manages sFlow configuration on HUAWEI CloudEngine switches.
 description:
     - Configure Sampled Flow (sFlow) to monitor traffic on an interface in real time,
       detect abnormal traffic, and locate the source of attack traffic,
       ensuring stable running of the network.
 author: QijunPan (@CloudEngine-Ansible)
-extends_documentation_fragment: cloudengine
 options:
     agent_ip:
         description:
@@ -46,7 +45,6 @@ options:
         description:
             - Specifies the ID of an sFlow collector. This ID is used when you specify
               the collector in subsequent sFlow configuration.
-              The value is an integer that can be 1 or 2.
         required: false
         default: null
         choices: ['1', '2']
@@ -60,7 +58,7 @@ options:
             - Specifies the name of a VPN instance.
               The value is a string of 1 to 31 case-sensitive characters, spaces not supported.
               When double quotation marks are used around the string, spaces are allowed in the string.
-              The value _public_ is reserved and cannot be used as the VPN instance name.
+              The value C(_public_) is reserved and cannot be used as the VPN instance name.
         required: false
         default: null
     collector_datagram_size:
@@ -174,37 +172,47 @@ options:
 """
 
 EXAMPLES = '''
-# Configuring sFlow Agent
-- ce_sflow:
-    agent_ip: 6.6.6.6
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configuring sFlow Collector
-- ce_sflow:
-    collector_id: 1
-    collector_ip: 7.7.7.7
-    collector_ip_vpn: vpn1
-    collector_description: Collector1
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure flow sampling.
-- ce_sflow:
-    sflow_interface: 10GE2/0/2
-    sample_collector: 1
-    sample_direction: inbound
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure counter sampling.
-- ce_sflow:
-    sflow_interface: 10GE2/0/2
-    counter_collector: 1
-    counter_interval: 1000
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+---
+
+- name: sflow module test
+  hosts: ce128
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Configuring sFlow Agent
+    ce_sflow:
+      agent_ip: 6.6.6.6
+      provider: '{{ cli }}'
+
+  - name: Configuring sFlow Collector
+    ce_sflow:
+      collector_id: 1
+      collector_ip: 7.7.7.7
+      collector_ip_vpn: vpn1
+      collector_description: Collector1
+      provider: '{{ cli }}'
+
+  - name: Configure flow sampling.
+    ce_sflow:
+      sflow_interface: 10GE2/0/2
+      sample_collector: 1
+      sample_direction: inbound
+      provider: '{{ cli }}'
+
+  - name: Configure counter sampling.
+    ce_sflow:
+      sflow_interface: 10GE2/0/2
+      counter_collector: 1
+      counter_interval: 1000
+      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -239,13 +247,9 @@ import sys
 import re
 import socket
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule, NetworkError
-from ansible.module_utils.cloudengine import get_netconf, get_cli_exception
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.ce import get_config, load_config
 
 CE_NC_GET_SFLOW = """
 <filter type="subtree">
@@ -442,7 +446,6 @@ class Sflow(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.__init_module__()
 
         # module input info
@@ -471,11 +474,6 @@ class Sflow(object):
         self.counter_interval = self.module.params['counter_interval']
         self.state = self.module.params['state']
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
-
         # state
         self.config = ""  # current config
         self.sflow_dict = dict()
@@ -487,27 +485,12 @@ class Sflow(object):
         self.existing = dict()
         self.end_state = dict()
 
-        # init netconf connect
-        self.__init_netconf__()
-
     def __init_module__(self):
         """init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
-
-    def __init_netconf__(self):
-        """init netconf"""
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
+        required_together = [("collector_id", "collector_ip")]
+        self.module = AnsibleModule(
+            argument_spec=self.spec, required_together=required_together, supports_check_mode=True)
 
     def check_response(self, con_obj, xml_name):
         """Check if response message is already succeed"""
@@ -516,44 +499,23 @@ class Sflow(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def netconf_get_config(self, xml_str):
-        """netconf get config"""
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def netconf_set_config(self, xml_str, xml_name):
         """netconf set config"""
 
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
+        rcv_xml = set_nc_config(self.module, xml_str)
+        if "<ok/>" not in rcv_xml:
+            self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
     def cli_load_config(self, commands):
         """load config by cli"""
 
         if not self.module.check_mode:
-            try:
-                self.module.config.load_config(commands)
-            except NetworkError:
-                err = get_cli_exception()
-                self.module.fail_json(msg=err)
+            load_config(self.module, commands)
 
     def get_current_config(self):
         """get current configuration"""
 
+        flags = list()
         exp = ""
         if self.rate_limit:
             exp += "assign sflow management-plane export rate-limit %s" % self.rate_limit
@@ -568,7 +530,8 @@ class Sflow(object):
 
         if exp:
             exp = " | ignore-case include " + exp
-            return self.module.config.get_config(include_defaults=False, regular=exp)
+            flags.append(exp)
+            return get_config(self.module, flags)
         else:
             return ""
 
@@ -595,12 +558,12 @@ class Sflow(object):
         if not self.collector_meth:
             conf_str = conf_str.replace("<meth></meth>", "")
 
-        con_obj = self.netconf_get_config(conf_str)
+        rcv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in rcv_xml:
             return sflow_dict
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = rcv_xml.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
@@ -1187,11 +1150,6 @@ class Sflow(object):
                 self.module.fail_json(
                     msg="Error: forward_enp_slot is invalid.")
 
-        if self.state == "present":
-            if bool(self.collector_id) != bool(self.collector_ip):
-                self.module.fail_json(msg="Error: collector_id and collector_ip must "
-                                          "set at the same time when state is present.")
-
     def get_proposed(self):
         """get proposed info"""
 
@@ -1380,6 +1338,7 @@ def main():
                    choices=['present', 'absent'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = Sflow(argument_spec)
     module.work()
 

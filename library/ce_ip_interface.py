@@ -27,7 +27,6 @@ version_added: "2.3"
 short_description: Manages L3 attributes for IPv4 and IPv6 interfaces.
 description:
     - Manages Layer 3 attributes for IPv4 and IPv6 interfaces.
-extends_documentation_fragment: cloudengine
 author: QijunPan (@CloudEngine-Ansible)
 notes:
     - Interface must already be a L3 port when using this module.
@@ -74,14 +73,53 @@ options:
 '''
 
 EXAMPLES = '''
-# ensure ipv4 address is configured on 40GE1/0/22
-- ce_ip_interface: interface=40GE1/0/22 version=v4 state=present addr=20.20.20.20 mask=24
-# ensure ipv4 secondary address is configured on 40GE1/0/22
-- ce_ip_interface: interface=40GE1/0/22 version=v4 state=present addr=30.30.30.30 mask=24 type=sub
-# ensure ipv6 is enabled on 40GE1/0/22
-- ce_ip_interface: interface=40GE1/0/22 version=v6 state=present
-# ensure ipv6 address is configured on 40GE1/0/22
-- ce_ip_interface: interface=40GE1/0/22 version=v6 state=present addr=2001::db8:800:200c:cccb mask=64
+- name: ip_interface module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Ensure ipv4 address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v4
+      state: present
+      addr: 20.20.20.20
+      mask: 24
+      provider: '{{ cli }}'
+
+  - name: Ensure ipv4 secondary address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v4
+      state: present
+      addr: 30.30.30.30
+      mask: 24
+      ipv4_type: sub
+      provider: '{{ cli }}'
+
+  - name: Ensure ipv6 is enabled on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v6
+      state: present
+      provider: '{{ cli }}'
+
+  - name: Ensure ipv6 address is configured on 10GE1/0/22
+    ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v6
+      state: present
+      addr: 2001::db8:800:200c:cccb
+      mask: 64
+      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -89,23 +127,23 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"addr": "20.20.20.20", "interface": "40GE1/0/22", "mask": "24"}
+    sample: {"addr": "20.20.20.20", "interface": "10GE1/0/22", "mask": "24"}
 existing:
     description: k/v pairs of existing IP attributes on the interface
     type: dict
     sample: {"ipv4": [{"ifIpAddr": "11.11.11.11", "subnetMask": "255.255.0.0", "addrType": "main"}],
-            "interface": "40GE1/0/22"}
+            "interface": "10GE1/0/22"}
 end_state:
     description: k/v pairs of IP attributes after module execution
     returned: always
     type: dict
     sample: {"ipv4": [{"ifIpAddr": "20.20.20.20", "subnetMask": "255.255.255.0", "addrType": "main"}],
-            "interface": "40GE1/0/22"}
+            "interface": "10GE1/0/22"}
 updates:
     description: commands sent to the device
     returned: always
     type: list
-    sample: ["interface 40GE1/0/22", "ip address 20.20.20.20 24"]
+    sample: ["interface 10GE1/0/22", "ip address 20.20.20.20 24"]
 changed:
     description: check to see if a change was made on the device
     returned: always
@@ -114,15 +152,9 @@ changed:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -267,6 +299,7 @@ CE_NC_MERGE_IPV6_ENABLE = """
 </config>
 """
 
+
 def get_interface_type(interface):
     """Gets the type of interface, such as 10GE, ETH-TRUNK, VLANIF..."""
 
@@ -316,6 +349,7 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
+
 def is_valid_v4addr(addr):
     """check is ipv4 addr is valid"""
 
@@ -335,6 +369,7 @@ def is_valid_v4addr(addr):
 
     return False
 
+
 class IpInterface(object):
     """
     Manages L3 attributes for IPv4 and IPv6 interfaces.
@@ -343,7 +378,6 @@ class IpInterface(object):
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.__init_module__()
 
         # module input info]
@@ -353,11 +387,6 @@ class IpInterface(object):
         self.version = self.module.params['version']
         self.ipv4_type = self.module.params['ipv4_type']
         self.state = self.module.params['state']
-
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.port = self.module.params['port']
 
         # state
         self.changed = False
@@ -370,84 +399,33 @@ class IpInterface(object):
         self.intf_info = dict()
         self.intf_type = None
 
-        # init netconf connect
-        self.__init_netconf__()
-
     def __init_module__(self):
         """ init module """
 
-        self.module = NetworkModule(
+        self.module = AnsibleModule(
             argument_spec=self.spec, supports_check_mode=True)
-
-    def __init_netconf__(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed.')
-
-    def check_response(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
-
-        xml_str = con_obj.xml
-        if "<ok/>" not in xml_str:
-            self.module.fail_json(msg='Error: %s failed.' % xml_name)
-
-    def netconf_get_config(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
 
     def netconf_set_config(self, xml_str, xml_name):
         """ netconf set config """
 
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def netconf_set_action(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.execute_action(action=xml_str)
-            self.check_response(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        return con_obj
+        rcv_xml = set_nc_config(self.module, xml_str)
+        if "<ok/>" not in rcv_xml:
+            self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
     def get_interface_dict(self, ifname):
         """ get one interface attributes dict."""
 
         intf_info = dict()
         conf_str = CE_NC_GET_INTF % ifname
-        con_obj = self.netconf_get_config(conf_str)
+        rcv_xml = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in con_obj.xml:
+        if "<data/>" in rcv_xml:
             return intf_info
 
         # get interface base info
         intf = re.findall(
             r'.*<ifName>(.*)</ifName>.*\s*'
-            r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*', con_obj.xml)
+            r'<isL2SwitchPort>(.*)</isL2SwitchPort>.*', rcv_xml)
 
         if intf:
             intf_info = dict(ifName=intf[0][0],
@@ -456,7 +434,7 @@ class IpInterface(object):
         # get interface ipv4 address info
         ipv4_info = re.findall(
             r'.*<ifIpAddr>(.*)</ifIpAddr>.*\s*<subnetMask>(.*)'
-            r'</subnetMask>.*\s*<addrType>(.*)</addrType>.*', con_obj.xml)
+            r'</subnetMask>.*\s*<addrType>(.*)</addrType>.*', rcv_xml)
         intf_info["am4CfgAddr"] = list()
         for info in ipv4_info:
             intf_info["am4CfgAddr"].append(
@@ -464,7 +442,7 @@ class IpInterface(object):
 
         # get interface ipv6 address info
         ipv6_info = re.findall(
-            r'.*<ifmAm6>.*\s*<enableFlag>(.*)</enableFlag>.*', con_obj.xml)
+            r'.*<ifmAm6>.*\s*<enableFlag>(.*)</enableFlag>.*', rcv_xml)
         if not ipv6_info:
             self.module.fail_json(msg='Error: Fail to get interface IPv6 state.')
         else:
@@ -473,7 +451,7 @@ class IpInterface(object):
         # get interface ipv6 enable info
         ipv6_info = re.findall(
             r'.*<ifIp6Addr>(.*)</ifIp6Addr>.*\s*<addrPrefixLen>(.*)'
-            r'</addrPrefixLen>.*\s*<addrType6>(.*)</addrType6>.*', con_obj.xml)
+            r'</addrPrefixLen>.*\s*<addrType6>(.*)</addrType6>.*', rcv_xml)
 
         intf_info["am6CfgAddr"] = list()
         for info in ipv6_info:
@@ -755,6 +733,7 @@ def main():
                    choices=['present', 'absent'])
     )
 
+    argument_spec.update(ce_argument_spec)
     module = IpInterface(argument_spec)
     module.work()
 

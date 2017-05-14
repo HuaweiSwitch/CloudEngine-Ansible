@@ -18,23 +18,22 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_switchport
-version_added: "2.3"
-short_description: Manages Layer 2 switchport interfaces.
-extends_documentation_fragment: cloudengine
+version_added: "2.4"
+short_description: Manages Layer 2 switchport interfaces on HUAWEI CloudEngine switches.
 description:
-    - Manages Layer 2 interfaces
+    - Manages Layer 2 switchport interfaces on HUAWEI CloudEngine switches.
 author: QijunPan (@CloudEngine-Ansible)
 notes:
     - When C(state=absent), VLANs can be added/removed from trunk links and
       the existing access VLAN can be 'unconfigured' to just having VLAN 1
       on that interface.
     - When working with trunks VLANs the keywords add/remove are always sent
-      in the `port trunk allow-pass vlan` command. Use verbose mode to see
+      in the C(port trunk allow-pass vlan) command. Use verbose mode to see
       commands sent.
     - When C(state=unconfigured), the interface will result with having a default
       Layer 2 interface, i.e. vlan 1 in access mode.
@@ -73,19 +72,59 @@ options:
             - Manage the state of the resource.
         required: false
         default:  present
-        choices: ['present','absent', 'unconfigured']
+        choices: ['present', 'absent', 'unconfigured']
 '''
+
 EXAMPLES = '''
-# ENSURE 40GE1/0/22 is in its default switchport state
-- ce_switchport: interface=40GE1/0/22 state=unconfigured host={{ inventory_hostname }}
-# ENSURE 40GE1/0/22 is configured for access vlan 20
-- ce_switchport: interface=40GE1/0/22 mode=access access_vlan=20 host={{ inventory_hostname }}
-# ENSURE 40GE1/0/22 only has vlans 5-10 as trunk vlans
-- ce_switchport: interface=40GE1/0/22 mode=trunk native_vlan=10 trunk_vlans=5-10 host={{ inventory_hostname }}
-# Ensure 40GE1/0/22 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)
-- ce_switchport: interface=40GE1/0/22 mode=trunk native_vlan=10 trunk_vlans=2-50 host={{ inventory_hostname }}
-# Ensure these VLANs are not being tagged on the trunk
-- ce_switchport: interface=40GE1/0/22 mode=trunk trunk_vlans=51-4000 host={{ inventory_hostname }} state=absent
+- name: switchport module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Ensure 10GE1/0/22 is in its default switchport state
+    ce_switchport:
+      interface: 10GE1/0/22
+      state: unconfigured
+      provider: '{{ cli }}'
+
+  - name: Ensure 10GE1/0/22 is configured for access vlan 20
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: access
+      access_vlan: 20
+      provider: '{{ cli }}'
+
+  - name: Ensure 10GE1/0/22 only has vlans 5-10 as trunk vlans
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      native_vlan: 10
+      trunk_vlans: 5-10
+      provider: '{{ cli }}'
+
+  - name: Ensure 10GE1/0/22 is a trunk port and ensure 2-50 are being tagged (doesn't mean others aren't also being tagged)
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      native_vlan: 10
+      trunk_vlans: 2-50
+      provider: '{{ cli }}'
+
+  - name: Ensure these VLANs are not being tagged on the trunk
+    ce_switchport:
+      interface: 10GE1/0/22
+      mode: trunk
+      trunk_vlans: 51-4000
+      state: absent
+      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -93,23 +132,24 @@ proposed:
     description: k/v pairs of parameters passed into module
     returned: always
     type: dict
-    sample: {"access_vlan": "20", "interface": "40GE1/0/22", "mode": "access"}
+    sample: {"access_vlan": "20", "interface": "10GE1/0/22", "mode": "access"}
 existing:
     description: k/v pairs of existing switchport
+    returned: always
     type: dict
-    sample:  {"access_vlan": "10", "interface": "40GE1/0/22",
+    sample:  {"access_vlan": "10", "interface": "10GE1/0/22",
               "mode": "access", "switchport": "enable"}
 end_state:
     description: k/v pairs of switchport after module execution
     returned: always
-    type: dict or null
-    sample:  {"access_vlan": "20", "interface": "40GE1/0/22",
+    type: dict
+    sample:  {"access_vlan": "20", "interface": "10GE1/0/22",
               "mode": "access", "switchport": "enable"}
 updates:
     description: command string sent to the device
     returned: always
     type: list
-    sample: ["40GE1/0/22", "port default vlan 20"]
+    sample: ["10GE1/0/22", "port default vlan 20"]
 changed:
     description: check to see if a change was made on the device
     returned: always
@@ -118,15 +158,8 @@ changed:
 '''
 
 import re
-import sys
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
-
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_INTF = """
 <filter type="subtree">
@@ -292,10 +325,12 @@ def get_interface_type(interface):
 
     return iftype.lower()
 
-def is_portswitch_enalbe(iftype):
+
+def is_portswitch_enalbed(iftype):
     """"[undo] portswitch"""
 
     return bool(iftype in SWITCH_PORT_TYPE)
+
 
 def vlan_bitmap_undo(bitmap):
     """convert vlan bitmap to undo bitmap"""
@@ -312,6 +347,7 @@ def vlan_bitmap_undo(bitmap):
 
     return ''.join(vlan_bit)
 
+
 def is_vlan_bitmap_empty(bitmap):
     """check vlan bitmap empty"""
 
@@ -325,14 +361,15 @@ def is_vlan_bitmap_empty(bitmap):
 
     return True
 
+
 class SwitchPort(object):
     """
     Manages Layer 2 switchport interfaces.
     """
+
     def __init__(self, argument_spec):
         self.spec = argument_spec
         self.module = None
-        self.netconf = None
         self.init_module()
 
         # interface and vlan info
@@ -358,32 +395,16 @@ class SwitchPort(object):
         self.intf_info = dict()         # interface vlan info
         self.intf_type = None           # loopback tunnel ...
 
-        # init netconf connect
-        self.init_netconf()
-
     def init_module(self):
         """ init module """
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, supports_check_mode=True)
+        required_if = [('state', 'absent', ['mode']), ('state', 'present', ['mode'])]
+        self.module = AnsibleModule(
+            argument_spec=self.spec, required_if=required_if, supports_check_mode=True)
 
-    def init_netconf(self):
-        """ init netconf """
-
-        if not HAS_NCCLIENT:
-            raise Exception("the ncclient library is required")
-
-        self.netconf = get_netconf(host=self.host,
-                                   port=self.port,
-                                   username=self.username,
-                                   password=self.module.params['password'])
-        if not self.netconf:
-            self.module.fail_json(msg='Error: netconf init failed')
-
-    def check_response(self, con_obj, xml_name):
+    def check_response(self, xml_str, xml_name):
         """Check if response message is already succeed."""
 
-        xml_str = con_obj.xml
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
@@ -392,17 +413,12 @@ class SwitchPort(object):
 
         intf_info = dict()
         conf_str = CE_NC_GET_PORT_ATTR % ifname
-        try:
-            con_obj = self.netconf.get_config(filter=conf_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
-
-        if "<data/>" in con_obj.xml:
+        rcv_xml = get_nc_config(self.module, conf_str)
+        if "<data/>" in rcv_xml:
             return intf_info
 
         intf = re.findall(
-            r'.*<ifName>(.*)</ifName>.*\s*<l2Enable>(.*)</l2Enable>.*', con_obj.xml)
+            r'.*<ifName>(.*)</ifName>.*\s*<l2Enable>(.*)</l2Enable>.*', rcv_xml)
         if intf:
             intf_info = dict(ifName=intf[0][0],
                              l2Enable=intf[0][1],
@@ -412,7 +428,7 @@ class SwitchPort(object):
             if intf_info["l2Enable"] == "enable":
                 attr = re.findall(
                     r'.*<linkType>(.*)</linkType>.*.*\s*<pvid>(.*)'
-                    r'</pvid>.*\s*<trunkVlans>(.*)</trunkVlans>.*', con_obj.xml)
+                    r'</pvid>.*\s*<trunkVlans>(.*)</trunkVlans>.*', rcv_xml)
                 if attr:
                     intf_info["linkType"] = attr[0][0]
                     intf_info["pvid"] = attr[0][1]
@@ -463,13 +479,9 @@ class SwitchPort(object):
             self.updates_cmd.pop()   # remove interface
             return
 
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_ACCESS_PORT")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        rcv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(rcv_xml, "MERGE_ACCESS_PORT")
+        self.changed = True
 
     def merge_trunk_vlan(self, ifname, native_vlan, trunk_vlans):
         """Merge trunk interface vlan"""
@@ -544,13 +556,9 @@ class SwitchPort(object):
             return
 
         conf_str = "<config>" + xmlstr + "</config>"
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "MERGE_TRUNK_PORT")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        rcv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(rcv_xml, "MERGE_TRUNK_PORT")
+        self.changed = True
 
     def default_switchport(self, ifname):
         """Set interface default or unconfigured"""
@@ -571,14 +579,9 @@ class SwitchPort(object):
             return
 
         conf_str = CE_NC_SET_DEFAULT_PORT % ifname
-
-        try:
-            con_obj = self.netconf.set_config(config=conf_str)
-            self.check_response(con_obj, "DEFAULT_INTF_VLAN")
-            self.changed = True
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' % err.message.replace("\r\n", ""))
+        rcv_xml = set_nc_config(self.module, conf_str)
+        self.check_response(rcv_xml, "DEFAULT_INTF_VLAN")
+        self.changed = True
 
     def vlan_series(self, vlanid_s):
         """ convert vlan range to vlan list """
@@ -689,10 +692,6 @@ class SwitchPort(object):
     def check_params(self):
         """Check all input params"""
 
-        if not self.interface:
-            self.module.fail_json(
-                msg='Error: Interface name must be set.')
-
         # interface type check
         if self.interface:
             self.intf_type = get_interface_type(self.interface)
@@ -700,7 +699,7 @@ class SwitchPort(object):
                 self.module.fail_json(
                     msg='Error: Interface name of %s is error.' % self.interface)
 
-        if not self.intf_type or not is_portswitch_enalbe(self.intf_type):
+        if not self.intf_type or not is_portswitch_enalbed(self.intf_type):
             self.module.fail_json(msg='Error: Interface %s is error.')
 
         # check access_vlan
@@ -718,11 +717,6 @@ class SwitchPort(object):
             if int(self.native_vlan) <= 0 or int(self.native_vlan) > 4094:
                 self.module.fail_json(
                     msg='Error: Native vlan id is not in the range from 1 to 4094.')
-
-        # check mode
-        if self.state == "present" or self.state == "absent":
-            if not self.mode:
-                self.module.fail_json(msg='Error: Interface mode must be set.')
 
         # get interface info
         self.intf_info = self.get_interface_dict(self.interface)
@@ -784,8 +778,6 @@ class SwitchPort(object):
             elif self.mode == "trunk":
                 self.merge_trunk_vlan(
                     self.interface, self.native_vlan, self.trunk_vlans)
-            else:
-                self.module.fail_json(msg='Error: Interface mode must be set.')
         # unconfigured
         else:
             self.default_switchport(self.interface)
@@ -816,6 +808,7 @@ def main():
                    default='present')
     )
 
+    argument_spec.update(ce_argument_spec)
     switchport = SwitchPort(argument_spec)
     switchport.work()
 

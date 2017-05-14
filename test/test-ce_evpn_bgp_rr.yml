@@ -3,33 +3,39 @@
 - name: cloudengine EVPN BGP RR module test
   hosts: cloudengine
   vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
   connection: local
   gather_facts: no
 
   tasks:
 
   - name: "rollback"
-    ce_config: lines='return,rollback configuration to label ansible_test' match=none host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='return,rollback configuration to label ansible_test' match=none provider="{{ cli }}"
     register: data
     ignore_errors: false
 
   - name: "Ensure BGP veiw has existed"
-    ce_config: lines='bgp 20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='bgp 20' provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "Ensure evpn overlay enable"
-    ce_config: lines='evpn-overlay enable' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='evpn-overlay enable' provider="{{ cli }}"
     register: data
     ignore_errors: true
   
   - name: "Ensure BGP_EVPN view is enabled"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable provider="{{ cli }}"
     register: data
     ignore_errors: true
   
   - name: "Unconfigure BGP-EVPN address family view"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=disable provider="{{ cli }}"
     register: data
     
   - name: "TEST 1"
@@ -38,7 +44,7 @@
         - data.changed == true 
 
   - name: "Unconfigure BGP-EVPN address family view again"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=disable provider="{{ cli }}"
     register: data
     
   - name: "TEST 2"
@@ -47,7 +53,7 @@
         - data.changed == false 
   
   - name: "Configure BGP-EVPN address family view"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable provider="{{ cli }}"
     register: data
     
   - name: "TEST 3"
@@ -56,7 +62,7 @@
         - data.changed == true 
 
   - name: "Configure BGP-EVPN address family view again"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable provider="{{ cli }}"
     register: data
     
   - name: "TEST 4"
@@ -65,12 +71,12 @@
         - data.changed == false 
 
   - name: "Ensure peer has existed"
-    ce_config: before='bgp 20' lines='peer 192.8.3.3 as-number 20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: before='bgp 20' lines='peer 192.8.3.3 as-number 20' provider="{{ cli }}"
     register: data
     ignore_errors: true
 
   - name: "Configure reflect client"
-    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=enable provider="{{ cli }}"
     register: data
     
   - name: "TEST 5"
@@ -79,7 +85,7 @@
         - data.changed == true 
   
   - name: "Configure reflect client again"
-    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=enable provider="{{ cli }}"
     register: data
     
   - name: "TEST 6"
@@ -88,7 +94,7 @@
         - data.changed == false 
 
   - name: "Unconfigure reflect client"
-    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=disable provider="{{ cli }}"
     register: data
     
   - name: "TEST 7"
@@ -97,7 +103,7 @@
         - data.changed == true 
 
   - name: "Unconfigure reflect client again"
-    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 peer_type=ipv4_address peer=192.8.3.3 reflect_client=disable provider="{{ cli }}"
     register: data
     
   - name: "TEST 8"
@@ -106,7 +112,7 @@
         - data.changed == false 
   
   - name: "Unconfigure the VPN-Target filtering"
-    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=disable provider="{{ cli }}"
     register: data
    
   - name: "TEST 9"
@@ -115,7 +121,7 @@
         - data.changed == true 
  
   - name: "Unconfigure the VPN-Target filtering again"
-    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=disable provider="{{ cli }}"
     register: data
    
   - name: "TEST 10"
@@ -124,7 +130,7 @@
         - data.changed == false
 
   - name: "Configure the VPN-Target filtering"
-    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=enable provider="{{ cli }}"
     register: data
 
   - name: "TEST 11"
@@ -133,7 +139,7 @@
         - data.changed == true 
  
   - name: "Configure the VPN-Target filtering again"
-    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=true host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 policy_vpn_target=enable provider="{{ cli }}"
     register: data
    
   - name: "TEST 12"
@@ -142,7 +148,7 @@
         - data.changed == false
 
   - name: "Configure an RR in BGP-EVPN address family view"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=192.8.3.3 reflect_client=true policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address peer=192.8.3.3 reflect_client=enable policy_vpn_target=disable provider="{{ cli }}"
     register: data
    
   - name: "TEST 13"
@@ -151,7 +157,7 @@
         - data.changed == true
 
   - name: "Configure an RR in BGP-EVPN address family view again"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=192.8.3.3 reflect_client=true policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address peer=192.8.3.3 reflect_client=enable policy_vpn_target=disable provider="{{ cli }}"
     register: data
    
   - name: "TEST 14"
@@ -160,7 +166,7 @@
         - data.changed == false
 
   - name: "Unexisted BGP view"
-    ce_evpn_bgp_rr: as_number=111 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=111 provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -171,7 +177,7 @@
         - data | failed 
  
   - name: "Wrong as_number"
-    ce_evpn_bgp_rr: as_number=111111111111 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=111111111111 provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -182,7 +188,7 @@
         - data | failed 
 
   - name: "Wrong BGP instance"
-    ce_evpn_bgp_rr: as_number=20 bgp_instance=11111111111111111111111111111111 host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_instance=11111111111111111111111111111111 provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -193,7 +199,7 @@
         - data | failed 
  
   - name: "peer_type doesnot exist"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer=192.8.3.3 reflect_client=true policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer=192.8.3.3 reflect_client=enable policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
     
@@ -204,7 +210,7 @@
         - data | failed 
  
   - name: "peer doesnot exist"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address reflect_client=true policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address reflect_client=enable policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -215,7 +221,7 @@
         - data | failed
 
   - name: "reflect client doesnot exist"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=192.8.3.3 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address peer=192.8.3.3 policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -226,7 +232,7 @@
         - data | failed
 
   - name: "Wrong ipv4_address"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=2312 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address peer=2312 policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -237,7 +243,7 @@
         - data | failed
 
   - name: "Wrong group name"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=group_name peer=192.8.2.2 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=group_name peer=192.8.2.2 policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -248,7 +254,7 @@
         - data | failed
 
   - name: "Unexisted IPv4 address peer"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=ipv4_address peer=125.5.5.5 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=ipv4_address peer=125.5.5.5 policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -259,7 +265,7 @@
         - data | failed
 
   - name: "Unexisted group name peer"
-    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=true peer_type=group_name peer=12343 policy_vpn_target=false host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_evpn_bgp_rr: as_number=20 bgp_evpn_enable=enable peer_type=group_name peer=12343 policy_vpn_target=disable provider="{{ cli }}"
     register: data
     ignore_errors: true
 
@@ -270,6 +276,6 @@
         - data | failed
   
   - name: "Delete BGP veiw"
-    ce_config: lines='undo bgp 20' host={{inventory_hostname}} username={{username}} password={{password}} port={{ansible_ssh_port}}
+    ce_config: lines='undo bgp 20' provider="{{ cli }}"
     register: data
     ignore_errors: true

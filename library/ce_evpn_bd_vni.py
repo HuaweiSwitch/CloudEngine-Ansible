@@ -18,17 +18,16 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_evpn_bd_vni
-version_added: "2.3"
-short_description: Manages Huawei EVPN VXLAN Network Identifier (VNI).
-extends_documentation_fragment: cloudengine
+version_added: "2.4"
+short_description: Manages EVPN VXLAN Network Identifier (VNI) on HUAWEI CloudEngine switches.
 description:
-    - Manages Huawei Ethernet Virtual Private Network (EVPN) VXLAN Network
-      Identifier (VNI) configurations.
+    - Manages Ethernet Virtual Private Network (EVPN) VXLAN Network
+      Identifier (VNI) configurations on HUAWEI CloudEngine switches.
 author: Zhijin Zhou (@CloudEngine-Ansible)
 notes:
     - Ensure that EVPN has been configured to serve as the VXLAN control plane when state is present.
@@ -46,14 +45,14 @@ notes:
 options:
     bridge_domain_id:
         description:
-            - specify an existed bridge domain (BD).The value is an integer ranging from 1 to 16777215.
+            - Specify an existed bridge domain (BD).The value is an integer ranging from 1 to 16777215.
         required: true
     evpn:
         description:
-            - create or delete an EVPN instance for a VXLAN in BD view
+            - Create or delete an EVPN instance for a VXLAN in BD view.
         required: false
-        choices: ['true','false']
-        default: 'true'
+        choices: ['enable','disable']
+        default: 'enable'
     route_distinguisher:
         description:
             - Configures a route distinguisher (RD) for a BD EVPN instance.
@@ -74,94 +73,107 @@ options:
         default: null
     vpn_target_both:
         description:
-            - add VPN targets to both the import and export VPN target lists of a BD EVPN instance
-            - the format is the same as route_distinguisher
+            - Add VPN targets to both the import and export VPN target lists of a BD EVPN instance.
+              The format is the same as route_distinguisher.
         required: false
         default: null
     vpn_target_import:
         description:
-            - add VPN targets to the import VPN target list of a BD EVPN instance
-            - the format is the same as route_distinguisher
+            - Add VPN targets to the import VPN target list of a BD EVPN instance.
+              The format is the same as route_distinguisher.
         required: true
     vpn_target_export:
         description:
-            - add VPN targets to the export VPN target list of a BD EVPN instance
-            - the format is the same as route_distinguisher
+            - Add VPN targets to the export VPN target list of a BD EVPN instance.
+              The format is the same as route_distinguisher.
         required: false
         default: null
     state:
         description:
-            - manage the state of the resource
+            - Manage the state of the resource.
         required: false
         choices: ['present','absent']
         default: 'present'
 '''
 
 EXAMPLES = '''
-# Configure an EVPN instance for a VXLAN in BD view
-- ce_evpn_bd_vni:
-    evpn: true
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure a route distinguisher (RD) for a BD EVPN instance
-- ce_evpn_bd_vni:
-    route_distinguisher: 22:22
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure VPN targets to both the import and export VPN target lists of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_both: 22:100,22:101
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure VPN targets to the import VPN target list of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_import: 22:22,22:23
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Configure VPN targets to the export VPN target list of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_export: 22:38,22:39
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Unconfigure VPN targets to both the import and export VPN target lists of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_both: 22:100
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Unconfigure VPN targets to the import VPN target list of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_import: 22:22
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Unconfigure VPN targets to the export VPN target list of a BD EVPN instance
-- ce_evpn_bd_vni:
-    vpn_target_export: 22:38
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Unconfigure a route distinguisher (RD) of a BD EVPN instance
-- ce_evpn_bd_vni:
-    route_distinguisher: 22:22
-    state: absent
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
-# Unconfigure an EVPN instance for a VXLAN in BD view
-- ce_evpn_bd_vni:
-    evpn: false
-    username: "{{ un }}"
-    password: "{{ pwd }}"
-    host: "{{ inventory_hostname }}"
+- name: EVPN BD VNI test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+
+  - name: "Configure an EVPN instance for a VXLAN in BD view"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      evpn: enable
+      provider: "{{ cli }}"
+
+  - name: "Configure a route distinguisher (RD) for a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      route_distinguisher: '22:22'
+      provider: "{{ cli }}"
+
+  - name: "Configure VPN targets to both the import and export VPN target lists of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_both: 22:100,22:101
+      provider: "{{ cli }}"
+
+  - name: "Configure VPN targets to the import VPN target list of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_import: 22:22,22:23
+      provider: "{{ cli }}"
+
+  - name: "Configure VPN targets to the export VPN target list of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_export: 22:38,22:39
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure VPN targets to both the import and export VPN target lists of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_both: '22:100'
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure VPN targets to the import VPN target list of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_import: '22:22'
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure VPN targets to the export VPN target list of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      vpn_target_export: '22:38'
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure a route distinguisher (RD) of a BD EVPN instance"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      route_distinguisher: '22:22'
+      state: absent
+      provider: "{{ cli }}"
+
+  - name: "Unconfigure an EVPN instance for a VXLAN in BD view"
+    ce_evpn_bd_vni:
+      bridge_domain_id: 20
+      evpn: disable
+      provider: "{{ cli }}"
 '''
 
 RETURN = '''
@@ -171,7 +183,7 @@ proposed:
     type: dict
     sample: {
                 "bridge_domain_id": "2",
-                "evpn": "true",
+                "evpn": "enable",
                 "route_distinguisher": "22:22",
                 "state": "present",
                 "vpn_target_both": [
@@ -189,10 +201,11 @@ proposed:
             }
 existing:
     description: k/v pairs of existing attributes on the device
+    returned: always
     type: dict
     sample: {
                 "bridge_domain_id": "2",
-                "evpn": "false",
+                "evpn": "disable",
                 "route_distinguisher": null,
                 "vpn_target_both": [],
                 "vpn_target_export": [],
@@ -201,10 +214,10 @@ existing:
 end_state:
     description: k/v pairs of end attributes on the device
     returned: always
-    type: dict or null
+    type: dict
     sample: {
                 "bridge_domain_id": "2",
-                "evpn": "true",
+                "evpn": "enable",
                 "route_distinguisher": "22:22",
                 "vpn_target_both": [
                     "22:100",
@@ -243,17 +256,11 @@ changed:
     sample: true
 '''
 
-import sys
 import copy
 from xml.etree import ElementTree
-from ansible.module_utils.network import NetworkModule
-from ansible.module_utils.cloudengine import get_netconf
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
 
-try:
-    from ncclient.operations.rpc import RPCError
-    HAS_NCCLIENT = True
-except ImportError:
-    HAS_NCCLIENT = False
 
 CE_NC_GET_VNI_BD = """
 <filter type="subtree">
@@ -447,13 +454,6 @@ class EvpnBd(object):
         self.evpn_info = dict()
         self.conf_exist = False
 
-        # host info
-        self.host = self.module.params['host']
-        self.username = self.module.params['username']
-        self.password = self.module.params['password']
-        self.port = self.module.params['port']
-
-        self.netconf = None
         # state
         self.changed = False
         self.updates_cmd = list()
@@ -462,61 +462,19 @@ class EvpnBd(object):
         self.existing = dict()
         self.end_state = dict()
 
-        self.__init_netconf__()
-
     def __init_module__(self):
-        """init module"""
+        """Init module"""
 
-        self.module = NetworkModule(
-            argument_spec=self.spec, connect_on_load=False, supports_check_mode=True)
+        self.module = AnsibleModule(
+            argument_spec=self.spec, supports_check_mode=True)
 
-    def __init_netconf__(self):
-        """ init netconf interface"""
-
-        if HAS_NCCLIENT:
-            self.netconf = get_netconf(host=self.host, port=self.port,
-                                       username=self.username,
-                                       password=self.module.params['password'])
-            if not self.netconf:
-                self.module.fail_json(msg='Error: netconf init failed')
-        else:
-            self.module.fail_json(
-                msg='Error: No ncclient package, please install it.')
-
-    def __check_response__(self, con_obj, xml_name):
-        """Check if response message is already succeed."""
-
-        xml_str = con_obj.xml
+    def __check_response__(self, xml_str, xml_name):
+        """Check if response message is already succeed"""
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def __netconf_get_config__(self, xml_str):
-        """ netconf get config """
-
-        try:
-            con_obj = self.netconf.get_config(filter=xml_str)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
-    def __netconf_set_config__(self, xml_str, xml_name):
-        """ netconf set config """
-
-        try:
-            con_obj = self.netconf.set_config(config=xml_str)
-            self.__check_response__(con_obj, xml_name)
-        except RPCError:
-            err = sys.exc_info()[1]
-            self.module.fail_json(msg='Error: %s' %
-                                  err.message.replace("\r\n", ""))
-
-        return con_obj
-
     def __string_to_lowercase__(self):
-        """convert string to lowercase"""
+        """Convert string to lowercase"""
 
         if self.route_distinguisher:
             self.route_distinguisher = self.route_distinguisher.lower()
@@ -534,7 +492,7 @@ class EvpnBd(object):
                 self.vpn_target_both[index] = ele.lower()
 
     def get_all_evpn_rts(self, evpn_rts):
-        """get all EVPN RTS"""
+        """Get all EVPN RTS"""
 
         rts = evpn_rts.findall("evpnRT")
         if not rts:
@@ -550,7 +508,7 @@ class EvpnBd(object):
                 self.evpn_info['vpn_target_import'].append(vrf_rtvalue.text)
 
     def get_all_evpn_autorts(self, evpn_autorts):
-        """"get all EVPN AUTORTS"""
+        """"Get all EVPN AUTORTS"""
 
         autorts = evpn_autorts.findall("evpnAutoRT")
         if not autorts:
@@ -579,7 +537,8 @@ class EvpnBd(object):
                 self.evpn_info['vpn_target_import'].remove(ele)
 
     def get_evpn_instance_info(self):
-        """ get current EVPN instance information"""
+        """Get current EVPN instance information"""
+
         if not self.bridge_domain_id:
             self.module.fail_json(msg='Error: The value of bridge_domain_id cannot be empty.')
 
@@ -587,16 +546,16 @@ class EvpnBd(object):
         self.evpn_info['vpn_target_import'] = list()
         self.evpn_info['vpn_target_export'] = list()
         self.evpn_info['vpn_target_both'] = list()
-        self.evpn_info['evpn_inst'] = 'true'
+        self.evpn_info['evpn_inst'] = 'enable'
 
         xml_str = CE_NC_GET_EVPN_CONFIG % (
             self.bridge_domain_id, self.bridge_domain_id)
-        con_obj = self.__netconf_get_config__(xml_str)
-        if "<data/>" in con_obj.xml:
-            self.evpn_info['evpn_inst'] = 'false'
+        xml_str = get_nc_config(self.module, xml_str)
+        if "<data/>" in xml_str:
+            self.evpn_info['evpn_inst'] = 'disable'
             return
 
-        xml_str = con_obj.xml.replace('\r', '').replace('\n', '').\
+        xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
@@ -616,7 +575,7 @@ class EvpnBd(object):
             self.process_rts_info()
 
     def get_existing(self):
-        """get existing config"""
+        """Get existing config"""
 
         self.existing = dict(bridge_domain_id=self.bridge_domain_id,
                              evpn=self.evpn_info['evpn_inst'],
@@ -628,7 +587,7 @@ class EvpnBd(object):
                              vpn_target_export=self.evpn_info['vpn_target_export'])
 
     def get_proposed(self):
-        """get proposed config"""
+        """Get proposed config"""
 
         self.proposed = dict(bridge_domain_id=self.bridge_domain_id,
                              evpn=self.evpn,
@@ -639,7 +598,7 @@ class EvpnBd(object):
                              state=self.state)
 
     def get_end_state(self):
-        """get end config"""
+        """Get end config"""
 
         self.get_evpn_instance_info()
         self.end_state = dict(bridge_domain_id=self.bridge_domain_id,
@@ -653,7 +612,7 @@ class EvpnBd(object):
                               vpn_target_export=self.evpn_info['vpn_target_export'])
 
     def show_result(self):
-        """ show result"""
+        """Show result"""
 
         self.results['changed'] = self.changed
         self.results['proposed'] = self.proposed
@@ -667,7 +626,7 @@ class EvpnBd(object):
         self.module.exit_json(**self.results)
 
     def judge_if_vpn_target_exist(self, vpn_target_type):
-        """judge whether proposed vpn target has existed"""
+        """Judge whether proposed vpn target has existed"""
 
         vpn_target = list()
         if vpn_target_type == 'vpn_target_import':
@@ -682,7 +641,7 @@ class EvpnBd(object):
         return False
 
     def judge_if_config_exist(self):
-        """ judge whether configuration has existed"""
+        """Judge whether configuration has existed"""
 
         if self.state == 'absent':
             if self.route_distinguisher or self.vpn_target_import or self.vpn_target_export or self.vpn_target_both:
@@ -693,7 +652,7 @@ class EvpnBd(object):
         if self.evpn_info['evpn_inst'] != self.evpn:
             return False
 
-        if self.evpn == 'false' and self.evpn_info['evpn_inst'] == 'false':
+        if self.evpn == 'disable' and self.evpn_info['evpn_inst'] == 'disable':
             return True
 
         if self.proposed['bridge_domain_id'] != self.existing['bridge_domain_id']:
@@ -719,8 +678,14 @@ class EvpnBd(object):
 
         return True
 
+    def check_response(self, xml_str, xml_name):
+        """Check if response message is already succeed."""
+
+        if "<ok/>" not in xml_str:
+            self.module.fail_json(msg='Error: %s failed.' % xml_name)
+
     def unconfig_evpn_instance(self):
-        """unconfigure EVPN instance"""
+        """Unconfigure EVPN instance"""
 
         self.updates_cmd.append("bridge-domain %s" % self.bridge_domain_id)
         xml_str = CE_NC_MERGE_EVPN_CONFIG_HEAD % (
@@ -737,7 +702,8 @@ class EvpnBd(object):
                 self.updates_cmd.append(
                     "    undo route-distinguisher %s" % self.route_distinguisher)
             xml_str += CE_NC_MERGE_EVPN_CONFIG_TAIL
-            self.__netconf_set_config__(xml_str, "UNDO_EVPN_BD_RD")
+            recv_xml = set_nc_config(self.module, xml_str)
+            self.check_response(recv_xml, "UNDO_EVPN_BD_RD")
             self.changed = True
             return
 
@@ -805,18 +771,20 @@ class EvpnBd(object):
             xml_str += CE_NC_MERGE_EVPN_RTS_TAIL
 
         xml_str += CE_NC_MERGE_EVPN_CONFIG_TAIL
-        self.__netconf_set_config__(xml_str, "MERGE_EVPN_BD_VPN_TARGET_CONFIG")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "MERGE_EVPN_BD_VPN_TARGET_CONFIG")
         self.changed = True
 
     def config_evpn_instance(self):
-        """configure EVPN instance"""
+        """Configure EVPN instance"""
 
         self.updates_cmd.append("bridge-domain %s" % self.bridge_domain_id)
 
-        if self.evpn == 'false':
+        if self.evpn == 'disable':
             xml_str = CE_NC_DELETE_EVPN_CONFIG % (
                 self.bridge_domain_id, self.bridge_domain_id)
-            self.__netconf_set_config__(xml_str, "MERGE_EVPN_BD_CONFIG")
+            recv_xml = set_nc_config(self.module, xml_str)
+            self.check_response(recv_xml, "MERGE_EVPN_BD_CONFIG")
             self.updates_cmd.append("  undo evpn")
             self.changed = True
             return
@@ -904,12 +872,12 @@ class EvpnBd(object):
             xml_str += CE_NC_MERGE_EVPN_RTS_TAIL
 
         xml_str += CE_NC_MERGE_EVPN_CONFIG_TAIL
-
-        self.__netconf_set_config__(xml_str, "MERGE_EVPN_BD_CONFIG")
+        recv_xml = set_nc_config(self.module, xml_str)
+        self.check_response(recv_xml, "MERGE_EVPN_BD_CONFIG")
         self.changed = True
 
     def is_vpn_target_exist(self, target_type, value):
-        """judge whether VPN target has existed"""
+        """Judge whether VPN target has existed"""
 
         if target_type == 'export_extcommunity':
             if (value not in self.existing['vpn_target_export']) and\
@@ -926,7 +894,7 @@ class EvpnBd(object):
         return False
 
     def config_evnp_bd(self):
-        """configure EVPN in BD view"""
+        """Configure EVPN in BD view"""
 
         if not self.conf_exist:
             if self.state == 'present':
@@ -940,7 +908,7 @@ class EvpnBd(object):
         if self.state == 'absent':
             self.evpn = None
         else:
-            if self.evpn == 'false':
+            if self.evpn == 'disable':
                 return
 
         if self.vpn_target_both:
@@ -986,7 +954,7 @@ class EvpnBd(object):
                         msg='Error: VPN target extended community attribute has invalid value %s.' % ele)
 
     def check_undo_params_if_exist(self):
-        """check whether all undo parameters is existed"""
+        """Check whether all undo parameters is existed"""
 
         if self.vpn_target_import:
             for ele in self.vpn_target_import:
@@ -1047,13 +1015,13 @@ class EvpnBd(object):
         """Check whether vxlan vni is configured in BD view"""
 
         xml_str = CE_NC_GET_VNI_BD % self.bridge_domain_id
-        con_obj = self.__netconf_get_config__(xml_str)
-        if "<data/>" in con_obj.xml:
+        xml_str = get_nc_config(self.module, xml_str)
+        if "<data/>" in xml_str:
             self.module.fail_json(
                 msg='Error: The vxlan vni is not configured or the bridge domain id is invalid.')
 
     def work(self):
-        """excute task"""
+        """Excute task"""
 
         self.get_evpn_instance_info()
         self.process_input_params()
@@ -1069,12 +1037,12 @@ class EvpnBd(object):
 
 
 def main():
-    """main function entry"""
+    """Main function entry"""
 
     argument_spec = dict(
         bridge_domain_id=dict(required=True, type='str'),
         evpn=dict(required=False, type='str',
-                  default='true', choices=['true', 'false']),
+                  default='enable', choices=['enable', 'disable']),
         route_distinguisher=dict(required=False, type='str'),
         vpn_target_both=dict(required=False, type='list'),
         vpn_target_import=dict(required=False, type='list'),
@@ -1082,9 +1050,10 @@ def main():
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
-
+    argument_spec.update(ce_argument_spec)
     evpn_bd = EvpnBd(argument_spec)
     evpn_bd.work()
+
 
 if __name__ == '__main__':
     main()
