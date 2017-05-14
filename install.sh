@@ -41,11 +41,14 @@ if [ -d "./module_utils" ]; then
 fi
 
 echo "Updateing constants.py"
-replace_line=`grep -rn "NETWORK_GROUP_MODULES" $ANSIBLE_PATH/constants.py  | cut -d ":" -f 1`
-if [ $replace_line ]; then
-	sed -i "${replace_line}s/'nxos'/'nxos', 'ce'/g" $ANSIBLE_PATH/constants.py
-else
-	echo "Update Updateing constants.py failed, NETWORK_GROUP_MODULES in constants.py should be manually updated."
+ce_exist=`cat $ANSIBLE_PATH/constants.py | grep "NETWORK_GROUP_MODULES"| grep "ce"`
+if [ -z "$ce_exist" ]; then
+    replace_line=`grep -rn "NETWORK_GROUP_MODULES" $ANSIBLE_PATH/constants.py  | cut -d ":" -f 1`
+    if [ $replace_line ]; then
+        sed -i "${replace_line}s/'nxos'/'nxos', 'ce'/g" $ANSIBLE_PATH/constants.py
+    else
+        echo "Update Updateing constants.py failed, NETWORK_GROUP_MODULES in constants.py should be manually updated."
+    fi
 fi
 
 echo "CloudEngine Ansible 2.3 library installed."
