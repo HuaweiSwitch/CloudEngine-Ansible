@@ -24,7 +24,7 @@ mkdir -p $ANSIBLE_PATH/modules/network/cloudengine
 
 echo "Copying files ..."
 if [ -d "./library" ]; then
-    cp -rf ./library/*.py $ANSIBLE_PATH/modules/core/network/cloudengine
+    cp -rf ./library/*.py $ANSIBLE_PATH/modules/network/cloudengine
 fi
 
 if [ -d "./plugins" ]; then
