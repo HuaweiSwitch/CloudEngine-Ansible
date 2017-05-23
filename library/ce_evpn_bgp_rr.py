@@ -18,15 +18,15 @@
 
 ANSIBLE_METADATA = {'status': ['preview'],
                     'supported_by': 'community',
-                    'version': '1.0'}
+                    'metadata_version': '1.0'}
 
 DOCUMENTATION = '''
 ---
 module: ce_evpn_bgp_rr
-version_added: "2.3"
-short_description: Manages RR for the VXLAN Network.
+version_added: "2.4"
+short_description: Manages RR for the VXLAN Network on HUAWEI CloudEngine switches.
 description:
-    - Configure an RR in BGP-EVPN address family view.
+    - Configure an RR in BGP-EVPN address family view on HUAWEI CloudEngine switches.
 author: Zhijin Zhou (@CloudEngine-Ansible)
 notes:
     - Ensure that BGP view is existed.
@@ -63,8 +63,7 @@ options:
         default: null
     reflect_client:
         description:
-            - Configure the local device as the route reflector
-              and the peer or peer group as the client of the route reflector.
+            - Configure the local device as the route reflector and the peer or peer group as the client of the route reflector.
         required: false
         choices: ['enable','disable']
         default: null
@@ -138,6 +137,7 @@ proposed:
             }
 existing:
     description: k/v pairs of existing attributes on the device
+    returned: always
     type: dict
     sample: {
                 "as_number": "20",
@@ -151,7 +151,7 @@ existing:
 end_state:
     description: k/v pairs of end attributes on the device
     returned: always
-    type: dict or null
+    type: dict
     sample: {
                 "as_number": "20",
                 "bgp_evpn_enable": "enable",
@@ -529,6 +529,7 @@ def main():
     argument_spec.update(ce_argument_spec)
     evpn_bgp_rr = EvpnBgpRr(argument_spec)
     evpn_bgp_rr.work()
+
 
 if __name__ == '__main__':
     main()
