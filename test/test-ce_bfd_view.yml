@@ -1,0 +1,618 @@
+---
+
+- name: cloudengine bfd session view module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    test_intf_10ge: "10GE1/0/1"
+    test_intf_trunk: "eth-trunk10"
+    test_intf_vlanif: "Vlanif100"
+    test_vlan_id: 100
+    test_vlanif_ip: "10.1.1.5"
+    test_trunk_ip: "20.1.1.5"
+    test_vpn: "vpn1"
+
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config:
+      lines: 'return,rollback configuration to label ansible_test'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create vlan and config vlanif"
+    ce_config:
+      lines: 'vlan {{ test_vlan_id }},quit,interface {{test_intf_vlanif}},ip address {{test_vlanif_ip}} 24'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create eth-trunk and config eth-trunk"
+    ce_config:
+      lines: 'interface {{test_intf_trunk}},undo portswitch,ip address {{test_trunk_ip}} 24'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create vpn instance"
+    ce_config:
+      lines: 'ip vpn-instance {{test_vpn}},ipv4-family'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "bfd enable"
+    ce_config:
+      lines: 'bfd'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+    
+  - name: Create bfd session
+    ce_bfd_session:
+      session_name: session1
+      dest_addr: 1.2.3.4
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: set bfd session discr
+    ce_bfd_view:
+      session_name: session1
+      local_discr: 100
+      remote_discr: 200
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+    
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: merge bfd session discr
+    ce_bfd_view:
+      session_name: session1
+      local_discr: 101
+      remote_discr: 202
+      state: present
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset bfd session discr
+    ce_bfd_view:
+      session_name: session1
+      local_discr: 101
+      remote_discr: 202
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Set bfd session interval
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: 51
+      min_rx_interval: 1000
+      detect_multi: 50
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Merge bfd session interval
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: 52
+      min_rx_interval: 999
+      detect_multi: 4
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset bfd session interval
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: 52
+      min_rx_interval: 999
+      detect_multi: 4
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Set bfd session wtr_interval
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: 1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Merge bfd session wtr_interval
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: 60
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset bfd session wtr_interval
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: 60
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Set bfd session tos_exp
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: 0
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Merge bfd session tos_exp
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: 6
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset bfd session tos_exp
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: 6
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Merge bfd session description
+    ce_bfd_view:
+      session_name: session1
+      description: hello
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: set bfd session admin_down
+    ce_bfd_view:
+      session_name: session1
+      admin_down: true
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: unset bfd session admin_down
+    ce_bfd_view:
+      session_name: session1
+      admin_down: false
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Create bfd session auto
+    ce_bfd_session:
+      session_name: session_auto
+      dest_addr: 1.2.3.5
+      src_addr: 2.3.4.5
+      create_type: auto
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: Check bfd session auto local_discr
+    ce_bfd_view:
+      session_name: session_auto
+      local_discr: 1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+    
+  - name: Check bfd session auto remote_discr
+    ce_bfd_view:
+      session_name: session_auto
+      remote_discr: 2
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+    
+  - name: Check bfd session local_discr 1
+    ce_bfd_view:
+      session_name: session1
+      local_discr: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session local_discr 2
+    ce_bfd_view:
+      session_name: session1
+      local_discr: 16385
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session remote_discr 1
+    ce_bfd_view:
+      session_name: session1
+      local_discr: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session remote_discr 2
+    ce_bfd_view:
+      session_name: session_remote
+      local_discr: 4294967296
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_tx_interval 1
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: 49
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_tx_interval 2
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_tx_interval 3
+    ce_bfd_view:
+      session_name: session1
+      min_tx_interval: 1001
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_rx_interval 1
+    ce_bfd_view:
+      session_name: session1
+      min_rx_interval: 49
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_rx_interval 2
+    ce_bfd_view:
+      session_name: session1
+      min_rx_interval: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session min_rx_interval 3
+    ce_bfd_view:
+      session_name: session1
+      min_rx_interval: 1001
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session detect_multi 1
+    ce_bfd_view:
+      session_name: session1
+      detect_multi: 2
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session detect_multi 2
+    ce_bfd_view:
+      session_name: session1
+      detect_multi: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session detect_multi 3
+    ce_bfd_view:
+      session_name: session1
+      detect_multi: 51
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session wtr_interval 1
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check bfd session wtr_interval 2
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: 0
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check bfd session wtr_interval 1
+    ce_bfd_view:
+      session_name: session1
+      wtr_interval: 61
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check bfd session tos_exp 1
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: hello
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check bfd session tos_exp 2
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: -1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check bfd session tos_exp 3
+    ce_bfd_view:
+      session_name: session1
+      tos_exp: 8
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 36"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed   
+        
+  - name: Check bfd session description 1
+    ce_bfd_view:
+      session_name: session1
+      description: 01234567890123456789012345678901234567890123456789ab
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 37"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session description 2
+    ce_bfd_view:
+      session_name: session1
+      description: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 38"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed

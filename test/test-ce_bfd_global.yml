@@ -1,0 +1,526 @@
+---
+
+- name: cloudengine bfd global module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    test_intf_10ge: "10GE1/0/1"
+    test_intf_trunk: "eth-trunk10"
+    test_intf_vlanif: "Vlanif100"
+    test_vlan_id: 100
+    test_vlanif_ip: "10.1.1.5"
+    test_trunk_ip: "20.1.1.5"
+    test_vpn: "vpn1"
+
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config:
+      lines: 'return,rollback configuration to label ansible_test'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: Enable bfd
+    ce_bfd_global:
+      bfd_enable: enable
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: disable bfd
+    ce_bfd_global:
+      bfd_enable: disable
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Set default IP
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: '224.0.0.107'
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Merge default IP
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: '224.0.0.250'
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset default IP
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: '224.0.0.250'
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Set tos_exp_dynamic
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: 0
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Merge tos_exp_dynamic
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: 6
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Delete tos_exp_dynamic
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: 6
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Set tos_exp_static
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: 0
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Merge tos_exp_static
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: 5
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Delete tos_exp_static
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: 5
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Set flapping suppression time 
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 1
+      damp_max_wait_time: 2
+      damp_second_wait_time: 1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Merge flapping suppression time
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 3599999
+      damp_max_wait_time: 3600000
+      damp_second_wait_time: 3599999
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Delete flapping suppression time
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 3599999
+      damp_max_wait_time: 3600000
+      damp_second_wait_time: 3599999
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Check default ip 1
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: 224.0.0.106
+      provider: '{{ cli }}'
+    ignore_errors: true
+    register: data
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check default ip 2
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: 224.0.0.251
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check default ip 3
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: 10.1.1.1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check default ip 4
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 18"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check default ip 5
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: 224.0.0.abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 19"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check tos_exp_dynamic 1
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: "abc"
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 20"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check tos_exp_dynamic 2
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: -1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 21"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check tos_exp_dynamic 3
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: 8
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 22"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check tos_exp_static 1
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: "abc"
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 23"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check tos_exp_static 2
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: -1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 24"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check tos_exp_static 3
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_static: 8
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 25"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check damp_init_wait_time damp_max_wait_time damp_second_wait_time 1
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: "abc"
+      damp_max_wait_time: 111
+      damp_second_wait_time: 222
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 26"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check damp_init_wait_time damp_max_wait_time damp_second_wait_time 2
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 100
+      damp_max_wait_time: 0
+      damp_second_wait_time: 222
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 27"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check damp_init_wait_time damp_max_wait_time damp_second_wait_time 3
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 100
+      damp_max_wait_time: 200
+      damp_second_wait_time: 3600001
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 28"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+        
+  - name: Check damp_init_wait_time damp_max_wait_time damp_second_wait_time 4
+    ce_bfd_global:
+      bfd_enable: enable
+      damp_init_wait_time: 100
+      damp_max_wait_time: 200
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 29"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: set delay_up_time
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: 1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 30"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: merge delay_up_time
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: 600
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 31"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: unset delay_up_time
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: 600
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 32"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: delay_up_time check 1
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: "aaa"
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 33"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: delay_up_time check 2
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: 0
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 34"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: delay_up_time check 3
+    ce_bfd_global:
+      bfd_enable: enable
+      delay_up_time: 601
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 35"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+
+
+

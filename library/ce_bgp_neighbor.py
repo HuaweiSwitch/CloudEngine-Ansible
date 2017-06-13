@@ -1849,7 +1849,10 @@ def main():
         is_single_hop=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']))
 
     argument_spec.update(ce_argument_spec)
-    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
+    mutually_exclusive = [('is_bfd_enable', 'is_bfd_block')]
+    module = AnsibleModule(argument_spec=argument_spec,
+                           mutually_exclusive=mutually_exclusive,
+                           supports_check_mode=True)
 
     changed = False
     proposed = dict()
