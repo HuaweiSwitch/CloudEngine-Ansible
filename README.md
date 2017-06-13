@@ -9,6 +9,9 @@ Huawei CloudEngine Switch support for using Ansible to deploy devices. The Huawe
 - ce_acl - Manages base ACL configuration.
 - ce_acl_advance - Manages advanced ACL configuration.
 - ce_acl_interface - Manages applying ACLs to interfaces.
+- ce_bfd_global - Manages BFD global configuration.
+- ce_bfd_session - Manages BFD session configuration.
+- ce_bfd_view - Manages BFD session view configuration.
 - ce_bgp - Manages BGP configuration.
 - ce_bgp_af - Manages BGP Address-family configuration.
 - ce_bgp_neighbor - Manages BGP peer configuration.

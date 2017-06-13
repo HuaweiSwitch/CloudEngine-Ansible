@@ -1859,7 +1859,9 @@ def main():
     if not HAS_NCCLIENT:
         raise Exception("the ncclient library is required")
 
+    mutually_exclusive = [('is_bfd_enable', 'is_bfd_block')]
     module = NetworkModule(argument_spec=argument_spec,
+                           mutually_exclusive=mutually_exclusive,
                            supports_check_mode=True)
 
     changed = False

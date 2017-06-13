@@ -12,6 +12,9 @@
   * [ce_acl - manages base ACL configuration](#ce_acl)
   * [ce_acl_advance - manages advanced ACL configuration](#ce_acl_advance)
   * [ce_acl_interface - manages applying ACLs to interfaces](#ce_acl_interface)
+  * [ce_bfd_global - Manages BFD global configuration on HUAWEI CloudEngine devices.](#ce_bfd_global)
+  * [ce_bfd_session - Manages BFD session configuration on HUAWEI CloudEngine devices.](#ce_bfd_session)
+  * [ce_bfd_view - Manages BFD session view configuration on HUAWEI CloudEngine devices.](#ce_bfd_view)
   * [ce_bgp - manages BGP configuration](#ce_bgp)
   * [ce_bgp_af - manages BGP Address-family configuration](#ce_bgp_af)
   * [ce_bgp_neighbor - manages BGP peer configuration](#ce_bgp_neighbor)
@@ -519,6 +522,202 @@ Manages applying ACLs to interfaces
 
 ```
 
+---
+
+## ce_bfd_global
+
+Manages BFD global configuration on HUAWEI CloudEngine devices.
+
+  * Synopsis
+  * Options
+  * Examples
+
+#### Synopsis
+
+Manages BFD global configuration on HUAWEI CloudEngine devices.
+
+#### Options
+
+| Parameter     | required    | default  | choices    | comments |
+| ------------- |-------------| ---------|----------- |--------- |
+| bfd_enable | no |  | <ul><li>enable</li><li>disable</li></ul> | Enables the global Bidirectional Forwarding Detection (BFD) function. |
+| damp_init_wait_time | no |  |  | Specifies an initial flapping suppression time for a BFD session. The value is an integer ranging from 1 to 3600000, in milliseconds. The default value is 2000. |
+| damp_max_wait_time | no |  |  | Specifies a maximum flapping suppression time for a BFD session. The value is an integer ranging from 1 to 3600000, in milliseconds. The default value is 15000. |
+| damp_second_wait_time | no |  |  | Specifies a secondary flapping suppression time for a BFD session. The value is an integer ranging from 1 to 3600000, in milliseconds. The default value is 5000. |
+| default_ip | no |  |  | Specifies the default multicast IP address. The value ranges from 224.0.0.107 to 224.0.0.250. |
+| delay_up_time | no |  |  | Specifies the delay before a BFD session becomes Up. The value is an integer ranging from 1 to 600, in seconds. The default value is 0, indicating that a BFD session immediately becomes Up. |
+| state | no | present | <ul><li>present</li><li>absent</li></ul> | Determines whether the config should be present or not on the device. |
+| tos_exp_dynamic | no |  |  | Indicates the priority of BFD control packets for dynamic BFD sessions. The value is an integer ranging from 0 to 7. The default priority is 7, which is the highest priority of BFD control packets. |
+| tos_exp_static | no |  |  | Indicates the priority of BFD control packets for static BFD sessions. The value is an integer ranging from 0 to 7. The default priority is 7, which is the highest priority of BFD control packets. |
+#### Examples
+
+```
+- name: bfd global module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Enable the global BFD function
+    ce_bfd_global:
+      bfd_enable: enable
+      provider: '{{ cli }}'
+
+  - name: Set the default multicast IP address to 224.0.0.150
+    ce_bfd_global:
+      bfd_enable: enable
+      default_ip: 224.0.0.150
+      state: present
+      provider: '{{ cli }}'
+
+  - name: Set the priority of BFD control packets for dynamic and static BFD sessions
+    ce_bfd_global:
+      bfd_enable: enable
+      tos_exp_dynamic: 5
+      tos_exp_static: 6
+      state: present
+      provider: '{{ cli }}'
+
+  - name: Disable the global BFD function
+    ce_bfd_global:
+      bfd_enable: disable
+      provider: '{{ cli }}'
+
+```
+
+---
+
+## ce_bfd_session
+
+Manages BFD session configuration on HUAWEI CloudEngine devices.
+
+  * Synopsis
+  * Options
+  * Examples
+
+#### Synopsis
+
+Manages BFD session configuration, creates a BFD session or deletes a specified BFD session on HUAWEI CloudEngine devices.
+
+#### Options
+
+| Parameter     | required    | default  | choices    | comments |
+| ------------- |-------------| ---------|----------- |--------- |
+| addr_type | no |  | <ul><li>ipv4</li></ul> | Specifies the peer IP address type. |
+| create_type | no |  | <ul><li>static</li><li>auto</li></ul> | BFD session creation mode, the currently created BFD session only supports static or static auto-negotiation mode. |
+| dest_addr | no |  |  | Specifies the peer IP address bound to the BFD session. |
+| out_if_name | no |  |  | Specifies the type and number of the interface bound to the BFD session. |
+| session_name | yes |  |  | Specifies the name of a BFD session. The value is a string of 1 to 15 case-sensitive characters without spaces. |
+| src_addr | no |  |  | Indicates the source IP address carried in BFD packets. |
+| state | no | present | <ul><li>present</li><li>absent</li></ul> | Determines whether the config should be present or not on the device. |
+| use_default_ip | no |  |  | Indicates the default multicast IP address that is bound to a BFD session. By default, BFD uses the multicast IP address 224.0.0.184. You can set the multicast IP address by running the default-ip-address command. The value is a bool type. |
+| vrf_name | no |  |  | Specifies the name of a Virtual Private Network (VPN) instance that is bound to a BFD session. The value is a string of 1 to 31 case-sensitive characters, spaces not supported. When double quotation marks are used around the string, spaces are allowed in the string. The value _public_ is reserved and cannot be used as the VPN instance name. |
+#### Examples
+
+```
+- name: bfd session module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Configuring Single-hop BFD for Detecting Faults on a Layer 2 Link
+    ce_bfd_session:
+      session_name: bfd_l2link
+      use_default_ip: true
+      out_if_name: 10GE1/0/1
+      provider: '{{ cli }}'
+
+  - name: Configuring Single-Hop BFD on a VLANIF Interface
+    ce_bfd_session:
+      session_name: bfd_vlanif
+      dest_addr: 10.1.1.6
+      out_if_name: Vlanif100
+      provider: '{{ cli }}'
+
+  - name: Configuring Multi-Hop BFD
+    ce_bfd_session:
+      session_name: bfd_multi_hop
+      dest_addr: 10.1.1.1
+      provider: '{{ cli }}'
+
+```
+
+---
+
+## ce_bfd_view
+
+Manages BFD session view configuration on HUAWEI CloudEngine devices.
+
+  * Synopsis
+  * Options
+  * Examples
+
+#### Synopsis
+
+Manages BFD session view configuration on HUAWEI CloudEngine devices.
+
+#### Options
+
+| Parameter     | required    | default  | choices    | comments |
+| ------------- |-------------| ---------|----------- |--------- |
+| admin_down | no |  |  | Enables the BFD session to enter the AdminDown state. By default, a BFD session is enabled. The default value is bool type. |
+| description | no |  |  | Specifies the description of a BFD session. The value is a string of 1 to 51 case-sensitive characters with spaces. |
+| detect_multi | no |  |  | Specifies the local detection multiplier of a BFD session. The value is an integer that ranges from 3 to 50. |
+| local_discr | no |  |  | Specifies the local discriminator of a BFD session. The value is an integer that ranges from 1 to 16384. |
+| min_rx_interval | no |  |  | Specifies the minimum interval for sending BFD packets. The value is an integer that ranges from 50 to 1000, in milliseconds. |
+| min_tx_interval | no |  |  | Specifies the minimum interval for receiving BFD packets. The value is an integer that ranges from 50 to 1000, in milliseconds. |
+| remote_discr | no |  |  | Specifies the remote discriminator of a BFD session. The value is an integer that ranges from 1 to 4294967295. |
+| session_name | yes |  |  | Specifies the name of a BFD session. The value is a string of 1 to 15 case-sensitive characters without spaces. |
+| state | no | present | <ul><li>present</li><li>absent</li></ul> | Determines whether the config should be present or not on the device. |
+| tos_exp | no |  |  | Specifies a priority for BFD control packets. The value is an integer ranging from 0 to 7. The default value is 7, which is the highest priority. |
+| wtr_interval | no |  |  | Specifies the WTR time of a BFD session. The value is an integer that ranges from 1 to 60, in minutes. The default value is 0. |
+#### Examples
+
+```
+- name: bfd view module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+  tasks:
+  - name: Set the local discriminator of a BFD session to 80 and the remote discriminator to 800
+    ce_bfd_view:
+      session_name: atob
+      local_discr: 80
+      remote_discr: 800
+      state: present
+      provider: '{{ cli }}'
+
+  - name: Set the minimum interval for receiving BFD packets to 500 ms
+    ce_bfd_view:
+      session_name: atob
+      min_rx_interval: 500
+      state: present
+      provider: '{{ cli }}'
+
+```
 
 ---
 
