@@ -1,0 +1,327 @@
+---
+
+- name: cloudengine bfd session module test
+  hosts: cloudengine
+  connection: local
+  gather_facts: no
+  vars:
+    test_intf_10ge: "10GE1/0/1"
+    test_intf_trunk: "eth-trunk10"
+    test_intf_vlanif: "Vlanif100"
+    test_vlan_id: 100
+    test_vlanif_ip: "10.1.1.5"
+    test_trunk_ip: "20.1.1.5"
+    test_vpn: "vpn1"
+
+    cli:
+      host: "{{ inventory_hostname }}"
+      port: "{{ ansible_ssh_port }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      transport: cli
+
+
+  tasks:
+
+  - name: "rollback"
+    ce_config:
+      lines: 'return,rollback configuration to label ansible_test'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create vlan and config vlanif"
+    ce_config:
+      lines: 'vlan {{ test_vlan_id }},quit,interface {{test_intf_vlanif}},ip address {{test_vlanif_ip}} 24'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create eth-trunk and config eth-trunk"
+    ce_config:
+      lines: 'interface {{test_intf_trunk}},undo portswitch,ip address {{test_trunk_ip}} 24'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "create vpn instance"
+    ce_config:
+      lines: 'ip vpn-instance {{test_vpn}},ipv4-family'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+
+  - name: "bfd enable"
+    ce_config:
+      lines: 'bfd'
+      match: none
+      provider: "{{ cli }}"
+      transport: cli
+    register: data
+    ignore_errors: false
+    
+  - name: Configuring Single-hop BFD for Detecting Faults on a Layer 2 Link
+    ce_bfd_session:
+      session_name: atob
+      use_default_ip: true
+      out_if_name: 10GE1/0/1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 1"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Configuring Single-Hop BFD on a VLANIF Interface
+    ce_bfd_session:
+      session_name: atoc
+      dest_addr: 10.1.1.6
+      out_if_name: Vlanif100
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 2"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Configuring Multi-Hop BFD
+    ce_bfd_session:
+      session_name: atod
+      dest_addr: 10.1.1.1
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: Create bfd session
+    ce_bfd_session:
+      session_name: session1
+      dest_addr: 1.2.3.4
+      vrf_name: '{{ test_vpn }}'
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 3"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Delete bfd session
+    ce_bfd_session:
+      session_name: session1
+      dest_addr: 1.2.3.4
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 4"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Create bfd session static
+    ce_bfd_session:
+      session_name: session2
+      dest_addr: 1.2.3.4
+      create_type: static
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 5"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Delete bfd session static
+    ce_bfd_session:
+      session_name: session2
+      dest_addr: 1.2.3.4
+      create_type: static
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 6"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Create bfd session auto
+    ce_bfd_session:
+      session_name: session3
+      dest_addr: 1.2.3.5
+      src_addr: 2.3.4.5
+      create_type: auto
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 7"
+    assert:
+      that:
+        - data.changed == true
+
+  - name: Delete bfd session auto
+    ce_bfd_session:
+      session_name: session3
+      dest_addr: 1.2.3.5
+      src_addr: 2.3.4.5
+      create_type: auto
+      state: absent
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 8"
+    assert:
+      that:
+        - data.changed == true
+        
+  - name: Session name check
+    ce_bfd_session:
+      session_name: 1234567890123456
+      dest_addr: 1.2.3.4
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 9"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check out_if_name
+    ce_bfd_session:
+      session_name: sesson_outif
+      dest_addr: 1.2.3.4
+      out_if_name: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 10"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check dest_addr 1
+    ce_bfd_session:
+      session_name: sesson_dip
+      dest_addr: 1.2.3.444
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 11"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check dest_addr 2
+    ce_bfd_session:
+      session_name: sesson_dip
+      dest_addr: 1.2.3.abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 12"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check src_addr 1
+    ce_bfd_session:
+      session_name: sesson_sip
+      dest_addr: 1.2.3.4
+      src_addr: abc
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 13"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check src_addr 2
+    ce_bfd_session:
+      session_name: sesson_sip
+      dest_addr: 1.2.3.4
+      src_addr: 1.2.3.256
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 14"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check vrf_name 1
+    ce_bfd_session:
+      session_name: sesson_sip
+      dest_addr: 1.2.3.4
+      src_addr: 1.2.3.6
+      vrf_name: nononovrf
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 15"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check vrf_name 2
+    ce_bfd_session:
+      session_name: sesson_sip
+      dest_addr: 1.2.3.4
+      src_addr: 1.2.3.6
+      vrf_name: abc11111111111111111111111111111111111111111112122aaaaa
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: true
+
+  - name: "TEST 16"
+    assert:
+      that:
+        - data.changed == false
+        - data | failed
+
+  - name: Check bfd session auto
+    ce_bfd_session:
+      session_name: session3
+      dest_addr: 1.2.3.5
+      src_addr: 2.3.4.5
+      create_type: auto
+      provider: '{{ cli }}'
+    register: data
+    ignore_errors: false
+
+  - name: "TEST 17"
+    assert:
+      that:
+        - data.changed == true
