@@ -143,7 +143,7 @@ existing:
     description: k/v pairs of existing configuration
     returned: verbose mode
     type: dict
-sample: {
+    sample: {
         "session": {}
     }
 end_state:
