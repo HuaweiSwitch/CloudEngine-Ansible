@@ -40,7 +40,8 @@ options:
         description:
             - Name of a BGP instance. The name is a case-sensitive string of characters.
               The BGP instance can be used only after the corresponding VPN instance is created.
-        required: true
+        required: false
+        default: _public_
     peer_addr:
         description:
             - Connection address of a peer, which can be an IPv4 or IPv6 address.
@@ -1815,7 +1816,7 @@ def main():
 
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        vrf_name=dict(type='str', required=True),
+        vrf_name=dict(type='str', default='_public_'),
         peer_addr=dict(type='str', required=True),
         remote_as=dict(type='str', required=True),
         description=dict(type='str'),

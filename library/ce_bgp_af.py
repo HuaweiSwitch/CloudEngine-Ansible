@@ -41,7 +41,8 @@ options:
             - Name of a BGP instance. The name is a case-sensitive string of characters.
               The BGP instance can be used only after the corresponding VPN instance is created.
               The value is a string of 1 to 31 case-sensitive characters.
-        required: true
+        required: false
+        default: _public_
     af_type:
         description:
             - Address family type of a BGP instance.
@@ -3014,7 +3015,7 @@ def main():
 
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        vrf_name=dict(type='str', required=True),
+        vrf_name=dict(type='str', default='_public_'),
         af_type=dict(choices=['ipv4uni', 'ipv4multi', 'ipv4vpn',
                               'ipv6uni', 'ipv6vpn', 'evpn'], required=True),
         max_load_ibgp_num=dict(type='str'),

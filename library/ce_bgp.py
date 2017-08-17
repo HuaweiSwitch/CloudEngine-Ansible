@@ -135,7 +135,7 @@ options:
         description:
             - Name of a BGP instance. The name is a case-sensitive string of characters.
         required: false
-        default: null
+        default: _public_
     vrf_rid_auto_sel:
         description:
             - If the value is true, VPN BGP instances are enabled to automatically select router IDs.
@@ -2050,7 +2050,7 @@ def main():
         hold_interval=dict(type='str'),
         clear_interval=dict(type='str'),
         confed_peer_as_num=dict(type='str'),
-        vrf_name=dict(type='str'),
+        vrf_name=dict(type='str', default='_public_'),
         vrf_rid_auto_sel=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         router_id=dict(type='str'),
         keepalive_time=dict(type='str'),
