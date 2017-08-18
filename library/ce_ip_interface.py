@@ -619,7 +619,7 @@ class IpInterface(object):
                 self.updates_cmd.pop()
         else:
             if self.is_ipv6_exist(addr, mask):
-                xml_str = CE_NC_DEL_IPV6 % (ifname, addr, mask)
+                xml_str = CE_NC_DEL_IPV6 % (ifname, addr, mask, ipv6_type)
                 self.netconf_set_config(xml_str, "DEL_IPV6_ADDR")
                 self.updates_cmd.append("interface %s" % ifname)
                 if ipv6_type == "global":
@@ -701,6 +701,7 @@ class IpInterface(object):
         self.proposed["addr"] = self.addr
         self.proposed["mask"] = self.mask
         self.proposed["ipv4_type"] = self.ipv4_type
+        self.proposed["ipv6_type"] = self.ipv6_type
         self.proposed["version"] = self.version
         self.proposed["interface"] = self.interface
 
