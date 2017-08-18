@@ -609,7 +609,8 @@ class IpInterface(object):
             if not self.is_ipv6_exist(addr, mask):
                 xml_str = CE_NC_ADD_IPV6 % (ifname, addr, mask, ipv6_type)
                 self.netconf_set_config(xml_str, "ADD_IPV6_ADDR")
-
+                self.changed = True
+                
                 if ipv6_type == "global":
                     self.updates_cmd.append("ipv6 address %s %s" % (addr, mask))
                 else:
