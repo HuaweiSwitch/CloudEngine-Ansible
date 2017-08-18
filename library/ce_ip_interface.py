@@ -64,6 +64,15 @@ options:
         required: false
         default: main
         choices: ['main','sub']
+    ipv6_type:
+        description:
+        - Specifies IPv6 address type.
+        The value is an enumerated type.
+        global: global IPv6 address.
+        linkLocal: link-local IPv6 address.
+        required: false
+        default: global
+        choices: ['global','linkLocal']
     state:
         description:
             - Specify desired state of the resource.
@@ -119,6 +128,16 @@ EXAMPLES = '''
       state: present
       addr: 2001::db8:800:200c:cccb
       mask: 64
+      provider: '{{ cli }}'
+      
+  - name: Ensure ipv6 address is configured on 10GE1/0/22
+      ce_ip_interface:
+      interface: 10GE1/0/22
+      version: v6
+      state: present
+      addr: fe80::3:1
+      mask: 10
+      ipv6_type: linkLocal
       provider: '{{ cli }}'
 '''
 
@@ -253,7 +272,7 @@ CE_NC_ADD_IPV6 = """
             <am6CfgAddr operation="merge">
               <ifIp6Addr>%s</ifIp6Addr>
               <addrPrefixLen>%s</addrPrefixLen>
-              <addrType6>global</addrType6>
+              <addrType6>%s</addrType6>
             </am6CfgAddr>
           </am6CfgAddrs>
         </ifmAm6>
@@ -274,7 +293,7 @@ CE_NC_DEL_IPV6 = """
                 <am6CfgAddr operation="delete">
                   <ifIp6Addr>%s</ifIp6Addr>
                   <addrPrefixLen>%s</addrPrefixLen>
-                  <addrType6>global</addrType6>
+                  <addrType6>%s</addrType6>
                 </am6CfgAddr>
               </am6CfgAddrs>
             </ifmAm6>
@@ -386,6 +405,7 @@ class IpInterface(object):
         self.mask = self.module.params['mask']
         self.version = self.module.params['version']
         self.ipv4_type = self.module.params['ipv4_type']
+        self.ipv6_type = self.module.params['ipv6_type']
         self.state = self.module.params['state']
 
         # state
@@ -520,6 +540,8 @@ class IpInterface(object):
             if address["ifIp6Addr"] == addr.upper():
                 if address["addrPrefixLen"] == masklen and address["addrType6"] == "global":
                     return True
+                elif address["addrType6"] == "linkLocal":
+                    return True
                 else:
                     self.module.fail_json(
                         msg="Error: Input IPv6 address or mask is invalid.")
@@ -570,7 +592,7 @@ class IpInterface(object):
                     self.updates_cmd.append("undo ip address %s %s sub" % (addr, maskstr))
                 self.changed = True
 
-    def set_ipv6_addr(self, ifname, addr, mask):
+    def set_ipv6_addr(self, ifname, addr, mask, ipv6_type):
         """Set interface IPv6 address"""
 
         if not addr or not mask:
@@ -585,11 +607,13 @@ class IpInterface(object):
                 self.changed = True
 
             if not self.is_ipv6_exist(addr, mask):
-                xml_str = CE_NC_ADD_IPV6 % (ifname, addr, mask)
+                xml_str = CE_NC_ADD_IPV6 % (ifname, addr, mask, ipv6_type)
                 self.netconf_set_config(xml_str, "ADD_IPV6_ADDR")
 
-                self.updates_cmd.append("ipv6 address %s %s" % (addr, mask))
-                self.changed = True
+                if ipv6_type == "global":
+                    self.updates_cmd.append("ipv6 address %s %s" % (addr, mask))
+                else:
+                    self.updates_cmd.append("ipv6 address %s link-local" % (addr))
 
             if not self.changed:
                 self.updates_cmd.pop()
@@ -598,8 +622,10 @@ class IpInterface(object):
                 xml_str = CE_NC_DEL_IPV6 % (ifname, addr, mask)
                 self.netconf_set_config(xml_str, "DEL_IPV6_ADDR")
                 self.updates_cmd.append("interface %s" % ifname)
-                self.updates_cmd.append(
-                    "undo ipv6 address %s %s" % (addr, mask))
+                if ipv6_type == "global":
+                    self.updates_cmd.append("undo ipv6 address %s %s" % (addr, mask))
+                else:
+                    self.updates_cmd.append("undo ipv6 address %s link-local" % (addr))
                 self.changed = True
 
     def set_ipv6_enable(self, ifname):
@@ -647,13 +673,18 @@ class IpInterface(object):
         # ipv6 mask check
         if self.version == "v6":
             if self.addr:
-                if not self.mask:
-                    self.module.fail_json(msg='Error: mask must be set.')
-                if not self.mask.isdigit():
-                    self.module.fail_json(msg='Error: mask is invalid.')
-                if int(self.mask) > 128 or int(self.mask) < 1:
-                    self.module.fail_json(
-                        msg='Error: mask must be an integer between 1 and 128.')
+                if self.ipv6_type == "global":
+                    if not self.mask:
+                        self.module.fail_json(msg='Error: mask must be set.')
+                    if not self.mask.isdigit():
+                        self.module.fail_json(msg='Error: mask is invalid.')
+                    if int(self.mask) > 128 or int(self.mask) < 1:
+                        self.module.fail_json(
+                                              msg='Error: mask must be an integer between 1 and 128.')
+                else:
+                    #Ignore mask for link-local addresses
+                    self.mask = 10
+                    
 
         # interface and layer3 check
         self.intf_info = self.get_interface_dict(self.interface)
@@ -704,7 +735,7 @@ class IpInterface(object):
             if not self.addr and not self.mask:
                 self.set_ipv6_enable(self.interface)
             else:
-                self.set_ipv6_addr(self.interface, self.addr, self.mask)
+                self.set_ipv6_addr(self.interface, self.addr, self.mask, self.ipv6_type)
 
         self.get_end_state()
         self.results['changed'] = self.changed
@@ -729,6 +760,7 @@ def main():
                      default='v4'),
         mask=dict(type='str', required=False),
         ipv4_type=dict(required=False, choices=['main', 'sub'], default='main'),
+        ipv6_type=dict(required=False, choices=['global', 'linkLocal'], default='global'),
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )
