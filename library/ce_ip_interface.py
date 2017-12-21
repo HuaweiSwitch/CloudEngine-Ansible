@@ -66,8 +66,8 @@ options:
         choices: ['main','sub']
     ipv6_type:
         description:
-        - Specifies IPv6 address type.
-        The value is an enumerated type.
+            - Specifies IPv6 address type.
+              The value is an enumerated type.
         global: global IPv6 address.
         linkLocal: link-local IPv6 address.
         required: false
