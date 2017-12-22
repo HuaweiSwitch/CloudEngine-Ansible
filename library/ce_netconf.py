@@ -145,7 +145,7 @@ def main():
         response = get_nc_config(module, cfg_xml)
 
         if "<data/>" in response:
-            end_state["result"] = "<data/>"
+            end_state["result"] = response
         else:
             tmp1 = response.split(r"<data>")
             tmp2 = tmp1[1].split(r"</data>")
