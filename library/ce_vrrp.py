@@ -370,6 +370,7 @@ CE_NC_CREATE_VRRP_VIRTUAL_IP_INFO = """
       <vrrpGroup>
         <vrrpId>%s</vrrpId>
         <ifName>%s</ifName>
+        <vrrpType>normal</vrrpType>
         <virtualIps>
           <virtualIp operation="create">
             <virtualIpAddress>%s</virtualIpAddress>
