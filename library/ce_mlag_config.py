@@ -831,11 +831,11 @@ class MlagConfig(object):
                     if self.nickname or self.pseudo_nickname or self.pseudo_priority or self.priority_id \
                             or self.ip_address or self.vpn_instance_name:
                         if self.nickname:
-                            if self.dfs_group_info["ipAddress"] != "0.0.0.0":
+                            if self.dfs_group_info["localNickname"] and self.dfs_group_info["ipAddress"] != "0.0.0.0":
                                 self.module.fail_json(msg='Error: nickname and ip_address can not be exist at the '
                                                           'same time.')
                         if self.ip_address:
-                            if self.dfs_group_info["localNickname"] != "0":
+                            if self.dfs_group_info["ipAddress"] and self.dfs_group_info["localNickname"] != "0":
                                 self.module.fail_json(msg='Error: nickname and ip_address can not be exist at the '
                                                           'same time.')
                         self.modify_dfs_group()
