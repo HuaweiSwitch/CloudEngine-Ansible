@@ -2169,8 +2169,12 @@ def main():
         bgp_enable_exist = ce_bgp_obj.get_bgp_enable(module=module)
         existing["bgp enable"] = bgp_enable_exist
 
-        asnumber_exist = bgp_enable_exist[0][0]
-        bgpenable_exist = bgp_enable_exist[0][1]
+        if bgp_enable_exist:
+            asnumber_exist = bgp_enable_exist[0][0]
+            bgpenable_exist = bgp_enable_exist[0][1]
+        else:
+            asnumber_exist = ''
+            bgpenable_exist = False
 
         if state == "present":
             bgp_enable_new = (as_number, "true")
