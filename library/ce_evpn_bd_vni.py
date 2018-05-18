@@ -268,7 +268,7 @@ CE_NC_GET_VNI_BD = """
     <nvo3Vni2Bds>
       <nvo3Vni2Bd>
         <vniId></vniId>
-        <bdId>%s</bdId>
+        <bdId></bdId>
       </nvo3Vni2Bd>
     </nvo3Vni2Bds>
   </nvo3>
