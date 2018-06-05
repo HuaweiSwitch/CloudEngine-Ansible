@@ -82,7 +82,7 @@ EXAMPLES = '''
     ce_vlan:
       vlan_id: 50
       name: WEB
-      state: absent
+      state: present
       provider: "{{ cli }}"
 
   - name: Ensure VLAN is NOT on the device
