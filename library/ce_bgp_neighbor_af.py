@@ -1878,6 +1878,8 @@ class BgpNeighborAf(object):
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
+        elif af_type == "evpn":
+            cmd = "l2vpn-family evpn"
         cmds.append(cmd)
         cmd = "peer %s" % remote_address
         cmds.append(cmd)
