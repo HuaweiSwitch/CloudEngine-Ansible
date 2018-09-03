@@ -1880,9 +1880,9 @@ class BgpNeighborAf(object):
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
         elif af_type == "ipv4vpn":
-            cmd = "ipv4-family ipv4vpn"
+            cmd = "ipv4-family vpnv4"
         elif af_type == "ipv6vpn":
-            cmd = "ipv6-family ipv6vpn"
+            cmd = "ipv6-family vpnv6"
         elif af_type == "evpn":
             cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
@@ -1916,9 +1916,9 @@ class BgpNeighborAf(object):
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
         elif af_type == "ipv4vpn":
-            cmd = "ipv4-family ipv4vpn"
+            cmd = "ipv4-family vpnv4"
         elif af_type == "ipv6vpn":
-            cmd = "ipv6-family ipv6vpn"
+            cmd = "ipv6-family vpnv6"
         elif af_type == "evpn":
             cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
@@ -1952,9 +1952,9 @@ class BgpNeighborAf(object):
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
         elif af_type == "ipv4vpn":
-            cmd = "ipv4-family ipv4vpn"
+            cmd = "ipv4-family vpnv4"
         elif af_type == "ipv6vpn":
-            cmd = "ipv6-family ipv6vpn"
+            cmd = "ipv6-family vpnv6"
         elif af_type == "evpn":
             cmd = "l2vpn-family evpn"       
         cmds.append(cmd)
