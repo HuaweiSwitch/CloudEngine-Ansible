@@ -1872,12 +1872,19 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Merge bgp peer address family failed.')
 
         cmds = []
+        cmd = ''
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
+        elif af_type == "ipv4vpn":
+            cmd = "ipv4-family ipv4vpn"
+        elif af_type == "ipv6vpn":
+            cmd = "ipv6-family ipv6vpn"
+        elif af_type == "evpn":
+            cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
         cmd = "peer %s" % remote_address
         cmds.append(cmd)
@@ -1901,12 +1908,19 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Create bgp peer address family failed.')
 
         cmds = []
+        cmd = ''
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
+        elif af_type == "ipv4vpn":
+            cmd = "ipv4-family ipv4vpn"
+        elif af_type == "ipv6vpn":
+            cmd = "ipv6-family ipv6vpn"
+        elif af_type == "evpn":
+            cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
         cmd = "peer %s" % remote_address
         cmds.append(cmd)
@@ -1930,12 +1944,19 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Delete bgp peer address family failed.')
 
         cmds = []
+        cmd = ''
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
+        elif af_type == "ipv4vpn":
+            cmd = "ipv4-family ipv4vpn"
+        elif af_type == "ipv6vpn":
+            cmd = "ipv6-family ipv6vpn"
+        elif af_type == "evpn":
+            cmd = "l2vpn-family evpn"       
         cmds.append(cmd)
         cmd = "undo peer %s" % remote_address
         cmds.append(cmd)
