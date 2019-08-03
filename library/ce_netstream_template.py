@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,12 +28,11 @@ short_description: Manages NetStream template configuration on HUAWEI CloudEngin
 description:
     - Manages NetStream template configuration on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present', 'absent']
     type:
@@ -45,32 +44,22 @@ options:
         description:
             - Configure the name of netstream record.
               The value is a string of 1 to 32 case-insensitive characters.
-        required: false
-        default: null
     match:
         description:
             - Configure flexible flow statistics template keywords.
-        required: false
-        default: null
         choices: ['destination-address', 'destination-port', 'tos', 'protocol', 'source-address', 'source-port']
     collect_counter:
         description:
             - Configure the number of packets and bytes that are included in the flexible flow statistics sent to NSC.
-        required: false
-        default: null
         choices: ['bytes', 'packets']
     collect_interface:
         description:
             - Configure the input or output interface that are included in the flexible flow statistics sent to NSC.
-        required: false
-        default: null
         choices: ['input', 'output']
     description:
         description:
             - Configure the description of netstream record.
               The value is a string of 1 to 80 case-insensitive characters.
-        required: false
-        default: null
 '''
 
 EXAMPLES = '''
@@ -90,29 +79,29 @@ EXAMPLES = '''
 
   - name: Config ipv4 netstream record
     ce_netstream_template:
-      state:  present
-      type:  ip
-      record_name:  test
+      state: present
+      type: ip
+      record_name: test
       provider: "{{ cli }}"
   - name: Undo ipv4 netstream record
     ce_netstream_template:
-      state:  absent
-      type:  ip
-      record_name:  test
+      state: absent
+      type: ip
+      record_name: test
       provider: "{{ cli }}"
   - name: Config ipv4 netstream record collect_counter
     ce_netstream_template:
-      state:  present
-      type:  ip
-      record_name:  test
-      collect_counter:  bytes
+      state: present
+      type: ip
+      record_name: test
+      collect_counter: bytes
       provider: "{{ cli }}"
   - name: Undo ipv4 netstream record collect_counter
     ce_netstream_template:
-      state:  absent
-      type:  ip
-      record_name:  test
-      collect_counter:  bytes
+      state: absent
+      type: ip
+      record_name: test
+      collect_counter: bytes
       provider: "{{ cli }}"
 '''
 
@@ -120,7 +109,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -149,8 +138,41 @@ updates:
 
 import re
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_config, load_config
-from ansible.module_utils.ce import ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import load_config
+from ansible.module_utils.network.cloudengine.ce import get_connection, rm_config_prefix
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec
+
+
+def get_config(module, flags):
+
+    """Retrieves the current config from the device or cache
+    """
+    flags = [] if flags is None else flags
+    if isinstance(flags, str):
+        flags = [flags]
+    elif not isinstance(flags, list):
+        flags = []
+
+    cmd = 'display current-configuration '
+    cmd += ' '.join(flags)
+    cmd = cmd.strip()
+    conn = get_connection(module)
+    rc, out, err = conn.exec_command(cmd)
+    if rc != 0:
+        module.fail_json(msg=err)
+    cfg = str(out).strip()
+    # remove default configuration prefix '~'
+    for flag in flags:
+        if "include-default" in flag:
+            cfg = rm_config_prefix(cfg)
+            break
+    if cfg.startswith('display'):
+        lines = cfg.split('\n')
+        if len(lines) > 1:
+            return '\n'.join(lines[1:])
+        else:
+            return ''
+    return cfg
 
 
 class NetstreamTemplate(object):
@@ -302,6 +324,9 @@ class NetstreamTemplate(object):
                 tmp_value = re.findall(r'collect interface (.*)', self.netstream_cfg)
                 if tmp_value:
                     self.end_state["collect_interface"] = tmp_value
+        if self.end_state == self.existing:
+            self.changed = False
+            self.updates_cmd = list()
 
     def present_netstream(self):
         """ Present netstream configuration """
@@ -320,7 +345,7 @@ class NetstreamTemplate(object):
             need_create_record = True
 
         if self.description:
-            cmd = "description %s" % self.description
+            cmd = "description %s" % self.description.strip()
             if not self.netstream_cfg or cmd not in self.netstream_cfg:
                 cmds.append(cmd)
                 self.updates_cmd.append(cmd)

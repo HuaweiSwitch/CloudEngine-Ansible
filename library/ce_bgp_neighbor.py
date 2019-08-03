@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,20 +28,18 @@ short_description: Manages BGP peer configuration on HUAWEI CloudEngine switches
 description:
     - Manages BGP peer configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present','absent']
     vrf_name:
         description:
             - Name of a BGP instance. The name is a case-sensitive string of characters.
               The BGP instance can be used only after the corresponding VPN instance is created.
-        required: false
-        default: _public_
+        required: true
     peer_addr:
         description:
             - Connection address of a peer, which can be an IPv4 or IPv6 address.
@@ -55,33 +53,26 @@ options:
         description:
             - Description of a peer, which can be letters or digits.
               The value is a string of 1 to 80 characters.
-        required: false
-        default: null
     fake_as:
         description:
             - Fake AS number that is specified for a local peer.
               The value is a string of 1 to 11 characters.
-        required: false
-        default: null
     dual_as:
         description:
             - If the value is true, the EBGP peer can use either a fake AS number or the actual AS number.
               If the value is false, the EBGP peer can only use a fake AS number.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     conventional:
         description:
             - If the value is true, the router has all extended capabilities.
               If the value is false, the router does not have all extended capabilities.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     route_refresh:
         description:
             - If the value is true, BGP is enabled to advertise REFRESH packets.
               If the value is false, the route refresh function is enabled.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     is_ignore:
@@ -89,146 +80,108 @@ options:
             - If the value is true, the session with a specified peer is torn down and all related
               routing entries are cleared.
               If the value is false, the session with a specified peer is retained.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     local_if_name:
         description:
             - Name of a source interface that sends BGP packets.
               The value is a string of 1 to 63 characters.
-        required: false
-        default: null
     ebgp_max_hop:
         description:
             - Maximum number of hops in an indirect EBGP connection.
               The value is an ranging from 1 to 255.
-        required: false
-        default: null
     valid_ttl_hops:
         description:
             - Enable GTSM on a peer or peer group.
               The valid-TTL-Value parameter is used to specify the number of TTL hops to be detected.
               The value is an integer ranging from 1 to 255.
-        required: false
-        default: null
     connect_mode:
         description:
             - The value can be Connect-only, Listen-only, or Both.
-        required: false
-        default: null
     is_log_change:
         description:
             - If the value is true, BGP is enabled to record peer session status and event information.
               If the value is false, BGP is disabled from recording peer session status and event information.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     pswd_type:
         description:
             - Enable BGP peers to establish a TCP connection and perform the Message Digest 5 (MD5)
               authentication for BGP messages.
-        required: false
         choices: ['null','cipher','simple']
-        default: null
     pswd_cipher_text:
         description:
             - The character string in a password identifies the contents of the password, spaces not supported.
               The value is a string of 1 to 255 characters.
-        required: false
-        default: null
     keep_alive_time:
         description:
             - Specify the Keepalive time of a peer or peer group.
               The value is an integer ranging from 0 to 21845. The default value is 60.
-        required: false
-        default: null
     hold_time:
         description:
             - Specify the Hold time of a peer or peer group.
               The value is 0 or an integer ranging from 3 to 65535.
-        required: false
-        default: null
     min_hold_time:
         description:
             - Specify the Min hold time of a peer or peer group.
-        required: false
-        default: null
     key_chain_name:
         description:
             - Specify the Keychain authentication name used when BGP peers establish a TCP connection.
               The value is a string of 1 to 47 case-insensitive characters.
-        required: false
-        default: null
     conn_retry_time:
         description:
             - ConnectRetry interval.
               The value is an integer ranging from 1 to 65535.
-        required: false
-        default: null
     tcp_MSS:
         description:
             - Maximum TCP MSS value used for TCP connection establishment for a peer.
               The value is an integer ranging from 176 to 4096.
-        required: false
-        default: null
     mpls_local_ifnet_disable:
         description:
             - If the value is true, peer create MPLS Local IFNET disable.
               If the value is false, peer create MPLS Local IFNET enable.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     prepend_global_as:
         description:
             - Add the global AS number to the Update packets to be advertised.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     prepend_fake_as:
         description:
             - Add the Fake AS number to received Update packets.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     is_bfd_block:
         description:
             - If the value is true, peers are enabled to inherit the BFD function from the peer group.
               If the value is false, peers are disabled to inherit the BFD function from the peer group.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     multiplier:
         description:
             - Specify the detection multiplier. The default value is 3.
               The value is an integer ranging from 3 to 50.
-        required: false
-        default: null
     is_bfd_enable:
         description:
             - If the value is true, BFD is enabled.
               If the value is false, BFD is disabled.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
     rx_interval:
         description:
             - Specify the minimum interval at which BFD packets are received.
               The value is an integer ranging from 50 to 1000, in milliseconds.
-        required: false
-        default: null
     tx_interval:
         description:
             - Specify the minimum interval at which BFD packets are sent.
               The value is an integer ranging from 50 to 1000, in milliseconds.
-        required: false
-        default: null
     is_single_hop:
         description:
             - If the value is true, the system is enabled to preferentially use the single-hop mode for
               BFD session setup between IBGP peers.
               If the value is false, the system is disabled from preferentially using the single-hop
               mode for BFD session setup between IBGP peers.
-        required: false
         choices: ['no_use','true','false']
         default: no_use
 '''
@@ -251,17 +204,17 @@ EXAMPLES = '''
 
   - name: "Config bgp peer"
     ce_bgp_neighbor:
-      state:  present
-      vrf_name:  js
-      peer_addr:  192.168.10.10
-      remote_as:  500
+      state: present
+      vrf_name: js
+      peer_addr: 192.168.10.10
+      remote_as: 500
       provider: "{{ cli }}"
 
   - name: "Config bgp route id"
     ce_bgp_neighbor:
-      state:  absent
-      vrf_name:  js
-      peer_addr:  192.168.10.10
+      state: absent
+      vrf_name: js
+      peer_addr: 192.168.10.10
       provider: "{{ cli }}"
 '''
 
@@ -269,7 +222,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -294,10 +247,8 @@ updates:
 '''
 
 import re
-import sys
-import socket
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec, check_ip_addr
 
 
 # get bgp peer
@@ -310,7 +261,7 @@ CE_GET_BGP_PEER_HEADER = """
               <vrfName>%s</vrfName>
               <bgpPeers>
                 <bgpPeer>
-                  <peerAddr></peerAddr>
+                  <peerAddr>%s</peerAddr>
 """
 CE_GET_BGP_PEER_TAIL = """
                 </bgpPeer>
@@ -321,7 +272,6 @@ CE_GET_BGP_PEER_TAIL = """
       </bgp>
     </filter>
 """
-
 
 # merge bgp peer
 CE_MERGE_BGP_PEER_HEADER = """
@@ -462,27 +412,6 @@ CE_DELETE_PEER_BFD_TAIL = """
 """
 
 
-def check_ip_addr(**kwargs):
-    """ check_ip_addr, Supports IPv4 and IPv6 """
-
-    ipaddr = kwargs["ipaddr"]
-
-    if not ipaddr or '\x00' in ipaddr:
-        return False
-
-    try:
-        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
-
-
 class BgpNeighbor(object):
     """ Manages BGP peer configuration """
 
@@ -545,6 +474,7 @@ class BgpNeighbor(object):
         result = dict()
         need_cfg = False
 
+        peerip = module.params['peer_addr']
         vrf_name = module.params['vrf_name']
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
@@ -557,7 +487,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of description %s is out of [1 - 80].' % description)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<description></description>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -580,7 +510,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of fake_as %s is out of [1 - 11].' % fake_as)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<fakeAs></fakeAs>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -600,7 +530,7 @@ class BgpNeighbor(object):
         dual_as = module.params['dual_as']
         if dual_as != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<dualAs></dualAs>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -612,7 +542,7 @@ class BgpNeighbor(object):
 
                 if re_find:
                     result["dual_as"] = re_find
-                    if re_find[0] != fake_as:
+                    if re_find[0] != dual_as:
                         need_cfg = True
                 else:
                     need_cfg = True
@@ -620,10 +550,9 @@ class BgpNeighbor(object):
         conventional = module.params['conventional']
         if conventional != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<conventional></conventional>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
-
             if "<data/>" in recv_xml:
                 need_cfg = True
             else:
@@ -640,7 +569,7 @@ class BgpNeighbor(object):
         route_refresh = module.params['route_refresh']
         if route_refresh != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<routeRefresh></routeRefresh>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -660,7 +589,7 @@ class BgpNeighbor(object):
         four_byte_as = module.params['four_byte_as']
         if four_byte_as != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<fourByteAs></fourByteAs>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -680,7 +609,7 @@ class BgpNeighbor(object):
         is_ignore = module.params['is_ignore']
         if is_ignore != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<isIgnore></isIgnore>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -703,7 +632,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of local_if_name %s is out of [1 - 63].' % local_if_name)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<localIfName></localIfName>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -715,7 +644,7 @@ class BgpNeighbor(object):
 
                 if re_find:
                     result["local_if_name"] = re_find
-                    if re_find[0] != local_if_name:
+                    if re_find[0].lower() != local_if_name.lower():
                         need_cfg = True
                 else:
                     need_cfg = True
@@ -726,7 +655,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of ebgp_max_hop %s is out of [1 - 255].' % ebgp_max_hop)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<ebgpMaxHop></ebgpMaxHop>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -749,7 +678,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of valid_ttl_hops %s is out of [1 - 255].' % valid_ttl_hops)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<validTtlHops></validTtlHops>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -769,7 +698,7 @@ class BgpNeighbor(object):
         connect_mode = module.params['connect_mode']
         if connect_mode:
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<connectMode></connectMode>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -789,7 +718,7 @@ class BgpNeighbor(object):
         is_log_change = module.params['is_log_change']
         if is_log_change != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<isLogChange></isLogChange>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -809,7 +738,7 @@ class BgpNeighbor(object):
         pswd_type = module.params['pswd_type']
         if pswd_type:
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<pswdType></pswdType>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -832,7 +761,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of pswd_cipher_text %s is out of [1 - 255].' % pswd_cipher_text)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<pswdCipherText></pswdCipherText>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -855,7 +784,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of keep_alive_time %s is out of [0 - 21845].' % keep_alive_time)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<keepAliveTime></keepAliveTime>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -878,7 +807,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of hold_time %s is out of [0 or 3 - 65535].' % hold_time)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<holdTime></holdTime>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -901,7 +830,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of min_hold_time %s is out of [0 or 20 - 65535].' % min_hold_time)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<minHoldTime></minHoldTime>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -924,7 +853,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The len of key_chain_name %s is out of [1 - 47].' % key_chain_name)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<keyChainName></keyChainName>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -947,7 +876,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of conn_retry_time %s is out of [1 - 65535].' % conn_retry_time)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<connRetryTime></connRetryTime>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -970,7 +899,7 @@ class BgpNeighbor(object):
                 module.fail_json(
                     msg='Error: The value of tcp_mss %s is out of [176 - 4096].' % tcp_mss)
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<tcpMSS></tcpMSS>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -990,7 +919,7 @@ class BgpNeighbor(object):
         mpls_local_ifnet_disable = module.params['mpls_local_ifnet_disable']
         if mpls_local_ifnet_disable != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<mplsLocalIfnetDisable></mplsLocalIfnetDisable>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -1010,7 +939,7 @@ class BgpNeighbor(object):
         prepend_global_as = module.params['prepend_global_as']
         if prepend_global_as != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<prependGlobalAs></prependGlobalAs>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -1030,7 +959,7 @@ class BgpNeighbor(object):
         prepend_fake_as = module.params['prepend_fake_as']
         if prepend_fake_as != 'no_use':
 
-            conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+            conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
                 "<prependFakeAs></prependFakeAs>" + CE_GET_BGP_PEER_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -1346,14 +1275,14 @@ class BgpNeighbor(object):
         """ get_bgp_peer """
 
         module = kwargs["module"]
-
+        peerip = module.params['peer_addr']
         vrf_name = module.params['vrf_name']
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
                     msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
-        conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + \
+        conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + \
             "<remoteAs></remoteAs>" + CE_GET_BGP_PEER_TAIL
 
         xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
@@ -1375,14 +1304,14 @@ class BgpNeighbor(object):
         """ get_bgp_del_peer """
 
         module = kwargs["module"]
-
+        peerip = module.params['peer_addr']
         vrf_name = module.params['vrf_name']
         if vrf_name:
             if len(vrf_name) > 31 or len(vrf_name) == 0:
                 module.fail_json(
                     msg='Error: The len of vrf_name %s is out of [1 - 31].' % vrf_name)
 
-        conf_str = CE_GET_BGP_PEER_HEADER % vrf_name + CE_GET_BGP_PEER_TAIL
+        conf_str = CE_GET_BGP_PEER_HEADER % (vrf_name, peerip) + CE_GET_BGP_PEER_TAIL
 
         xml_str = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -1504,7 +1433,6 @@ class BgpNeighbor(object):
         conventional = module.params['conventional']
         if conventional != 'no_use':
             conf_str += "<conventional>%s</conventional>" % conventional
-
             if conventional == "true":
                 cmd = "peer %s capability-advertise conventional" % peer_addr
             else:
@@ -1564,7 +1492,6 @@ class BgpNeighbor(object):
 
         connect_mode = module.params['connect_mode']
         if connect_mode:
-            conf_str += "<connectMode>%s</connectMode>" % connect_mode
 
             if connect_mode == "listenOnly":
                 cmd = "peer %s listen-only" % peer_addr
@@ -1572,11 +1499,13 @@ class BgpNeighbor(object):
             elif connect_mode == "connectOnly":
                 cmd = "peer %s connect-only" % peer_addr
                 cmds.append(cmd)
-            elif connect_mode == "null":
+            elif connect_mode == "both":
+                connect_mode = "null"
                 cmd = "peer %s listen-only" % peer_addr
                 cmds.append(cmd)
                 cmd = "peer %s connect-only" % peer_addr
                 cmds.append(cmd)
+            conf_str += "<connectMode>%s</connectMode>" % connect_mode
 
         is_log_change = module.params['is_log_change']
         if is_log_change != 'no_use':
@@ -1664,6 +1593,12 @@ class BgpNeighbor(object):
         prepend_fake_as = module.params['prepend_fake_as']
         if prepend_fake_as != 'no_use':
             conf_str += "<prependFakeAs>%s</prependFakeAs>" % prepend_fake_as
+
+            if prepend_fake_as == "true":
+                cmd = "peer %s prepend-local-as" % peer_addr
+            else:
+                cmd = "undo peer %s prepend-local-as" % peer_addr
+            cmds.append(cmd)
 
         conf_str += CE_MERGE_BGP_PEER_TAIL
 
@@ -1816,7 +1751,7 @@ def main():
 
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        vrf_name=dict(type='str', default='_public_'),
+        vrf_name=dict(type='str', required=True),
         peer_addr=dict(type='str', required=True),
         remote_as=dict(type='str', required=True),
         description=dict(type='str'),
@@ -1829,7 +1764,7 @@ def main():
         local_if_name=dict(type='str'),
         ebgp_max_hop=dict(type='str'),
         valid_ttl_hops=dict(type='str'),
-        connect_mode=dict(choices=['listenOnly', 'connectOnly', 'null']),
+        connect_mode=dict(choices=['listenOnly', 'connectOnly', 'both']),
         is_log_change=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']),
         pswd_type=dict(choices=['null', 'cipher', 'simple']),
         pswd_cipher_text=dict(type='str', no_log=True),
@@ -1850,10 +1785,7 @@ def main():
         is_single_hop=dict(type='str', default='no_use', choices=['no_use', 'true', 'false']))
 
     argument_spec.update(ce_argument_spec)
-    mutually_exclusive = [('is_bfd_enable', 'is_bfd_block')]
-    module = AnsibleModule(argument_spec=argument_spec,
-                           mutually_exclusive=mutually_exclusive,
-                           supports_check_mode=True)
+    module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     changed = False
     proposed = dict()
@@ -1986,7 +1918,6 @@ def main():
                 existing["bgp peer"] = bgp_peer_exist
 
                 bgp_peer_new = (peer_addr, remote_as)
-
                 if len(bgp_peer_exist) == 0:
                     cmd = ce_bgp_peer_obj.create_bgp_peer(module=module)
                     changed = True

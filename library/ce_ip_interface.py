@@ -16,18 +16,18 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
 module: ce_ip_interface
-version_added: "2.3"
-short_description: Manages L3 attributes for IPv4 and IPv6 interfaces.
+version_added: "2.4"
+short_description: Manages L3 attributes for IPv4 and IPv6 interfaces on HUAWEI CloudEngine switches.
 description:
-    - Manages Layer 3 attributes for IPv4 and IPv6 interfaces.
-author: QijunPan (@CloudEngine-Ansible)
+    - Manages Layer 3 attributes for IPv4 and IPv6 interfaces on HUAWEI CloudEngine switches.
+author: QijunPan (@QijunPan)
 notes:
     - Interface must already be a L3 port when using this module.
     - Logical interfaces (loopback, vlanif) must be created first.
@@ -42,17 +42,12 @@ options:
     addr:
         description:
             - IPv4 or IPv6 Address.
-        required: false
-        default: null
     mask:
         description:
             - Subnet mask for IPv4 or IPv6 Address in decimal format.
-        required: false
-        default: null
     version:
         description:
             - IP address version.
-        required: false
         default: v4
         choices: ['v4','v6']
     ipv4_type:
@@ -61,22 +56,11 @@ options:
               The value is an enumerated type.
               main, primary IP address.
               sub, secondary IP address.
-        required: false
         default: main
         choices: ['main','sub']
-    ipv6_type:
-        description:
-            - Specifies IPv6 address type.
-              The value is an enumerated type.
-        global: global IPv6 address.
-        linkLocal: link-local IPv6 address.
-        required: false
-        default: global
-        choices: ['global','linkLocal']
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present','absent']
 '''
@@ -129,16 +113,6 @@ EXAMPLES = '''
       addr: 2001::db8:800:200c:cccb
       mask: 64
       provider: '{{ cli }}'
-      
-  - name: Ensure ipv6 address is configured on 10GE1/0/22
-      ce_ip_interface:
-      interface: 10GE1/0/22
-      version: v6
-      state: present
-      addr: fe80::3:1
-      mask: 10
-      ipv6_type: linkLocal
-      provider: '{{ cli }}'
 '''
 
 RETURN = '''
@@ -149,6 +123,7 @@ proposed:
     sample: {"addr": "20.20.20.20", "interface": "10GE1/0/22", "mask": "24"}
 existing:
     description: k/v pairs of existing IP attributes on the interface
+    returned: always
     type: dict
     sample: {"ipv4": [{"ifIpAddr": "11.11.11.11", "subnetMask": "255.255.0.0", "addrType": "main"}],
             "interface": "10GE1/0/22"}
@@ -166,13 +141,13 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 import re
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 CE_NC_GET_INTF = """
@@ -272,7 +247,7 @@ CE_NC_ADD_IPV6 = """
             <am6CfgAddr operation="merge">
               <ifIp6Addr>%s</ifIp6Addr>
               <addrPrefixLen>%s</addrPrefixLen>
-              <addrType6>%s</addrType6>
+              <addrType6>global</addrType6>
             </am6CfgAddr>
           </am6CfgAddrs>
         </ifmAm6>
@@ -293,7 +268,7 @@ CE_NC_DEL_IPV6 = """
                 <am6CfgAddr operation="delete">
                   <ifIp6Addr>%s</ifIp6Addr>
                   <addrPrefixLen>%s</addrPrefixLen>
-                  <addrType6>%s</addrType6>
+                  <addrType6>global</addrType6>
                 </am6CfgAddr>
               </am6CfgAddrs>
             </ifmAm6>
@@ -405,7 +380,6 @@ class IpInterface(object):
         self.mask = self.module.params['mask']
         self.version = self.module.params['version']
         self.ipv4_type = self.module.params['ipv4_type']
-        self.ipv6_type = self.module.params['ipv6_type']
         self.state = self.module.params['state']
 
         # state
@@ -422,8 +396,14 @@ class IpInterface(object):
     def __init_module__(self):
         """ init module """
 
+        required_if = [("version", "v4", ("addr", "mask"))]
+        required_together = [("addr", "mask")]
         self.module = AnsibleModule(
-            argument_spec=self.spec, supports_check_mode=True)
+            argument_spec=self.spec,
+            required_if=required_if,
+            required_together=required_together,
+            supports_check_mode=True
+        )
 
     def netconf_set_config(self, xml_str, xml_name):
         """ netconf set config """
@@ -464,7 +444,7 @@ class IpInterface(object):
         ipv6_info = re.findall(
             r'.*<ifmAm6>.*\s*<enableFlag>(.*)</enableFlag>.*', rcv_xml)
         if not ipv6_info:
-            self.module.fail_json(msg='Error: Fail to get interface IPv6 state.')
+            self.module.fail_json(msg='Error: Fail to get interface %s IPv6 state.' % self.interface)
         else:
             intf_info["enableFlag"] = ipv6_info[0]
 
@@ -540,8 +520,6 @@ class IpInterface(object):
             if address["ifIp6Addr"] == addr.upper():
                 if address["addrPrefixLen"] == masklen and address["addrType6"] == "global":
                     return True
-                elif address["addrType6"] == "linkLocal":
-                    return True
                 else:
                     self.module.fail_json(
                         msg="Error: Input IPv6 address or mask is invalid.")
@@ -592,7 +570,7 @@ class IpInterface(object):
                     self.updates_cmd.append("undo ip address %s %s sub" % (addr, maskstr))
                 self.changed = True
 
-    def set_ipv6_addr(self, ifname, addr, mask, ipv6_type):
+    def set_ipv6_addr(self, ifname, addr, mask):
         """Set interface IPv6 address"""
 
         if not addr or not mask:
@@ -607,26 +585,21 @@ class IpInterface(object):
                 self.changed = True
 
             if not self.is_ipv6_exist(addr, mask):
-                xml_str = CE_NC_ADD_IPV6 % (ifname, addr, mask, ipv6_type)
+                xml_str = CE_NC_ADD_IPV6 % (ifname, addr, mask)
                 self.netconf_set_config(xml_str, "ADD_IPV6_ADDR")
+
+                self.updates_cmd.append("ipv6 address %s %s" % (addr, mask))
                 self.changed = True
-                
-                if ipv6_type == "global":
-                    self.updates_cmd.append("ipv6 address %s %s" % (addr, mask))
-                else:
-                    self.updates_cmd.append("ipv6 address %s link-local" % (addr))
 
             if not self.changed:
                 self.updates_cmd.pop()
         else:
             if self.is_ipv6_exist(addr, mask):
-                xml_str = CE_NC_DEL_IPV6 % (ifname, addr, mask, ipv6_type)
+                xml_str = CE_NC_DEL_IPV6 % (ifname, addr, mask)
                 self.netconf_set_config(xml_str, "DEL_IPV6_ADDR")
                 self.updates_cmd.append("interface %s" % ifname)
-                if ipv6_type == "global":
-                    self.updates_cmd.append("undo ipv6 address %s %s" % (addr, mask))
-                else:
-                    self.updates_cmd.append("undo ipv6 address %s link-local" % (addr))
+                self.updates_cmd.append(
+                    "undo ipv6 address %s %s" % (addr, mask))
                 self.changed = True
 
     def set_ipv6_enable(self, ifname):
@@ -660,8 +633,6 @@ class IpInterface(object):
 
         # ipv4 addr and mask check
         if self.version == "v4":
-            if not self.addr or not self.mask:
-                self.module.fail_json(msg='Error: addr and mask must be set.')
             if not is_valid_v4addr(self.addr):
                 self.module.fail_json(
                     msg='Error: The %s is not a valid address.' % self.addr)
@@ -674,26 +645,19 @@ class IpInterface(object):
         # ipv6 mask check
         if self.version == "v6":
             if self.addr:
-                if self.ipv6_type == "global":
-                    if not self.mask:
-                        self.module.fail_json(msg='Error: mask must be set.')
-                    if not self.mask.isdigit():
-                        self.module.fail_json(msg='Error: mask is invalid.')
-                    if int(self.mask) > 128 or int(self.mask) < 1:
-                        self.module.fail_json(
-                                              msg='Error: mask must be an integer between 1 and 128.')
-                else:
-                    #Ignore mask for link-local addresses
-                    self.mask = 10
-                    
+                if not self.mask.isdigit():
+                    self.module.fail_json(msg='Error: mask is invalid.')
+                if int(self.mask) > 128 or int(self.mask) < 1:
+                    self.module.fail_json(
+                        msg='Error: mask must be an integer between 1 and 128.')
 
         # interface and layer3 check
         self.intf_info = self.get_interface_dict(self.interface)
         if not self.intf_info:
-            self.module.fail_json(msg='Error: interface does not exist.')
+            self.module.fail_json(msg='Error: interface %s does not exist.' % self.interface)
 
         if self.intf_info["isL2SwitchPort"] == "true":
-            self.module.fail_json(msg='Error: interface is layer2.')
+            self.module.fail_json(msg='Error: interface %s is layer2.' % self.interface)
 
     def get_proposed(self):
         """get proposed info"""
@@ -702,7 +666,6 @@ class IpInterface(object):
         self.proposed["addr"] = self.addr
         self.proposed["mask"] = self.mask
         self.proposed["ipv4_type"] = self.ipv4_type
-        self.proposed["ipv6_type"] = self.ipv6_type
         self.proposed["version"] = self.version
         self.proposed["interface"] = self.interface
 
@@ -737,7 +700,7 @@ class IpInterface(object):
             if not self.addr and not self.mask:
                 self.set_ipv6_enable(self.interface)
             else:
-                self.set_ipv6_addr(self.interface, self.addr, self.mask, self.ipv6_type)
+                self.set_ipv6_addr(self.interface, self.addr, self.mask)
 
         self.get_end_state()
         self.results['changed'] = self.changed
@@ -762,7 +725,6 @@ def main():
                      default='v4'),
         mask=dict(type='str', required=False),
         ipv4_type=dict(required=False, choices=['main', 'sub'], default='main'),
-        ipv6_type=dict(required=False, choices=['global', 'linkLocal'], default='global'),
         state=dict(required=False, default='present',
                    choices=['present', 'absent'])
     )

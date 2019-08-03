@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -29,7 +29,7 @@ short_description: Manages NTP authentication configuration on HUAWEI CloudEngin
 description:
     - Manages NTP authentication configuration on HUAWEI CloudEngine switches.
 author:
-    - Zhijin Zhou (@CloudEngine-Ansible)
+    - Zhijin Zhou (@QijunPan)
 notes:
     - If C(state=absent), the module will attempt to remove the given key configuration.
       If a matching key configuration isn't found on the device, the module will fail.
@@ -43,39 +43,30 @@ options:
     auth_pwd:
         description:
             - Plain text with length of 1 to 255, encrypted text with length of 20 to 392.
-        required: false
-        default: null
     auth_mode:
         description:
             - Specify authentication algorithm.
-        required: false
-        default: null
         choices: ['hmac-sha256', 'md5']
     auth_type:
         description:
             - Whether the given password is in cleartext or
               has been encrypted. If in cleartext, the device
               will encrypt it before storing it.
-        required: false
         default: encrypt
         choices: ['text', 'encrypt']
     trusted_key:
         description:
             - Whether the given key is required to be supplied by a time source
               for the device to synchronize to the time source.
-        required: false
         default: 'disable'
         choices: ['enable', 'disable']
     authentication:
         description:
             - Configure ntp authentication enable or unconfigure ntp authentication enable.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     state:
         description:
             - Manage the state of the resource.
-        required: false
         default: present
         choices: ['present','absent']
 '''
@@ -182,7 +173,7 @@ end_state:
 state:
     description: state as sent in from the playbook
     returned: always
-    type: string
+    type: str
     sample: "present"
 updates:
     description: command sent to the device
@@ -196,91 +187,16 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
-import re
 import copy
+import re
+
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import ce_argument_spec, load_config, get_nc_config, set_nc_config
-
-CE_NC_GET_NTP_AUTH_CONFIG = """
-<filter type="subtree">
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpAuthKeyCfgs>
-      <ntpAuthKeyCfg>
-        <keyId>%s</keyId>
-        <mode></mode>
-        <keyVal></keyVal>
-        <isReliable></isReliable>
-      </ntpAuthKeyCfg>
-    </ntpAuthKeyCfgs>
-  </ntp>
-</filter>
-"""
-
-CE_NC_GET_ALL_NTP_AUTH_CONFIG = """
-<filter type="subtree">
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpAuthKeyCfgs>
-      <ntpAuthKeyCfg>
-        <keyId></keyId>
-        <mode></mode>
-        <keyVal></keyVal>
-        <isReliable></isReliable>
-      </ntpAuthKeyCfg>
-    </ntpAuthKeyCfgs>
-  </ntp>
-</filter>
-"""
-
-CE_NC_GET_NTP_AUTH_ENABLE = """
-<filter type="subtree">
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpSystemCfg>
-      <isAuthEnable></isAuthEnable>
-    </ntpSystemCfg>
-  </ntp>
-</filter>
-"""
-
-CE_NC_MERGE_NTP_AUTH_CONFIG = """
-<config>
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpAuthKeyCfgs>
-      <ntpAuthKeyCfg operation="merge">
-        <keyId>%s</keyId>
-        <mode>%s</mode>
-        <keyVal>%s</keyVal>
-        <isReliable>%s</isReliable>
-      </ntpAuthKeyCfg>
-    </ntpAuthKeyCfgs>
-  </ntp>
-</config>
-"""
-
-CE_NC_MERGE_NTP_AUTH_ENABLE = """
-<config>
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpSystemCfg operation="merge">
-      <isAuthEnable>%s</isAuthEnable>
-    </ntpSystemCfg>
-  </ntp>
-</config>
-"""
-
-CE_NC_DELETE_NTP_AUTH_CONFIG = """
-<config>
-  <ntp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
-    <ntpAuthKeyCfgs>
-      <ntpAuthKeyCfg operation="delete">
-        <keyId>%s</keyId>
-      </ntpAuthKeyCfg>
-    </ntpAuthKeyCfgs>
-  </ntp>
-</config>
-"""
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec, load_config
+from ansible.module_utils.connection import exec_command
 
 
 class NtpAuth(object):
@@ -322,11 +238,13 @@ class NtpAuth(object):
             self.module.fail_json(
                 msg='Error: key_id is not digit.')
 
-        if (long(self.key_id) < 1) or (long(self.key_id) > 4294967295):
+        if (int(self.key_id) < 1) or (int(self.key_id) > 4294967295):
             self.module.fail_json(
                 msg='Error: The length of key_id is between 1 and 4294967295.')
-
-        if self.state == "present":
+        if self.state == "present" and not self.password:
+            self.module.fail_json(
+                msg='Error: The password cannot be empty.')
+        if self.state == "present" and self.password:
             if (self.auth_type == 'encrypt') and\
                     ((len(self.password) < 20) or (len(self.password) > 392)):
                 self.module.fail_json(
@@ -339,67 +257,72 @@ class NtpAuth(object):
     def init_module(self):
         """Init module object"""
 
-        required_if = [("state", "present", ("password", "auth_mode"))]
+        required_if = [("state", "present", ("auth_pwd", "auth_mode"))]
         self.module = AnsibleModule(
             argument_spec=self.spec,
             required_if=required_if,
             supports_check_mode=True
         )
 
-    def check_response(self, xml_str, xml_name):
-        """Check if response message is already succeed."""
+    def get_config(self, flags=None):
+        """Retrieves the current config from the device or cache
+        """
+        flags = [] if flags is None else flags
 
-        if "<ok/>" not in xml_str:
-            self.module.fail_json(msg='Error: %s failed.' % xml_name)
+        cmd = 'display current-configuration '
+        cmd += ' '.join(flags)
+        cmd = cmd.strip()
+
+        rc, out, err = exec_command(self.module, cmd)
+        if rc != 0:
+            self.module.fail_json(msg=err)
+        cfg = str(out).strip()
+
+        return cfg
 
     def get_ntp_auth_enable(self):
         """Get ntp authentication enable state"""
 
-        xml_str = CE_NC_GET_NTP_AUTH_ENABLE
-        con_obj = get_nc_config(self.module, xml_str)
-        if "<data/>" in con_obj:
-            return
-
-        # get ntp authentication enable
+        flags = list()
+        exp = "| exclude undo | include ntp authentication"
+        flags.append(exp)
+        config = self.get_config(flags)
         auth_en = re.findall(
-            r'.*<isAuthEnable>(.*)</isAuthEnable>.*', con_obj)
+            r'.*ntp\s*authentication\s*enable.*', config)
         if auth_en:
-            if auth_en[0] == 'true':
-                self.ntp_auth_conf['authentication'] = 'enable'
-            else:
-                self.ntp_auth_conf['authentication'] = 'disable'
+            self.ntp_auth_conf['authentication'] = 'enable'
+        else:
+            self.ntp_auth_conf['authentication'] = 'disable'
 
     def get_ntp_all_auth_keyid(self):
         """Get all authentication keyid info"""
 
         ntp_auth_conf = list()
 
-        xml_str = CE_NC_GET_ALL_NTP_AUTH_CONFIG
-        con_obj = get_nc_config(self.module, xml_str)
-        if "<data/>" in con_obj:
+        flags = list()
+        exp = "| include authentication-keyid %s" % self.key_id
+        flags.append(exp)
+        config = self.get_config(flags)
+        ntp_config_list = config.split('\n')
+        if not ntp_config_list:
             self.ntp_auth_conf["authentication-keyid"] = "None"
             return ntp_auth_conf
 
-        # get ntp authentication config
-        ntp_auth = re.findall(
-            r'.*<keyId>(.*)</keyId>.*\s*<mode>(.*)</mode>.*\s*'
-            r'<keyVal>(.*)</keyVal>.*\s*<isReliable>(.*)</isReliable>.*', con_obj)
-
-        for ntp_auth_num in ntp_auth:
-            if ntp_auth_num[0] == self.key_id:
-                self.key_id_exist = True
-                if ntp_auth_num[3] == 'true':
-                    self.cur_trusted_key = 'enable'
-                else:
-                    self.cur_trusted_key = 'disable'
-
-            if ntp_auth_num[3] == 'true':
-                trusted_key = 'enable'
-            else:
-                trusted_key = 'disable'
-            ntp_auth_conf.append(dict(key_id=ntp_auth_num[0],
-                                      auth_mode=ntp_auth_num[1].lower(),
-                                      trusted_key=trusted_key))
+        self.key_id_exist = True
+        cur_auth_mode = ""
+        cur_auth_pwd = ""
+        for ntp_config in ntp_config_list:
+            ntp_auth_mode = re.findall(r'.*authentication-mode(\s\S*)\s\S*\s(\S*)', ntp_config)
+            ntp_auth_trust = re.findall(r'.*trusted.*', ntp_config)
+            if ntp_auth_trust:
+                self.cur_trusted_key = 'enable'
+            if ntp_auth_mode:
+                cur_auth_mode = ntp_auth_mode[0][0].strip()
+                cur_auth_pwd = ntp_auth_mode[0][1].strip()
+        ntp_auth_conf.append(dict(key_id=self.key_id,
+                                  auth_mode=cur_auth_mode,
+                                  auth_pwd=cur_auth_pwd,
+                                  trusted_key=self.cur_trusted_key))
         self.ntp_auth_conf["authentication-keyid"] = ntp_auth_conf
 
         return ntp_auth_conf
@@ -413,33 +336,47 @@ class NtpAuth(object):
     def config_ntp_auth_keyid(self):
         """Config ntp authentication keyid"""
 
-        if self.trusted_key == 'enable':
-            trusted_key = 'true'
+        commands = list()
+        if self.auth_type == 'encrypt':
+            config_cli = "ntp authentication-keyid %s authentication-mode %s cipher %s" % (
+                self.key_id, self.auth_mode, self.password)
         else:
-            trusted_key = 'false'
-        xml_str = CE_NC_MERGE_NTP_AUTH_CONFIG % (
-            self.key_id, self.auth_mode.upper(), self.password, trusted_key)
-        ret_xml = set_nc_config(self.module, xml_str)
-        self.check_response(ret_xml, "NTP_AUTH_KEYID_CONFIG")
+            config_cli = "ntp authentication-keyid %s authentication-mode %s %s" % (
+                self.key_id, self.auth_mode, self.password)
+
+        commands.append(config_cli)
+
+        if self.trusted_key != self.cur_trusted_key:
+            if self.trusted_key == 'enable':
+                config_cli_trust = "ntp trusted authentication-keyid %s" % (self.key_id)
+                commands.append(config_cli_trust)
+            else:
+                config_cli_trust = "undo ntp trusted authentication-keyid %s" % (self.key_id)
+                commands.append(config_cli_trust)
+
+        self.cli_load_config(commands)
 
     def config_ntp_auth_enable(self):
         """Config ntp authentication enable"""
 
+        commands = list()
         if self.ntp_auth_conf['authentication'] != self.authentication:
             if self.authentication == 'enable':
-                state = 'true'
+                config_cli = "ntp authentication enable"
             else:
-                state = 'false'
-            xml_str = CE_NC_MERGE_NTP_AUTH_ENABLE % state
-            ret_xml = set_nc_config(self.module, xml_str)
-            self.check_response(ret_xml, "NTP_AUTH_ENABLE")
+                config_cli = "undo ntp authentication enable"
+            commands.append(config_cli)
+
+            self.cli_load_config(commands)
 
     def undo_config_ntp_auth_keyid(self):
         """Undo ntp authentication key-id"""
 
-        xml_str = CE_NC_DELETE_NTP_AUTH_CONFIG % self.key_id
-        ret_xml = set_nc_config(self.module, xml_str)
-        self.check_response(ret_xml, "UNDO_NTP_AUTH_KEYID_CONFIG")
+        commands = list()
+        config_cli = "undo ntp authentication-keyid %s" % self.key_id
+        commands.append(config_cli)
+
+        self.cli_load_config(commands)
 
     def cli_load_config(self, commands):
         """Load config by cli"""
@@ -447,23 +384,11 @@ class NtpAuth(object):
         if not self.module.check_mode:
             load_config(self.module, commands)
 
-    def config_ntp_auth_keyid_by_cli(self):
-        """Config ntp authentication keyid bye the way of CLI"""
-
-        commands = list()
-        config_cli = "ntp authentication-keyid %s authentication-mode %s %s" % (
-            self.key_id, self.auth_mode, self.password)
-        commands.append(config_cli)
-        self.cli_load_config(commands)
-
     def config_ntp_auth(self):
         """Config ntp authentication"""
 
         if self.state == "present":
-            if self.auth_type == 'encrypt':
-                self.config_ntp_auth_keyid()
-            else:
-                self.config_ntp_auth_keyid_by_cli()
+            self.config_ntp_auth_keyid()
         else:
             if not self.key_id_exist:
                 self.module.fail_json(
@@ -540,6 +465,8 @@ class NtpAuth(object):
         self.ntp_auth_conf = dict()
         self.get_ntp_auth_exist_config()
         self.end_state = copy.deepcopy(self.ntp_auth_conf)
+        if self.end_state == self.existing:
+            self.changed = False
 
     def show_result(self):
         """Show result"""

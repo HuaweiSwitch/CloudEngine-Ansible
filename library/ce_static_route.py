@@ -1,23 +1,10 @@
 #!/usr/bin/python
-#
-# This file is part of Ansible
-#
-# Ansible is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Ansible is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
-#
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -26,7 +13,7 @@ version_added: "2.4"
 short_description: Manages static route configuration on HUAWEI CloudEngine switches.
 description:
     - Manages the static routes on HUAWEI CloudEngine switches.
-author: Yang yang (@CloudEngine-Ansible)
+author: Yang yang (@QijunPan)
 notes:
     - If no vrf is supplied, vrf is set to default.
       If I(state=absent), the route will be removed, regardless of the
@@ -48,42 +35,27 @@ options:
     next_hop:
         description:
             - Next hop address of static route.
-        required: false
-        default: null
     nhp_interface:
         description:
             - Next hop interface full name of static route.
-        required: false
-        default: null
     vrf:
         description:
             - VPN instance of destination ip address.
-        required: false
-        default: null
     destvrf:
         description:
             - VPN instance of next hop ip address.
-        required: false
-        default: null
     tag:
         description:
             - Route tag value (numeric).
-        required: false
-        default: null
     description:
         description:
             - Name of the route. Used with the name parameter on the CLI.
-        required: false
-        default: null
     pref:
         description:
             - Preference or administrative difference of route (range 1-255).
-        required: false
-        default: null
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         choices: ['present','absent']
         default: present
 '''
@@ -157,12 +129,12 @@ existing:
     description: k/v pairs of existing switchport
     returned: always
     type: dict
-    sample:  {}
+    sample: {}
 end_state:
     description: k/v pairs of switchport after module execution
     returned: always
     type: dict
-    sample:  {"next_hop": "3.3.3.3", "pref": "100",
+    sample: {"next_hop": "3.3.3.3", "pref": "100",
             "prefix": "192.168.20.0", "mask": "24", "description": "testing",
             "tag" : "null"}
 updates:
@@ -173,14 +145,14 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_STATIC_ROUTE = """
 <filter type="subtree">
@@ -302,10 +274,24 @@ def is_valid_v6addr(addr):
     """check if ipv6 addr is valid"""
     if addr.find(':') != -1:
         addr_list = addr.split(':')
-        if len(addr_list) > 6:
+        # The IPv6 binary system has a length of 128 bits and is grouped by 16 bits.
+        # Each group is separated by a colon ":" and can be divided into 8 groups, each group being represented by 4 hexadecimal
+        if len(addr_list) > 8:
             return False
-        if addr_list[1] != "":
+        # You can use a double colon "::" to represent a group of 0 or more consecutive 0s, but only once.
+        if addr.count('::') > 1:
             return False
+        # if do not use '::', the length of address should not be less than 8.
+        if addr.count('::') == 0 and len(addr_list) < 8:
+            return False
+        for group in addr_list:
+            if group.strip() == '':
+                continue
+            try:
+                # Each group is represented in 4-digit hexadecimal
+                int(group, base=16)
+            except ValueError:
+                return False
         return True
     return False
 
@@ -421,7 +407,6 @@ class StaticRoute(object):
             if self.prefix.find('.') == -1:
                 return False
             if self.mask == '32':
-                self.prefix = self.prefix
                 return True
             if self.mask == '0':
                 self.prefix = '0.0.0.0'
@@ -436,13 +421,12 @@ class StaticRoute(object):
                 if int(each_num) > 255:
                     return False
             byte_len = 8
-            ip_len = int(self.mask) / byte_len
+            ip_len = int(self.mask) // byte_len
             ip_bit = int(self.mask) % byte_len
         else:
             if self.prefix.find(':') == -1:
                 return False
             if self.mask == '128':
-                self.prefix = self.prefix
                 return True
             if self.mask == '0':
                 self.prefix = '::'
@@ -452,7 +436,7 @@ class StaticRoute(object):
             if length > 6:
                 return False
             byte_len = 16
-            ip_len = int(self.mask) / byte_len
+            ip_len = int(self.mask) // byte_len
             ip_bit = int(self.mask) % byte_len
 
         if self.aftype == "v4":
@@ -601,7 +585,7 @@ class StaticRoute(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         static_routes = root.findall(
-            "data/staticrt/staticrtbase/srRoutes/srRoute")
+            "staticrt/staticrtbase/srRoutes/srRoute")
 
         if static_routes:
             for static_route in static_routes:
@@ -793,6 +777,8 @@ class StaticRoute(object):
 
         self.get_static_route(self.state)
         self.end_state['sroute'] = self.static_routes_info["sroute"]
+        if self.end_state == self.existing:
+            self.changed = False
 
     def work(self):
         """worker"""

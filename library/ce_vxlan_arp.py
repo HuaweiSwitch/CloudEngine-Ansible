@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = """
 ---
@@ -27,72 +27,51 @@ version_added: "2.4"
 short_description: Manages ARP attributes of VXLAN on HUAWEI CloudEngine devices.
 description:
     - Manages ARP attributes of VXLAN on HUAWEI CloudEngine devices.
-author: QijunPan (@CloudEngine-Ansible)
+author: QijunPan (@QijunPan)
 options:
     evn_bgp:
         description:
             - Enables EVN BGP.
-        required: false
         choices: ['enable', 'disable']
-        default: null
     evn_source_ip:
         description:
             - Specifies the source address of an EVN BGP peer.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     evn_peer_ip:
         description:
             - Specifies the IP address of an EVN BGP peer.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     evn_server:
         description:
             - Configures the local device as the router reflector (RR) on the EVN network.
-        required: false
         choices: ['enable', 'disable']
-        default: null
     evn_reflect_client:
         description:
             - Configures the local device as the route reflector (RR) and its peer as the client.
-        required: false
         choices: ['enable', 'disable']
-        default: null
     vbdif_name:
         description:
             -  Full name of VBDIF interface, i.e. Vbdif100.
-        required: false
-        default: null
     arp_collect_host:
         description:
             - Enables EVN BGP or BGP EVPN to collect host information.
-        required: false
         choices: ['enable', 'disable']
-        default: null
     host_collect_protocol:
         description:
             - Enables EVN BGP or BGP EVPN to advertise host information.
-        required: false
         choices: ['bgp','none']
-        default: null
     bridge_domain_id:
         description:
             - Specifies a BD(bridge domain) ID.
               The value is an integer ranging from 1 to 16777215.
-        required: false
-        default: null
     arp_suppress:
         description:
             - Enables ARP broadcast suppression in a BD.
-        required: false
         choices: ['enable', 'disable']
-        default: null
     state:
         description:
             - Determines whether the config should be present or not
               on the device.
-        required: false
         default: present
         choices: ['present', 'absent']
 """
@@ -165,14 +144,15 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 import re
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_config, load_config
-from ansible.module_utils.ce import ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import load_config
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec
+from ansible.module_utils.connection import exec_command
 
 
 def is_config_exist(cmp_cfg, test_cfg):
@@ -286,6 +266,22 @@ class VxlanArp(object):
         if not self.module.check_mode:
             load_config(self.module, commands)
 
+    def get_config(self, flags=None):
+        """Retrieves the current config from the device or cache
+        """
+        flags = [] if flags is None else flags
+
+        cmd = 'display current-configuration '
+        cmd += ' '.join(flags)
+        cmd = cmd.strip()
+
+        rc, out, err = exec_command(self.module, cmd)
+        if rc != 0:
+            self.module.fail_json(msg=err)
+        cfg = str(out).strip()
+
+        return cfg
+
     def get_current_config(self):
         """get current configuration"""
 
@@ -298,9 +294,14 @@ class VxlanArp(object):
             exp += "|^bridge-domain %s$" % self.bridge_domain_id
 
         flags.append(exp)
-        config = get_config(self.module, flags)
+        cfg_str = self.get_config(flags)
+        config = cfg_str.split("\n")
 
-        return config
+        exist_config = ""
+        for cfg in config:
+            if not cfg.startswith("display"):
+                exist_config += cfg
+        return exist_config
 
     def cli_add_command(self, command, undo=False):
         """add command to self.update_cmd and self.commands"""

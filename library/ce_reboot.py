@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -27,15 +27,14 @@ version_added: 2.4
 short_description: Reboot a HUAWEI CloudEngine switches.
 description:
     - Reboot a HUAWEI CloudEngine switches.
-author: Gong Jianjun (@CloudEngine-Ansible)
+author: Gong Jianjun (@QijunPan)
 requirements: ["ncclient"]
 options:
     confirm:
         description:
             - Safeguard boolean. Set to true if you're sure you want to reboot.
-        required: true
         type: bool
-        default: false
+        required: true
     save_config:
         description:
             - Flag indicating whether to save the configuration.
@@ -69,13 +68,13 @@ RETURN = '''
 rebooted:
     description: Whether the device was instructed to reboot.
     returned: success
-    type: boolean
+    type: bool
     sample: true
 '''
 
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import execute_nc_action, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import execute_nc_action, ce_argument_spec
 
 try:
     from ncclient.operations.errors import TimeoutExpiredError
@@ -135,8 +134,8 @@ def main():
     """ main """
 
     argument_spec = dict(
-        confirm=dict(required=True, type='bool', default='false'),
-        save_config=dict(required=False, type='bool', default='false')
+        confirm=dict(required=True, type='bool'),
+        save_config=dict(default=False, type='bool')
     )
 
     argument_spec.update(ce_argument_spec)
