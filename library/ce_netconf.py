@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,7 +28,7 @@ short_description: Run an arbitrary netconf command on HUAWEI CloudEngine switch
 description:
     - Sends an arbitrary netconf command on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     rpc:
         description:
@@ -109,7 +109,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 end_state:
     description: k/v pairs of aaa params after module execution
@@ -119,8 +119,8 @@ end_state:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config
-from ansible.module_utils.ce import execute_nc_action, ce_argument_spec, execute_nc_cli
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config
+from ansible.module_utils.network.cloudengine.ce import execute_nc_action, ce_argument_spec, execute_nc_cli
 
 
 def main():
@@ -145,7 +145,7 @@ def main():
         response = get_nc_config(module, cfg_xml)
 
         if "<data/>" in response:
-            end_state["result"] = response
+            end_state["result"] = "<data/>"
         else:
             tmp1 = response.split(r"<data>")
             tmp2 = tmp1[1].split(r"</data>")
@@ -180,7 +180,7 @@ def main():
         if "<data/>" in response:
             end_state["result"] = "<data/>"
         else:
-            tmp1 = response.xml.split(r"<data>")
+            tmp1 = response.split(r"<data>")
             tmp2 = tmp1[1].split(r"</data>")
             result = tmp2[0].split("\n")
 

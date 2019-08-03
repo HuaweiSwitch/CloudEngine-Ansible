@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,12 +28,11 @@ short_description: Manages base ACL configuration on HUAWEI CloudEngine switches
 description:
     - Manages base ACL configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present','absent','delete_acl']
     acl_name:
@@ -47,84 +46,59 @@ options:
         description:
             - ACL number.
               The value is an integer ranging from 2000 to 2999.
-        required: false
-        default: null
     acl_step:
         description:
             - ACL step.
               The value is an integer ranging from 1 to 20. The default value is 5.
-        required: false
-        default: null
     acl_description:
         description:
             - ACL description.
               The value is a string of 1 to 127 characters.
-        required: false
-        default: null
     rule_name:
         description:
             - Name of a basic ACL rule.
               The value is a string of 1 to 32 characters.
               The value is case-insensitive, and cannot contain spaces or begin with an underscore (_).
-        required: false
-        default: null
     rule_id:
         description:
             - ID of a basic ACL rule in configuration mode.
               The value is an integer ranging from 0 to 4294967294.
-        required: false
-        default: null
     rule_action:
         description:
             - Matching mode of basic ACL rules.
-        required: false
-        default: null
         choices: ['permit','deny']
     source_ip:
         description:
             - Source IP address.
               The value is a string of 0 to 255 characters.The default value is 0.0.0.0.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     src_mask:
         description:
             - Mask of a source IP address.
               The value is an integer ranging from 1 to 32.
-        required: false
-        default: null
     frag_type:
         description:
             - Type of packet fragmentation.
-        required: false
-        default: null
         choices: ['fragment', 'clear_fragment']
     vrf_name:
         description:
             - VPN instance name.
               The value is a string of 1 to 31 characters.The default value is _public_.
-        required: false
-        default: null
     time_range:
         description:
             - Name of a time range in which an ACL rule takes effect.
               The value is a string of 1 to 32 characters.
               The value is case-insensitive, and cannot contain spaces. The name must start with an uppercase
               or lowercase letter. In addition, the word "all" cannot be specified as a time range name.
-        required: false
-        default: null
     rule_description:
         description:
             - Description about an ACL rule.
               The value is a string of 1 to 127 characters.
-        required: false
-        default: null
     log_flag:
         description:
             - Flag of logging matched data packets.
-        required: false
-        default: false
-        choices: ['true', 'false']
+        type: bool
+        default: 'no'
 '''
 
 EXAMPLES = '''
@@ -145,40 +119,40 @@ EXAMPLES = '''
 
   - name: "Config ACL"
     ce_acl:
-      state:  present
-      acl_name:  2200
+      state: present
+      acl_name: 2200
       provider: "{{ cli }}"
 
   - name: "Undo ACL"
     ce_acl:
-      state:  delete_acl
-      acl_name:  2200
+      state: delete_acl
+      acl_name: 2200
       provider: "{{ cli }}"
 
   - name: "Config ACL base rule"
     ce_acl:
-      state:  present
-      acl_name:  2200
-      rule_name:  test_rule
-      rule_id:  111
-      rule_action:  permit
-      source_ip:  10.10.10.10
-      src_mask:  24
-      frag_type:  fragment
-      time_range:  wdz_acl_time
+      state: present
+      acl_name: 2200
+      rule_name: test_rule
+      rule_id: 111
+      rule_action: permit
+      source_ip: 10.10.10.10
+      src_mask: 24
+      frag_type: fragment
+      time_range: wdz_acl_time
       provider: "{{ cli }}"
 
   - name: "undo ACL base rule"
     ce_acl:
-      state:  absent
-      acl_name:  2200
-      rule_name:  test_rule
-      rule_id:  111
-      rule_action:  permit
-      source_ip:  10.10.10.10
-      src_mask:  24
-      frag_type:  fragment
-      time_range:  wdz_acl_time
+      state: absent
+      acl_name: 2200
+      rule_name: test_rule
+      rule_id: 111
+      rule_action: permit
+      source_ip: 10.10.10.10
+      src_mask: 24
+      frag_type: fragment
+      time_range: wdz_acl_time
       provider: "{{ cli }}"
 '''
 
@@ -186,7 +160,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -210,12 +184,9 @@ updates:
     sample: ["undo acl name test"]
 '''
 
-import socket
-import sys
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
-
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec, check_ip_addr
 
 # get acl
 CE_GET_ACL_HEADER = """
@@ -317,25 +288,6 @@ CE_DELETE_ACL_BASE_RULE_TAIL = """
       </acl>
     </config>
 """
-
-
-def check_ip_addr(ipaddr):
-    """ check_ip_addr, Supports IPv4 and IPv6 """
-
-    if not ipaddr or '\x00' in ipaddr:
-        return False
-
-    try:
-        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
 
 
 class BaseAcl(object):
@@ -475,7 +427,7 @@ class BaseAcl(object):
 
             if self.acl_type:
                 conf_str += "<aclType></aclType>"
-            if self.acl_num:
+            if self.acl_num or self.acl_name.isdigit():
                 conf_str += "<aclNumber></aclNumber>"
             if self.acl_step:
                 conf_str += "<aclStep></aclStep>"
@@ -492,12 +444,11 @@ class BaseAcl(object):
                 xml_str = recv_xml.replace('\r', '').replace('\n', '').\
                     replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
                     replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
-
                 root = ElementTree.fromstring(xml_str)
 
                 # parse acl
                 acl_info = root.findall(
-                    "data/acl/aclGroups/aclGroup")
+                    "acl/aclGroups/aclGroup")
                 if acl_info:
                     for tmp in acl_info:
                         tmp_dict = dict()
@@ -508,22 +459,43 @@ class BaseAcl(object):
                         self.cur_acl_cfg["acl_info"].append(tmp_dict)
 
                 if self.cur_acl_cfg["acl_info"]:
+                    find_list = list()
                     for tmp in self.cur_acl_cfg["acl_info"]:
-                        find_flag = True
+                        cur_cfg_dict = dict()
+                        exist_cfg_dict = dict()
+                        if self.acl_name:
+                            if self.acl_name.isdigit() and tmp.get("aclNumber"):
+                                cur_cfg_dict["aclNumber"] = self.acl_name
+                                exist_cfg_dict["aclNumber"] = tmp.get("aclNumber")
+                            else:
+                                cur_cfg_dict["aclNumOrName"] = self.acl_name
+                                exist_cfg_dict["aclNumOrName"] = tmp.get("aclNumOrName")
+                        if self.acl_type:
+                            cur_cfg_dict["aclType"] = self.acl_type
+                            exist_cfg_dict["aclType"] = tmp.get("aclType")
+                        if self.acl_num:
+                            cur_cfg_dict["aclNumber"] = self.acl_num
+                            exist_cfg_dict["aclNumber"] = tmp.get("aclNumber")
+                        if self.acl_step:
+                            cur_cfg_dict["aclStep"] = self.acl_step
+                            exist_cfg_dict["aclStep"] = tmp.get("aclStep")
+                        if self.acl_description:
+                            cur_cfg_dict["aclDescription"] = self.acl_description
+                            exist_cfg_dict["aclDescription"] = tmp.get("aclDescription")
 
-                        if self.acl_name and tmp.get("aclNumOrName") != self.acl_name:
-                            find_flag = False
-                        if self.acl_type and tmp.get("aclType") != self.acl_type:
-                            find_flag = False
-                        if self.acl_num and tmp.get("aclNumber") != self.acl_num:
-                            find_flag = False
-                        if self.acl_step and tmp.get("aclStep") != self.acl_step:
-                            find_flag = False
-                        if self.acl_description and tmp.get("aclDescription") != self.acl_description:
-                            find_flag = False
+                        if cur_cfg_dict == exist_cfg_dict:
+                            find_bool = True
+                        else:
+                            find_bool = False
+                        find_list.append(find_bool)
 
-                        if find_flag:
+                    for mem in find_list:
+                        if mem:
+                            find_flag = True
                             break
+                        else:
+                            find_flag = False
+
                 else:
                     find_flag = False
 
@@ -641,7 +613,7 @@ class BaseAcl(object):
 
                     # parse base rule
                     base_rule_info = root.findall(
-                        "data/acl/aclGroups/aclGroup/aclRuleBas4s/aclRuleBas4")
+                        "acl/aclGroups/aclGroup/aclRuleBas4s/aclRuleBas4")
                     if base_rule_info:
                         for tmp in base_rule_info:
                             tmp_dict = dict()

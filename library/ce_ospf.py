@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -27,7 +27,7 @@ version_added: "2.4"
 short_description: Manages configuration of an OSPF instance on HUAWEI CloudEngine switches.
 description:
     - Manages configuration of an OSPF instance on HUAWEI CloudEngine switches.
-author: QijunPan (@CloudEngine-Ansible)
+author: QijunPan (@QijunPan)
 options:
     process_id:
         description:
@@ -39,67 +39,46 @@ options:
             - Specifies the area ID. The area with the area-id being 0 is a backbone area.
               Valid values are a string, formatted as an IP address
               (i.e. "0.0.0.0") or as an integer between 1 and 4294967295.
-        required: false
-        default: null
     addr:
         description:
             - Specifies the address of the network segment where the interface resides.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     mask:
         description:
             - IP network wildcard bits in decimal format between 0 and 32.
-        required: false
-        default: null
     auth_mode:
         description:
             - Specifies the authentication type.
-        required: false
         choices: ['none', 'hmac-sha256', 'md5', 'hmac-md5', 'simple']
-        default: null
     auth_text_simple:
         description:
             - Specifies a password for simple authentication.
               The value is a string of 1 to 8 characters.
-        required: false
-        default: null
     auth_key_id:
         description:
             - Authentication key id when C(auth_mode) is 'hmac-sha256', 'md5' or 'hmac-md5.
               Valid value is an integer is in the range from 1 to 255.
-        required: false
-        default: null
     auth_text_md5:
         description:
             - Specifies a password for MD5, HMAC-MD5, or HMAC-SHA256 authentication.
               The value is a string of 1 to 255 case-sensitive characters, spaces not supported.
-        required: false
-        default: null
     nexthop_addr:
         description:
             - IPv4 address for configure next-hop address's weight.
               Valid values are a string, formatted as an IP address.
-        required: false
-        default: null
     nexthop_weight:
         description:
             - Indicates the weight of the next hop.
               The smaller the value is, the higher the preference of the route is.
               It is an integer that ranges from 1 to 254.
-        required: false
-        default: null
     max_load_balance:
         description:
             - The maximum number of paths for forward packets over multiple paths.
               Valid value is an integer in the range from 1 to 64.
-        required: false
-        default: null
     state:
         description:
             - Determines whether the config should be present or not
               on the device.
-        required: false
         default: present
         choices: ['present','absent']
 '''
@@ -153,13 +132,13 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -463,7 +442,7 @@ class OSPF(object):
 
         # get process base info
         root = ElementTree.fromstring(xml_str)
-        ospfsite = root.find("data/ospfv2/ospfv2comm/ospfSites/ospfSite")
+        ospfsite = root.find("ospfv2/ospfv2comm/ospfSites/ospfSite")
         if ospfsite:
             for site in ospfsite:
                 if site.tag in ["processId", "routerId", "vrfName"]:
@@ -471,7 +450,7 @@ class OSPF(object):
 
         # get Topology info
         topo = root.find(
-            "data/ospfv2/ospfv2comm/ospfSites/ospfSite/ProcessTopologys/ProcessTopology")
+            "ospfv2/ospfv2comm/ospfSites/ospfSite/ProcessTopologys/ProcessTopology")
         if topo:
             for eles in topo:
                 if eles.tag in ["maxLoadBalancing"]:
@@ -480,7 +459,7 @@ class OSPF(object):
         # get nexthop info
         ospf_info["nexthops"] = list()
         nexthops = root.findall(
-            "data/ospfv2/ospfv2comm/ospfSites/ospfSite/ProcessTopologys/ProcessTopology/nexthopMTs/nexthopMT")
+            "ospfv2/ospfv2comm/ospfSites/ospfSite/ProcessTopologys/ProcessTopology/nexthopMTs/nexthopMT")
         if nexthops:
             for nexthop in nexthops:
                 nh_dict = dict()
@@ -492,7 +471,7 @@ class OSPF(object):
         # get areas info
         ospf_info["areas"] = list()
         areas = root.findall(
-            "data/ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area")
+            "ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area")
         if areas:
             for area in areas:
                 area_dict = dict()
@@ -511,15 +490,12 @@ class OSPF(object):
                             area_dict["networks"].append(net_dict)
 
                 ospf_info["areas"].append(area_dict)
-
         return ospf_info
 
     def is_area_exist(self):
         """is ospf area exist"""
-
         if not self.ospf_info:
             return False
-
         for area in self.ospf_info["areas"]:
             if area["areaId"] == self.get_area_ip():
                 return True
@@ -528,7 +504,6 @@ class OSPF(object):
 
     def is_network_exist(self):
         """is ospf area network exist"""
-
         if not self.ospf_info:
             return False
 
@@ -549,7 +524,6 @@ class OSPF(object):
 
         if not self.ospf_info:
             return False
-
         for nexthop in self.ospf_info["nexthops"]:
             if nexthop["ipAddress"] == self.nexthop_addr:
                 return True
@@ -558,7 +532,6 @@ class OSPF(object):
 
     def is_nexthop_change(self):
         """is ospf nexthop change"""
-
         if not self.ospf_info:
             return True
 
@@ -576,6 +549,8 @@ class OSPF(object):
 
         xml_area = ""
         self.updates_cmd.append("ospf %s" % self.process_id)
+        xml_create = CE_NC_CREATE_PROCESS % self.process_id
+        set_nc_config(self.module, xml_create)
 
         # nexthop weight
         xml_nh = ""
@@ -628,7 +603,7 @@ class OSPF(object):
                         self.updates_cmd.pop()
                         self.updates_cmd.append(
                             "authentication-mode %s %s %s" % (self.auth_mode, self.auth_key_id, self.auth_text_md5))
-            if xml_network or xml_auth:
+            if xml_network or xml_auth or not self.is_area_exist():
                 xml_area += CE_NC_XML_BUILD_MERGE_AREA % (
                     self.get_area_ip(), xml_network + xml_auth)
 
@@ -905,6 +880,7 @@ class OSPF(object):
         """get end state info"""
 
         ospf_info = self.get_ospf_dict(self.process_id)
+
         if not ospf_info:
             return
 
@@ -912,6 +888,9 @@ class OSPF(object):
         self.end_state["areas"] = ospf_info["areas"]
         self.end_state["nexthops"] = ospf_info["nexthops"]
         self.end_state["max_load_balance"] = ospf_info.get("maxLoadBalancing")
+
+        if self.end_state == self.existing:
+            self.changed = False
 
     def work(self):
         """worker"""

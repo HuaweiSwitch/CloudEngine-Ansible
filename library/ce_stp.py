@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,97 +28,70 @@ short_description: Manages STP configuration on HUAWEI CloudEngine switches.
 description:
     - Manages STP configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present', 'absent']
     stp_mode:
         description:
             - Set an operation mode for the current MSTP process.
               The mode can be STP, RSTP, or MSTP.
-        required: false
-        default: null
         choices: ['stp', 'rstp', 'mstp']
     stp_enable:
         description:
             - Enable or disable STP on a switch.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     stp_converge:
         description:
             - STP convergence mode.
               Fast means set STP aging mode to Fast.
               Normal means set STP aging mode to Normal.
-        required: false
-        default: null
         choices: ['fast', 'normal']
     bpdu_protection:
         description:
             - Configure BPDU protection on an edge port.
               This function prevents network flapping caused by attack packets.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     tc_protection:
         description:
             - Configure the TC BPDU protection function for an MSTP process.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     tc_protection_interval:
         description:
             - Set the time the MSTP device takes to handle the maximum number of TC BPDUs
               and immediately refresh forwarding entries.
               The value is an integer ranging from 1 to 600, in seconds.
-        required: false
-        default: null
     tc_protection_threshold:
         description:
             - Set the maximum number of TC BPDUs that the MSTP can handle.
               The value is an integer ranging from 1 to 255. The default value is 1 on the switch.
-        required: false
-        default: null
     interface:
         description:
             - Interface name.
               If the value is C(all), will apply configuration to all interfaces.
               if the value is a special name, only support input the full name.
-        required: false
-        default: null
     edged_port:
         description:
             - Set the current port as an edge port.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     bpdu_filter:
         description:
             - Specify a port as a BPDU filter port.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     cost:
         description:
             - Set the path cost of the current port.
               The default instance is 0.
-        required: false
-        default: null
     root_protection:
         description:
             - Enable root protection on the current port.
-        required: false
-        default: null
         choices: ['enable', 'disable']
     loop_protection:
         description:
             - Enable loop protection on the current port.
-        required: false
-        default: null
         choices: ['enable', 'disable']
 '''
 
@@ -140,26 +113,26 @@ EXAMPLES = '''
 
   - name: "Config stp mode"
     ce_stp:
-      state:  present
-      stp_mode:  stp
+      state: present
+      stp_mode: stp
       provider: "{{ cli }}"
 
   - name: "Undo stp mode"
     ce_stp:
-      state:  absent
-      stp_mode:  stp
+      state: absent
+      stp_mode: stp
       provider: "{{ cli }}"
 
   - name: "Enable bpdu protection"
     ce_stp:
-      state:  present
-      bpdu_protection:  enable
+      state: present
+      bpdu_protection: enable
       provider: "{{ cli }}"
 
   - name: "Disable bpdu protection"
     ce_stp:
-      state:  present
-      bpdu_protection:  disable
+      state: present
+      bpdu_protection: disable
       provider: "{{ cli }}"
 '''
 
@@ -167,7 +140,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -194,7 +167,22 @@ updates:
 
 import re
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_config, load_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import load_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_config as get_cli_config
+
+
+def get_config(module, flags):
+
+    cfg = get_cli_config(module, flags)
+    config = cfg.strip() if cfg else ""
+    if config.startswith("display"):
+        configs = config.split("\n")
+        if len(configs) > 1:
+            return "\n".join(configs[1:])
+        else:
+            return ""
+    else:
+        return config
 
 
 class Stp(object):
@@ -246,17 +234,14 @@ class Stp(object):
     def cli_get_stp_config(self):
         """ Cli get stp configuration """
 
-        regular = "| include stp"
-
-        flags = list()
-        flags.append(regular)
+        flags = [r"| section include #\s*\n\s*stp", r"| section exclude #\s*\n+\s*stp process \d+"]
         self.stp_cfg = get_config(self.module, flags)
 
     def cli_get_interface_stp_config(self):
         """ Cli get interface's stp configuration """
 
         if self.interface:
-            regular = "| ignore-case section include ^interface %s$" % self.interface
+            regular = r"| ignore-case section include ^#\s+interface %s\s+" % self.interface.replace(" ", "")
             flags = list()
             flags.append(regular)
             tmp_cfg = get_config(self.module, flags)
@@ -426,7 +411,8 @@ class Stp(object):
                 self.existing["bpdu_protection"] = "disable"
 
         if self.tc_protection:
-            if "stp tc-protection" in self.stp_cfg:
+            pre_cfg = self.stp_cfg.split("\n")
+            if "stp tc-protection" in pre_cfg:
                 self.cur_cfg["tc_protection"] = "enable"
                 self.existing["tc_protection"] = "enable"
             else:
@@ -540,7 +526,8 @@ class Stp(object):
                 self.end_state["bpdu_protection"] = "disable"
 
         if self.tc_protection:
-            if "stp tc-protection" in self.stp_cfg:
+            pre_cfg = self.stp_cfg.split("\n")
+            if "stp tc-protection" in pre_cfg:
                 self.end_state["tc_protection"] = "enable"
             else:
                 self.end_state["tc_protection"] = "disable"
@@ -572,17 +559,20 @@ class Stp(object):
             else:
                 self.end_state["cost"] = tmp_value[0][1]
 
-        if self.root_protection:
+        if self.root_protection or self.loop_protection:
             if "stp root-protection" in self.interface_stp_cfg:
                 self.end_state["root_protection"] = "enable"
             else:
                 self.end_state["root_protection"] = "disable"
 
-        if self.loop_protection:
             if "stp loop-protection" in self.interface_stp_cfg:
                 self.end_state["loop_protection"] = "enable"
             else:
                 self.end_state["loop_protection"] = "disable"
+
+        if self.existing == self.end_state:
+            self.changed = False
+            self.updates_cmd = list()
 
     def present_stp(self):
         """ Present stp configuration """

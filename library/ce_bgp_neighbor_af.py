@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,14 +28,13 @@ short_description: Manages BGP neighbor Address-family configuration on HUAWEI C
 description:
     - Manages BGP neighbor Address-family configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     vrf_name:
         description:
             - Name of a BGP instance. The name is a case-sensitive string of characters.
               The BGP instance can be used only after the corresponding VPN instance is created.
-        required: false
-        default: _public_
+        required: true
     af_type:
         description:
             - Address family type of a BGP instance.
@@ -49,64 +48,54 @@ options:
         description:
             - If the value is true, advertised IRB routes are distinguished.
               If the value is false, advertised IRB routes are not distinguished.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     advertise_arp:
         description:
             - If the value is true, advertised ARP routes are distinguished.
               If the value is false, advertised ARP routes are not distinguished.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     advertise_remote_nexthop:
         description:
             - If the value is true, the remote next-hop attribute is advertised to peers.
               If the value is false, the remote next-hop attribute is not advertised to any peers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     advertise_community:
         description:
             - If the value is true, the community attribute is advertised to peers.
               If the value is false, the community attribute is not advertised to peers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     advertise_ext_community:
         description:
             - If the value is true, the extended community attribute is advertised to peers.
               If the value is false, the extended community attribute is not advertised to peers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     discard_ext_community:
         description:
             - If the value is true, the extended community attribute in the peer route information is discarded.
               If the value is false, the extended community attribute in the peer route information is not discarded.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     allow_as_loop_enable:
         description:
             - If the value is true, repetitive local AS numbers are allowed.
               If the value is false, repetitive local AS numbers are not allowed.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     allow_as_loop_limit:
         description:
             - Set the maximum number of repetitive local AS number.
               The value is an integer ranging from 1 to 10.
-        required: false
-        default: null
     keep_all_routes:
         description:
             - If the value is true, the system stores all route update messages received from all peers (groups)
               after BGP connection setup.
               If the value is false, the system stores only BGP update messages that are received from peers
               and pass the configured import policy.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     nexthop_configure:
@@ -115,21 +104,16 @@ options:
               local, The next hop is changed to the local IP address.
               invariable, Prevent the device from changing the next hop of each imported IGP route
               when advertising it to its BGP peers.
-        required: false
-        default: null
         choices: ['null', 'local', 'invariable']
     preferred_value:
         description:
             - Assign a preferred value for the routes learned from a specified peer.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     public_as_only:
         description:
             - If the value is true, sent BGP update messages carry only the public AS number but do not carry
               private AS numbers.
               If the value is false, sent BGP update messages can carry private AS numbers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     public_as_only_force:
@@ -137,39 +121,31 @@ options:
             - If the value is true, sent BGP update messages carry only the public AS number but do not carry
               private AS numbers.
               If the value is false, sent BGP update messages can carry private AS numbers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     public_as_only_limited:
         description:
             - Limited use public as number.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     public_as_only_replace:
         description:
             - Private as replaced by public as number.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     public_as_only_skip_peer_as:
         description:
             - Public as only skip peer as.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     route_limit:
         description:
             - Configure the maximum number of routes that can be accepted from a peer.
               The value is an integer ranging from 1 to 4294967295.
-        required: false
-        default: null
     route_limit_percent:
         description:
             - Specify the percentage of routes when a router starts to generate an alarm.
               The value is an integer ranging from 1 to 100.
-        required: false
-        default: null
     route_limit_type:
         description:
             - Noparameter, After the number of received routes exceeds the threshold and the timeout
@@ -180,32 +156,24 @@ options:
               maximum number of routes allowed have been received.
               IdleTimeout, After the number of received routes exceeds the threshold and the timeout timer
               expires, the connection that is interrupted is automatically re-established.
-        required: false
-        default: null
         choices: ['noparameter', 'alertOnly', 'idleForever', 'idleTimeout']
     route_limit_idle_timeout:
         description:
             - Specify the value of the idle-timeout timer to automatically reestablish the connections after
               they are cut off when the number of routes exceeds the set threshold.
               The value is an integer ranging from 1 to 1200.
-        required: false
-        default: null
     rt_updt_interval:
         description:
             - Specify the minimum interval at which Update packets are sent. The value is an integer, in seconds.
               The value is an integer ranging from 0 to 600.
-        required: false
-        default: null
     redirect_ip:
         description:
             - Redirect ip.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     redirect_ip_vaildation:
         description:
             - Redirect ip vaildation.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     reflect_client:
@@ -213,7 +181,6 @@ options:
             - If the value is true, the local device functions as the route reflector and a peer functions
               as a client of the route reflector.
               If the value is false, the route reflector and client functions are not configured.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     substitute_as_enable:
@@ -222,89 +189,64 @@ options:
               the local AS number is enabled.
               If the value is false, the function to replace a specified peer's AS number in the AS-Path attribute with
               the local AS number is disabled.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     import_rt_policy_name:
         description:
             - Specify the filtering policy applied to the routes learned from a peer.
               The value is a string of 1 to 40 characters.
-        required: false
-        default: null
     export_rt_policy_name:
         description:
             - Specify the filtering policy applied to the routes to be advertised to a peer.
               The value is a string of 1 to 40 characters.
-        required: false
-        default: null
     import_pref_filt_name:
         description:
             - Specify the IPv4 filtering policy applied to the routes received from a specified peer.
               The value is a string of 1 to 169 characters.
-        required: false
-        default: null
     export_pref_filt_name:
         description:
             - Specify the IPv4 filtering policy applied to the routes to be advertised to a specified peer.
               The value is a string of 1 to 169 characters.
-        required: false
-        default: null
     import_as_path_filter:
         description:
             - Apply an AS_Path-based filtering policy to the routes received from a specified peer.
               The value is an integer ranging from 1 to 256.
-        required: false
-        default: null
     export_as_path_filter:
         description:
             - Apply an AS_Path-based filtering policy to the routes to be advertised to a specified peer.
               The value is an integer ranging from 1 to 256.
-        required: false
-        default: null
     import_as_path_name_or_num:
         description:
             - A routing strategy based on the AS path list for routing received by a designated peer.
-        required: false
-        default: null
     export_as_path_name_or_num:
         description:
             - Application of a AS path list based filtering policy to the routing of a specified peer.
-        required: false
-        default: null
     import_acl_name_or_num:
         description:
             - Apply an IPv4 ACL-based filtering policy to the routes received from a specified peer.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     export_acl_name_or_num:
         description:
             - Apply an IPv4 ACL-based filtering policy to the routes to be advertised to a specified peer.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     ipprefix_orf_enable:
         description:
             - If the value is true, the address prefix-based Outbound Route Filter (ORF) capability is
               enabled for peers.
               If the value is false, the address prefix-based Outbound Route Filter (ORF) capability is
               disabled for peers.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     is_nonstd_ipprefix_mod:
         description:
             - If the value is true, Non-standard capability codes are used during capability negotiation.
               If the value is false, RFC-defined standard ORF capability codes are used during capability negotiation.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     orftype:
         description:
             - ORF Type.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     orf_mode:
         description:
             - ORF mode.
@@ -312,35 +254,26 @@ options:
               receive, ORF for incoming packets.
               send, ORF for outgoing packets.
               both, ORF for incoming and outgoing packets.
-        required: false
-        default: null
         choices: ['null', 'receive', 'send', 'both']
     soostring:
         description:
             - Configure the Site-of-Origin (SoO) extended community attribute.
               The value is a string of 3 to 21 characters.
-        required: false
-        default: null
     default_rt_adv_enable:
         description:
             - If the value is true, the function to advertise default routes to peers is enabled.
               If the value is false, the function to advertise default routes to peers is disabled.
-        required: false
         default: no_use
         choices: ['no_use','true', 'false']
     default_rt_adv_policy:
         description:
             - Specify the name of a used policy. The value is a string.
               The value is a string of 1 to 40 characters.
-        required: false
-        default: null
     default_rt_match_mode:
         description:
             - null, Null.
               matchall, Advertise the default route if all matching conditions are met.
               matchany, Advertise the default route if any matching condition is met.
-        required: false
-        default: null
         choices: ['null', 'matchall', 'matchany']
     add_path_mode:
         description:
@@ -348,34 +281,27 @@ options:
               receive, Support receiving Add-Path routes.
               send, Support sending Add-Path routes.
               both, Support receiving and sending Add-Path routes.
-        required: false
-        default: null
         choices: ['null', 'receive', 'send', 'both']
     adv_add_path_num:
         description:
             - The number of addPath advertise route.
               The value is an integer ranging from 2 to 64.
-        required: false
-        default: null
     origin_as_valid:
         description:
             - If the value is true, Application results of route announcement.
               If the value is false, Routing application results are not notified.
-        required: false
         default: no_use
         choices: ['no_use','true', 'false']
     vpls_enable:
         description:
             - If the value is true, vpls enable.
               If the value is false, vpls disable.
-        required: false
         default: no_use
         choices: ['no_use','true', 'false']
     vpls_ad_disable:
         description:
             - If the value is true, enable vpls-ad.
               If the value is false, disable vpls-ad.
-        required: false
         default: no_use
         choices: ['no_use','true', 'false']
     update_pkt_standard_compatible:
@@ -384,7 +310,6 @@ options:
               the message has no label.
               If the value is false, When the vpnv4 multicast neighbor receives and updates the message,
               the message has label.
-        required: false
         default: no_use
         choices: ['no_use','true', 'false']
 '''
@@ -407,20 +332,20 @@ EXAMPLES = '''
 
   - name: "Config BGP peer Address_Family"
     ce_bgp_neighbor_af:
-      state:  present
-      vrf_name:  js
-      af_type:  ipv4uni
-      remote_address:  192.168.10.10
-      nexthop_configure:  local
+      state: present
+      vrf_name: js
+      af_type: ipv4uni
+      remote_address: 192.168.10.10
+      nexthop_configure: local
       provider: "{{ cli }}"
 
   - name: "Undo BGP peer Address_Family"
     ce_bgp_neighbor_af:
-      state:  absent
-      vrf_name:  js
-      af_type:  ipv4uni
-      remote_address:  192.168.10.10
-      nexthop_configure:  local
+      state: absent
+      vrf_name: js
+      af_type: ipv4uni
+      remote_address: 192.168.10.10
+      nexthop_configure: local
       provider: "{{ cli }}"
 '''
 
@@ -428,7 +353,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -461,11 +386,8 @@ updates:
 '''
 
 import re
-import sys
-import socket
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
-
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec, check_ip_addr
 
 # get bgp peer af
 CE_GET_BGP_PEER_AF_HEADER = """
@@ -480,7 +402,7 @@ CE_GET_BGP_PEER_AF_HEADER = """
                   <afType>%s</afType>
                   <peerAFs>
                     <peerAF>
-                      <remoteAddress></remoteAddress>
+                      <remoteAddress>%s</remoteAddress>
 """
 CE_GET_BGP_PEER_AF_TAIL = """
                     </peerAF>
@@ -572,27 +494,6 @@ CE_DELETE_BGP_PEER_AF = """
 """
 
 
-def check_ip_addr(**kwargs):
-    """ check_ip_addr, Supports IPv4 and IPv6 """
-
-    ipaddr = kwargs["ipaddr"]
-
-    if not ipaddr or '\x00' in ipaddr:
-        return False
-
-    try:
-        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
-
-
 class BgpNeighborAf(object):
     """ Manages BGP neighbor Address-family configuration """
 
@@ -638,7 +539,7 @@ class BgpNeighborAf(object):
                 msg='Error: The remote_address %s is invalid.' % remote_address)
 
         conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-            vrf_name, af_type) + CE_GET_BGP_PEER_AF_TAIL
+            vrf_name, af_type, remote_address) + CE_GET_BGP_PEER_AF_TAIL
         recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
         if state == "present":
@@ -647,12 +548,11 @@ class BgpNeighborAf(object):
             else:
                 re_find = re.findall(
                     r'.*<remoteAddress>(.*)</remoteAddress>.*', recv_xml)
-
                 if re_find:
                     result["remote_address"] = re_find
                     result["vrf_name"] = vrf_name
                     result["af_type"] = af_type
-                    if re_find[0] != remote_address:
+                    if remote_address not in re_find:
                         need_cfg = True
                 else:
                     need_cfg = True
@@ -683,6 +583,7 @@ class BgpNeighborAf(object):
         state = module.params['state']
         vrf_name = module.params['vrf_name']
         af_type = module.params['af_type']
+        remote_address = module.params['remote_address']
 
         if state == "absent":
             result["need_cfg"] = need_cfg
@@ -692,15 +593,14 @@ class BgpNeighborAf(object):
         if advertise_irb != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advertiseIrb></advertiseIrb>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advertiseIrb></advertiseIrb>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
                 need_cfg = True
             else:
-                re_find = re.findall(
-                    r'.*<advertiseIrb>(.*)</advertiseIrb>.*', recv_xml)
-
+                re_find = re.findall(r'.*<remoteAddress>%s</remoteAddress>\s*'
+                                     r'<advertiseIrb>(.*)</advertiseIrb>.*' % remote_address, recv_xml)
                 if re_find:
                     result["advertise_irb"] = re_find
                     result["vrf_name"] = vrf_name
@@ -714,14 +614,14 @@ class BgpNeighborAf(object):
         if advertise_arp != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advertiseArp></advertiseArp>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advertiseArp></advertiseArp>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
                 need_cfg = True
             else:
-                re_find = re.findall(
-                    r'.*<advertiseArp>(.*)</advertiseArp>.*', recv_xml)
+                re_find = re.findall(r'.*<remoteAddress>%s</remoteAddress>\s*'
+                                     r'.*<advertiseArp>(.*)</advertiseArp>.*' % remote_address, recv_xml)
 
                 if re_find:
                     result["advertise_arp"] = re_find
@@ -736,7 +636,7 @@ class BgpNeighborAf(object):
         if advertise_remote_nexthop != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advertiseRemoteNexthop></advertiseRemoteNexthop>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advertiseRemoteNexthop></advertiseRemoteNexthop>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -758,7 +658,7 @@ class BgpNeighborAf(object):
         if advertise_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advertiseCommunity></advertiseCommunity>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advertiseCommunity></advertiseCommunity>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -780,9 +680,8 @@ class BgpNeighborAf(object):
         if advertise_ext_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advertiseExtCommunity></advertiseExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advertiseExtCommunity></advertiseExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
-
             if "<data/>" in recv_xml:
                 need_cfg = True
             else:
@@ -802,7 +701,7 @@ class BgpNeighborAf(object):
         if discard_ext_community != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<discardExtCommunity></discardExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<discardExtCommunity></discardExtCommunity>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -824,7 +723,7 @@ class BgpNeighborAf(object):
         if allow_as_loop_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<allowAsLoopEnable></allowAsLoopEnable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<allowAsLoopEnable></allowAsLoopEnable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -849,7 +748,7 @@ class BgpNeighborAf(object):
                     msg='the value of allow_as_loop_limit %s is out of [1 - 10].' % allow_as_loop_limit)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<allowAsLoopLimit></allowAsLoopLimit>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<allowAsLoopLimit></allowAsLoopLimit>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -871,7 +770,7 @@ class BgpNeighborAf(object):
         if keep_all_routes != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<keepAllRoutes></keepAllRoutes>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<keepAllRoutes></keepAllRoutes>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -893,7 +792,7 @@ class BgpNeighborAf(object):
         if nexthop_configure:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<nextHopConfigure></nextHopConfigure>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<nextHopConfigure></nextHopConfigure>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -918,7 +817,7 @@ class BgpNeighborAf(object):
                     msg='the value of preferred_value %s is out of [0 - 65535].' % preferred_value)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<preferredValue></preferredValue>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<preferredValue></preferredValue>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -940,7 +839,7 @@ class BgpNeighborAf(object):
         if public_as_only != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<publicAsOnly></publicAsOnly>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<publicAsOnly></publicAsOnly>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -962,7 +861,7 @@ class BgpNeighborAf(object):
         if public_as_only_force != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<publicAsOnlyForce></publicAsOnlyForce>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<publicAsOnlyForce></publicAsOnlyForce>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -984,7 +883,7 @@ class BgpNeighborAf(object):
         if public_as_only_limited != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<publicAsOnlyLimited></publicAsOnlyLimited>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<publicAsOnlyLimited></publicAsOnlyLimited>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1006,7 +905,7 @@ class BgpNeighborAf(object):
         if public_as_only_replace != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<publicAsOnlyReplace></publicAsOnlyReplace>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<publicAsOnlyReplace></publicAsOnlyReplace>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1029,7 +928,7 @@ class BgpNeighborAf(object):
         if public_as_only_skip_peer_as != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<publicAsOnlySkipPeerAs></publicAsOnlySkipPeerAs>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<publicAsOnlySkipPeerAs></publicAsOnlySkipPeerAs>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1055,7 +954,7 @@ class BgpNeighborAf(object):
                     msg='the value of route_limit %s is out of [1 - 4294967295].' % route_limit)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<routeLimit></routeLimit>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<routeLimit></routeLimit>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1081,7 +980,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of route_limit_percent %s is out of [1 - 100].' % route_limit_percent)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<routeLimitPercent></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<routeLimitPercent></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1103,7 +1002,7 @@ class BgpNeighborAf(object):
         if route_limit_type:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<routeLimitType></routeLimitType>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<routeLimitType></routeLimitType>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1130,7 +1029,7 @@ class BgpNeighborAf(object):
                         '[1 - 1200].' % route_limit_idle_timeout)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<routeLimitIdleTimeout></routeLimitPercent>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<routeLimitIdleTimeout></routeLimitIdleTimeout>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1156,7 +1055,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of rt_updt_interval %s is out of [0 - 600].' % rt_updt_interval)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<rtUpdtInterval></rtUpdtInterval>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<rtUpdtInterval></rtUpdtInterval>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1178,7 +1077,7 @@ class BgpNeighborAf(object):
         if redirect_ip != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<redirectIP></redirectIP>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<redirectIP></redirectIP>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1200,7 +1099,7 @@ class BgpNeighborAf(object):
         if redirect_ip_vaildation != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<redirectIPVaildation></redirectIPVaildation>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<redirectIPVaildation></redirectIPVaildation>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1222,7 +1121,7 @@ class BgpNeighborAf(object):
         if reflect_client != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<reflectClient></reflectClient>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<reflectClient></reflectClient>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1244,7 +1143,7 @@ class BgpNeighborAf(object):
         if substitute_as_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<substituteAsEnable></substituteAsEnable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<substituteAsEnable></substituteAsEnable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1270,7 +1169,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of import_rt_policy_name %s is out of [1 - 40].' % import_rt_policy_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<importRtPolicyName></importRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<importRtPolicyName></importRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1296,7 +1195,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of export_rt_policy_name %s is out of [1 - 40].' % export_rt_policy_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<exportRtPolicyName></exportRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<exportRtPolicyName></exportRtPolicyName>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1322,7 +1221,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of import_pref_filt_name %s is out of [1 - 169].' % import_pref_filt_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<importPrefFiltName></importPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<importPrefFiltName></importPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1348,7 +1247,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of export_pref_filt_name %s is out of [1 - 169].' % export_pref_filt_name)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<exportPrefFiltName></exportPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<exportPrefFiltName></exportPrefFiltName>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1374,7 +1273,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of import_as_path_filter %s is out of [1 - 256].' % import_as_path_filter)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<importAsPathFilter></importAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<importAsPathFilter></importAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1400,7 +1299,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of export_as_path_filter %s is out of [1 - 256].' % export_as_path_filter)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<exportAsPathFilter></exportAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<exportAsPathFilter></exportAsPathFilter>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1428,7 +1327,7 @@ class BgpNeighborAf(object):
                         'of [1 - 51].' % import_as_path_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<importAsPathNameOrNum></importAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<importAsPathNameOrNum></importAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1456,7 +1355,7 @@ class BgpNeighborAf(object):
                         'of [1 - 51].' % export_as_path_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<exportAsPathNameOrNum></exportAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<exportAsPathNameOrNum></exportAsPathNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1482,7 +1381,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of import_acl_name_or_num %s is out of [1 - 32].' % import_acl_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<importAclNameOrNum></importAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<importAclNameOrNum></importAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1508,7 +1407,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of export_acl_name_or_num %s is out of [1 - 32].' % export_acl_name_or_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<exportAclNameOrNum></exportAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<exportAclNameOrNum></exportAclNameOrNum>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1529,7 +1428,7 @@ class BgpNeighborAf(object):
         ipprefix_orf_enable = module.params['ipprefix_orf_enable']
         if ipprefix_orf_enable != 'no_use':
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<ipprefixOrfEnable></ipprefixOrfEnable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<ipprefixOrfEnable></ipprefixOrfEnable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1551,7 +1450,7 @@ class BgpNeighborAf(object):
         if is_nonstd_ipprefix_mod != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<isNonstdIpprefixMod></isNonstdIpprefixMod>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<isNonstdIpprefixMod></isNonstdIpprefixMod>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1577,7 +1476,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of orftype %s is out of [0 - 65535].' % orftype)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<orftype></orftype>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<orftype></orftype>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1599,7 +1498,7 @@ class BgpNeighborAf(object):
         if orf_mode:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<orfMode></orfMode>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<orfMode></orfMode>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1625,7 +1524,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of soostring %s is out of [3 - 21].' % soostring)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<soostring></soostring>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<soostring></soostring>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1647,7 +1546,7 @@ class BgpNeighborAf(object):
         if default_rt_adv_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<defaultRtAdvEnable></defaultRtAdvEnable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<defaultRtAdvEnable></defaultRtAdvEnable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1673,7 +1572,7 @@ class BgpNeighborAf(object):
                     msg='Error: The len of default_rt_adv_policy %s is out of [1 - 40].' % default_rt_adv_policy)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<defaultRtAdvPolicy></defaultRtAdvPolicy>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<defaultRtAdvPolicy></defaultRtAdvPolicy>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1695,7 +1594,7 @@ class BgpNeighborAf(object):
         if default_rt_match_mode:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<defaultRtMatchMode></defaultRtMatchMode>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<defaultRtMatchMode></defaultRtMatchMode>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1717,7 +1616,7 @@ class BgpNeighborAf(object):
         if add_path_mode:
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<addPathMode></addPathMode>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<addPathMode></addPathMode>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1743,7 +1642,7 @@ class BgpNeighborAf(object):
                     msg='Error: The value of adv_add_path_num %s is out of [2 - 64].' % adv_add_path_num)
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<advAddPathNum></advAddPathNum>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<advAddPathNum></advAddPathNum>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1765,7 +1664,7 @@ class BgpNeighborAf(object):
         if origin_as_valid != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<originAsValid></originAsValid>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<originAsValid></originAsValid>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1787,7 +1686,7 @@ class BgpNeighborAf(object):
         if vpls_enable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<vplsEnable></vplsEnable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<vplsEnable></vplsEnable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1809,7 +1708,7 @@ class BgpNeighborAf(object):
         if vpls_ad_disable != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<vplsAdDisable></vplsAdDisable>" + CE_GET_BGP_PEER_AF_TAIL
+                vrf_name, af_type, remote_address) + "<vplsAdDisable></vplsAdDisable>" + CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
             if "<data/>" in recv_xml:
@@ -1832,7 +1731,7 @@ class BgpNeighborAf(object):
         if update_pkt_standard_compatible != 'no_use':
 
             conf_str = CE_GET_BGP_PEER_AF_HEADER % (
-                vrf_name, af_type) + "<updatePktStandardCompatible></updatePktStandardCompatible>" + \
+                vrf_name, af_type, remote_address) + "<updatePktStandardCompatible></updatePktStandardCompatible>" + \
                 CE_GET_BGP_PEER_AF_TAIL
             recv_xml = self.netconf_get_config(module=module, conf_str=conf_str)
 
@@ -1872,19 +1771,13 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Merge bgp peer address family failed.')
 
         cmds = []
-        cmd = ''
+        cmd = af_type
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
-        elif af_type == "ipv4vpn":
-            cmd = "ipv4-family vpnv4"
-        elif af_type == "ipv6vpn":
-            cmd = "ipv6-family vpnv6"
-        elif af_type == "evpn":
-            cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
         cmd = "peer %s" % remote_address
         cmds.append(cmd)
@@ -1908,19 +1801,13 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Create bgp peer address family failed.')
 
         cmds = []
-        cmd = ''
+        cmd = af_type
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
-        elif af_type == "ipv4vpn":
-            cmd = "ipv4-family vpnv4"
-        elif af_type == "ipv6vpn":
-            cmd = "ipv6-family vpnv6"
-        elif af_type == "evpn":
-            cmd = "l2vpn-family evpn"     
         cmds.append(cmd)
         cmd = "peer %s" % remote_address
         cmds.append(cmd)
@@ -1944,19 +1831,13 @@ class BgpNeighborAf(object):
             module.fail_json(msg='Error: Delete bgp peer address family failed.')
 
         cmds = []
-        cmd = ''
+        cmd = af_type
         if af_type == "ipv4uni":
             cmd = "ipv4-family unicast"
         elif af_type == "ipv4multi":
             cmd = "ipv4-family multicast"
         elif af_type == "ipv6uni":
             cmd = "ipv6-family unicast"
-        elif af_type == "ipv4vpn":
-            cmd = "ipv4-family vpnv4"
-        elif af_type == "ipv6vpn":
-            cmd = "ipv6-family vpnv6"
-        elif af_type == "evpn":
-            cmd = "l2vpn-family evpn"       
         cmds.append(cmd)
         cmd = "undo peer %s" % remote_address
         cmds.append(cmd)
@@ -1981,7 +1862,7 @@ class BgpNeighborAf(object):
         if advertise_irb != 'no_use':
             conf_str += "<advertiseIrb>%s</advertiseIrb>" % advertise_irb
 
-            if advertise_irb == "ture":
+            if advertise_irb == "true":
                 cmd = "peer %s advertise irb" % remote_address
             else:
                 cmd = "undo peer %s advertise irb" % remote_address
@@ -1991,7 +1872,7 @@ class BgpNeighborAf(object):
         if advertise_arp != 'no_use':
             conf_str += "<advertiseArp>%s</advertiseArp>" % advertise_arp
 
-            if advertise_arp == "ture":
+            if advertise_arp == "true":
                 cmd = "peer %s advertise arp" % remote_address
             else:
                 cmd = "undo peer %s advertise arp" % remote_address
@@ -2201,6 +2082,12 @@ class BgpNeighborAf(object):
         if substitute_as_enable != 'no_use':
             conf_str += "<substituteAsEnable>%s</substituteAsEnable>" % substitute_as_enable
 
+            if substitute_as_enable == "true":
+                cmd = "peer %s substitute-as" % remote_address
+            else:
+                cmd = "undo peer %s substitute-as" % remote_address
+            cmds.append(cmd)
+
         import_rt_policy_name = module.params['import_rt_policy_name']
         if import_rt_policy_name:
             conf_str += "<importRtPolicyName>%s</importRtPolicyName>" % import_rt_policy_name
@@ -2330,12 +2217,13 @@ class BgpNeighborAf(object):
                 cmd += "peer %s default-route-advertise" % remote_address
             else:
                 cmd += "undo peer %s default-route-advertise" % remote_address
+            cmds.append(cmd)
 
         default_rt_adv_policy = module.params['default_rt_adv_policy']
         if default_rt_adv_policy:
             conf_str += "<defaultRtAdvPolicy>%s</defaultRtAdvPolicy>" % default_rt_adv_policy
-
-            cmd += " route-policy %s" % default_rt_adv_policy
+            cmd = " route-policy %s" % default_rt_adv_policy
+            cmds.append(cmd)
 
         default_rt_match_mode = module.params['default_rt_match_mode']
         if default_rt_match_mode:
@@ -2346,17 +2234,27 @@ class BgpNeighborAf(object):
             elif default_rt_match_mode == "matchany":
                 cmd += " conditional-route-match-any"
 
-        if cmd:
-            cmds.append(cmd)
+            if cmd:
+                cmds.append(cmd)
 
         add_path_mode = module.params['add_path_mode']
         if add_path_mode:
             conf_str += "<addPathMode>%s</addPathMode>" % add_path_mode
+            if add_path_mode == "receive":
+                cmd += " add-path receive"
+            elif add_path_mode == "send":
+                cmd += " add-path send"
+            elif add_path_mode == "both":
+                cmd += " add-path both"
+            if cmd:
+                cmds.append(cmd)
 
         adv_add_path_num = module.params['adv_add_path_num']
         if adv_add_path_num:
             conf_str += "<advAddPathNum>%s</advAddPathNum>" % adv_add_path_num
-
+            cmd += " advertise add-path path-number %s" % adv_add_path_num
+            if cmd:
+                cmds.append(cmd)
         origin_as_valid = module.params['origin_as_valid']
         if origin_as_valid != 'no_use':
             conf_str += "<originAsValid>%s</originAsValid>" % origin_as_valid
@@ -2389,7 +2287,7 @@ def main():
 
     argument_spec = dict(
         state=dict(choices=['present', 'absent'], default='present'),
-        vrf_name=dict(type='str', default='_public_'),
+        vrf_name=dict(type='str', required=True),
         af_type=dict(choices=['ipv4uni', 'ipv4multi', 'ipv4vpn',
                               'ipv6uni', 'ipv6vpn', 'evpn'], required=True),
         remote_address=dict(type='str', required=True),

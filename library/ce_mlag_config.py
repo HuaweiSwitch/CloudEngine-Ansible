@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,60 +28,42 @@ short_description: Manages MLAG configuration on HUAWEI CloudEngine switches.
 description:
     - Manages MLAG configuration on HUAWEI CloudEngine switches.
 author:
-    - Li Yanfeng (@CloudEngine-Ansible)
+    - Li Yanfeng (@QijunPan)
 options:
     dfs_group_id:
         description:
             - ID of a DFS group. The value is 1.
-        required: false
         default: present
     nickname:
         description:
             - The nickname bound to a DFS group. The value is an integer that ranges from 1 to 65471.
-        required: false
-        default: null
     pseudo_nickname:
         description:
             - A pseudo nickname of a DFS group. The value is an integer that ranges from 1 to 65471.
-        required: false
-        default: null
     pseudo_priority:
         description:
             - The priority of a pseudo nickname. The value is an integer that ranges from 128 to 255.
               The default value is 192. A larger value indicates a higher priority.
-        required: false
-        default: null
     ip_address:
         description:
             - IP address bound to the DFS group. The value is in dotted decimal notation.
-        required: false
-        default: null
     vpn_instance_name:
         description:
             - Name of the VPN instance bound to the DFS group. The value is a string of 1 to 31 case-sensitive
               characters without spaces. If the character string is quoted by double quotation marks, the character
               string can contain spaces. The value _public_ is reserved and cannot be used as the VPN instance name.
-        required: false
-        default: null
     priority_id:
         description:
             - Priority of a DFS group. The value is an integer that ranges from 1 to 254. The default value is 100.
-        required: false
-        default: null
     eth_trunk_id:
         description:
             - Name of the peer-link interface. The value is in the range from 0 to 511.
-        required: false
-        default: null
     peer_link_id:
         description:
             - Number of the peer-link interface. The value is 1.
-        required: false
-        default: null
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present','absent']
 '''
@@ -136,7 +118,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -165,8 +147,7 @@ updates:
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import load_config
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 
 CE_NC_GET_DFS_GROUP_INFO = """
@@ -232,13 +213,27 @@ CE_NC_MERGE_DFS_GROUP_INFO_TAIL = """
 </config>
 """
 
+CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_HEADER = """
+<config>
+<dfs xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+  <groupInstances>
+    <groupInstance  operation="delete">
+      <groupId>%s</groupId>
+"""
+
+CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_TAIL = """
+    </groupInstance>
+  </groupInstances>
+</dfs>
+</config>
+"""
+
 CE_NC_DELETE_DFS_GROUP_INFO_HEADER = """
 <config>
 <dfs xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
   <groupInstances>
     <groupInstance operation="delete">
       <groupId>%s</groupId>
-
 """
 
 CE_NC_DELETE_DFS_GROUP_INFO_TAIL = """
@@ -246,7 +241,6 @@ CE_NC_DELETE_DFS_GROUP_INFO_TAIL = """
   </groupInstances>
 </dfs>
 </config>
-
 """
 
 CE_NC_CREATE_PEER_LINK_INFO = """
@@ -357,24 +351,6 @@ class MlagConfig(object):
         if "<ok/>" not in xml_str:
             self.module.fail_json(msg='Error: %s failed.' % xml_name)
 
-    def cli_add_command(self, command, undo=False):
-        """add command to self.update_cmd and self.commands"""
-
-        if undo and command.lower() not in ["quit", "return"]:
-            cmd = "undo " + command
-        else:
-            cmd = command
-
-        self.commands.append(cmd)          # set to device
-        if command.lower() not in ["quit", "return"]:
-            self.updates_cmd.append(cmd)   # show updates result
-
-    def cli_load_config(self, commands):
-        """load config by cli"""
-
-        if not self.module.check_mode:
-            load_config(self.module, commands)
-
     def get_dfs_group_info(self):
         """ get dfs group attributes info."""
 
@@ -389,7 +365,7 @@ class MlagConfig(object):
                 replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
             root = ElementTree.fromstring(xml_str)
             dfs_info = root.findall(
-                "data/dfs/groupInstances/groupInstance")
+                "dfs/groupInstances/groupInstance")
             if dfs_info:
                 for tmp in dfs_info:
                     for site in tmp:
@@ -397,7 +373,7 @@ class MlagConfig(object):
                             dfs_group_info[site.tag] = site.text
 
             dfs_nick_info = root.findall(
-                "data/dfs/groupInstances/groupInstance/trillType")
+                "dfs/groupInstances/groupInstance/trillType")
 
             if dfs_nick_info:
                 for tmp in dfs_nick_info:
@@ -421,8 +397,7 @@ class MlagConfig(object):
 
             root = ElementTree.fromstring(xml_str)
             link_info = root.findall(
-                "data/mlag/peerlinks/peerlink")
-
+                "mlag/peerlinks/peerlink")
             if link_info:
                 for tmp in link_info:
                     for site in tmp:
@@ -595,39 +570,63 @@ class MlagConfig(object):
     def delete_dfs_group_attribute(self):
         """delete dfg group attribute info"""
 
-        cmd = "dfs-group %s" % self.dfs_group_id
-        self.cli_add_command(cmd)
+        conf_str = CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_HEADER % self.dfs_group_id
         change = False
         if self.priority_id and self.dfs_group_info["priority"] == self.priority_id:
-            cmd = "priority %s" % self.priority_id
-            self.cli_add_command(cmd, True)
+            conf_str += "<priority>%s</priority>" % self.priority_id
             change = True
-
+            self.updates_cmd.append("undo priority %s" % self.priority_id)
         if self.ip_address and self.dfs_group_info["ipAddress"] == self.ip_address:
             if self.vpn_instance_name and self.dfs_group_info["srcVpnName"] == self.vpn_instance_name:
-                cmd = "source ip %s vpn-instance %s" % (
-                    self.ip_address, self.vpn_instance_name)
-                self.cli_add_command(cmd, True)
+                conf_str += "<ipAddress>%s</ipAddress>" % self.ip_address
+                conf_str += "<srcVpnName>%s</srcVpnName>" % self.vpn_instance_name
+                self.updates_cmd.append(
+                    "undo source ip %s vpn-instance %s" % (self.ip_address, self.vpn_instance_name))
             else:
-                cmd = "source ip %s" % self.ip_address
-                self.cli_add_command(cmd, True)
+                conf_str += "<ipAddress>%s</ipAddress>" % self.ip_address
+                self.updates_cmd.append("undo source ip %s" % self.ip_address)
             change = True
 
-        if self.nickname and self.dfs_group_info["localNickname"] == self.nickname:
-            cmd = "source nickname %s" % self.nickname
-            self.cli_add_command(cmd, True)
-            change = True
-        if self.pseudo_nickname and self.dfs_group_info["pseudoNickname"] == self.pseudo_nickname:
-            if self.pseudo_priority:
-                cmd = "pseudo-nickname %s priority %s" % (
-                    self.pseudo_nickname, self.pseudo_priority)
-                self.cli_add_command(cmd, True)
-            else:
-                cmd = "pseudo-nickname %s" % self.pseudo_nickname
-                self.cli_add_command(cmd, True)
-            change = True
+        conf_str += CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_TAIL
+
         if change:
-            self.cli_load_config(self.commands)
+            self.updates_cmd.append("undo dfs-group 1")
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
+                self.module.fail_json(
+                    msg='Error: Delete DFS group attribute failed.')
+            self.changed = True
+
+    def delete_dfs_group_nick(self):
+
+        conf_str = CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_HEADER % self.dfs_group_id
+        conf_str = conf_str.replace('<groupInstance  operation="delete">', '<groupInstance>')
+        change = False
+
+        if self.nickname or self.pseudo_nickname:
+            conf_str += "<trillType operation='delete'>"
+            if self.nickname and self.dfs_group_info["localNickname"] == self.nickname:
+                conf_str += "<localNickname>%s</localNickname>" % self.nickname
+                change = True
+                self.updates_cmd.append("undo source nickname %s" % self.nickname)
+            if self.pseudo_nickname and self.dfs_group_info["pseudoNickname"] == self.pseudo_nickname:
+                conf_str += "<pseudoNickname>%s</pseudoNickname>" % self.pseudo_nickname
+                if self.pseudo_priority and self.dfs_group_info["pseudoPriority"] == self.pseudo_priority:
+                    self.updates_cmd.append(
+                        "undo pseudo-nickname %s priority %s" % (self.pseudo_nickname, self.pseudo_priority))
+                if not self.pseudo_priority:
+                    self.updates_cmd.append(
+                        "undo pseudo-nickname %s" % self.pseudo_nickname)
+                change = True
+            conf_str += "</trillType>"
+
+        conf_str += CE_NC_DELETE_DFS_GROUP_ATTRIBUTE_TAIL
+
+        if change:
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
+                self.module.fail_json(
+                    msg='Error: Delete DFS group attribute failed.')
             self.changed = True
 
     def modify_peer_link(self):
@@ -635,28 +634,30 @@ class MlagConfig(object):
 
         eth_trunk_id = "Eth-Trunk"
         eth_trunk_id += self.eth_trunk_id
-        conf_str = CE_NC_MERGE_PEER_LINK_INFO % (
-            self.peer_link_id, eth_trunk_id)
-        recv_xml = set_nc_config(self.module, conf_str)
-        if "<ok/>" not in recv_xml:
-            self.module.fail_json(
-                msg='Error: Merge peer link failed.')
-        self.updates_cmd.append("peer-link %s" % self.peer_link_id)
-        self.changed = True
+        if self.eth_trunk_id and eth_trunk_id != self.peer_link_info.get("portName"):
+            conf_str = CE_NC_MERGE_PEER_LINK_INFO % (
+                self.peer_link_id, eth_trunk_id)
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
+                self.module.fail_json(
+                    msg='Error: Merge peer link failed.')
+            self.updates_cmd.append("peer-link %s" % self.peer_link_id)
+            self.changed = True
 
     def delete_peer_link(self):
         """delete peer link info"""
 
         eth_trunk_id = "Eth-Trunk"
         eth_trunk_id += self.eth_trunk_id
-        conf_str = CE_NC_DELETE_PEER_LINK_INFO % (
-            self.peer_link_id, eth_trunk_id)
-        recv_xml = set_nc_config(self.module, conf_str)
-        if "<ok/>" not in recv_xml:
-            self.module.fail_json(
-                msg='Error: Delete peer link failed.')
-        self.updates_cmd.append("undo peer-link %s" % self.peer_link_id)
-        self.changed = True
+        if self.eth_trunk_id and eth_trunk_id == self.peer_link_info.get("portName"):
+            conf_str = CE_NC_DELETE_PEER_LINK_INFO % (
+                self.peer_link_id, eth_trunk_id)
+            recv_xml = set_nc_config(self.module, conf_str)
+            if "<ok/>" not in recv_xml:
+                self.module.fail_json(
+                    msg='Error: Delete peer link failed.')
+            self.updates_cmd.append("undo peer-link %s" % self.peer_link_id)
+            self.changed = True
 
     def check_params(self):
         """Check all input params"""
@@ -759,7 +760,7 @@ class MlagConfig(object):
         """get existing info"""
         if self.dfs_group_id:
             self.dfs_group_info = self.get_dfs_group_info()
-        if self.peer_link_id and not self.eth_trunk_id:
+        if self.peer_link_id and self.eth_trunk_id:
             self.peer_link_info = self.get_peer_link_info()
         if self.dfs_group_info:
             if self.dfs_group_id:
@@ -790,7 +791,7 @@ class MlagConfig(object):
         """get end state info"""
         if self.dfs_group_id:
             self.dfs_group_info = self.get_dfs_group_info()
-        if self.peer_link_id and not self.eth_trunk_id:
+        if self.peer_link_id and self.eth_trunk_id:
             self.peer_link_info = self.get_peer_link_info()
 
         if self.dfs_group_info:
@@ -818,6 +819,8 @@ class MlagConfig(object):
                     "eth_trunk_id"] = self.peer_link_info["portName"]
             if self.peer_link_id:
                 self.end_state["peer_link_id"] = self.peer_link_info["linkId"]
+        if self.end_state == self.existing:
+            self.changed = False
 
     def work(self):
         """worker"""
@@ -831,11 +834,11 @@ class MlagConfig(object):
                     if self.nickname or self.pseudo_nickname or self.pseudo_priority or self.priority_id \
                             or self.ip_address or self.vpn_instance_name:
                         if self.nickname:
-                            if self.dfs_group_info["localNickname"] and self.dfs_group_info["ipAddress"] != "0.0.0.0":
+                            if self.dfs_group_info["ipAddress"] not in ["0.0.0.0", None]:
                                 self.module.fail_json(msg='Error: nickname and ip_address can not be exist at the '
                                                           'same time.')
                         if self.ip_address:
-                            if self.dfs_group_info["ipAddress"] and self.dfs_group_info["localNickname"] != "0":
+                            if self.dfs_group_info["localNickname"] not in ["0", None]:
                                 self.module.fail_json(msg='Error: nickname and ip_address can not be exist at the '
                                                           'same time.')
                         self.modify_dfs_group()
@@ -849,7 +852,11 @@ class MlagConfig(object):
                         and not self.ip_address and not self.vpn_instance_name:
                     self.delete_dfs_group()
                 else:
+                    self.updates_cmd.append("dfs-group 1")
                     self.delete_dfs_group_attribute()
+                    self.delete_dfs_group_nick()
+                    if "undo dfs-group 1" in self.updates_cmd:
+                        self.updates_cmd = ["undo dfs-group 1"]
 
         if self.eth_trunk_id and not self.peer_link_id:
             self.module.fail_json(
