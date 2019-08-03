@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,143 +28,100 @@ short_description: Manages outputting logs on HUAWEI CloudEngine switches.
 description:
     - This module offers the ability to be output to the log buffer, log file, console, terminal, or log host on HUAWEI CloudEngine switches.
 author:
-    - Li Yanfeng (@CloudEngine-Ansible)
+    - Li Yanfeng (@QijunPan)
 options:
     info_center_enable:
         description:
             - Whether the info-center function is enabled. The value is of the Boolean type.
-        required: false
-        default: null
         choices: ['true','false']
     packet_priority:
         description:
             - Set the priority of the syslog packet.The value is an integer ranging from 0 to 7. The default value is 0.
-        required: false
-        default: null
     suppress_enable:
         description:
             - Whether a device is enabled to suppress duplicate statistics. The value is of the Boolean type.
-        required: false
-        default: null
-        choices: ['true','false']
+        choices: [ 'false', 'true' ]
     logfile_max_num:
         description:
             - Maximum number of log files of the same type. The default value is 200.
             - The value range for log files is[3, 500], for security files is [1, 3],and for operation files is [1, 7].
-        required: false
-        default: null
     logfile_max_size:
         description:
             - Maximum size (in MB) of a log file. The default value is 32.
             - The value range for log files is [4, 8, 16, 32], for security files is [1, 4],
             - and for operation files is [1, 4].
-        required: false
         default: 32
         choices: ['4', '8', '16', '32']
     channel_id:
         description:
             - Number for channel. The value is an integer ranging from 0 to 9. The default value is 0.
-        required: false
-        default: null
     channel_cfg_name:
         description:
             - Channel name.The value is a string of 1 to 30 case-sensitive characters. The default value is console.
-        required: false
         default: console
     channel_out_direct:
         description:
             - Direction of information output.
-        required: false
-        default: null
         choices: ['console','monitor','trapbuffer','logbuffer','snmp','logfile']
     filter_feature_name:
         description:
             - Feature name of the filtered log. The value is a string of 1 to 31 case-insensitive characters.
-        required: false
-        default: null
     filter_log_name:
         description:
             - Name of the filtered log. The value is a string of 1 to 63 case-sensitive characters.
-        required: false
-        default: null
     ip_type:
         description:
             - Log server address type, IPv4 or IPv6.
-        required: false
-        default: null
         choices: ['ipv4','ipv6']
     server_ip:
         description:
             - Log server address, IPv4 or IPv6 type. The value is a string of 0 to 255 characters.
               The value can be an valid IPv4 or IPv6 address.
-        required: false
-        default: null
     server_domain:
         description:
             - Server name. The value is a string of 1 to 255 case-sensitive characters.
-        required: false
-        default: null
     is_default_vpn:
         description:
             - Use the default VPN or not.
-        required: false
-        default: False
+        type: bool
+        default: 'no'
     vrf_name:
         description:
             - VPN name on a log server. The value is a string of 1 to 31 case-sensitive characters.
               The default value is _public_.
-        required: false
-        default: null
     level:
         description:
             - Level of logs saved on a log server.
-        required: false
-        default: null
         choices: ['emergencies','alert','critical','error','warning','notification','informational','debugging']
     server_port:
         description:
             - Number of a port sending logs.The value is an integer ranging from 1 to 65535.
               For UDP, the default value is 514. For TCP, the default value is 601. For TSL, the default value is 6514.
-        required: false
-        default: null
     facility:
         description:
             - Log record tool.
-        required: false
-        default: null
         choices: ['local0','local1','local2','local3','local4','local5','local6','local7']
     channel_name:
         description:
             - Channel name. The value is a string of 1 to 30 case-sensitive characters.
-        required: false
-        default: null
     timestamp:
         description:
             - Log server timestamp. The value is of the enumerated type and case-sensitive.
-        required: false
-        default: null
         choices: ['UTC', 'localtime']
     transport_mode:
         description:
             - Transport mode. The value is of the enumerated type and case-sensitive.
-        required: false
-        default: null
         choices: ['tcp','udp']
     ssl_policy_name:
         description:
             - SSL policy name. The value is a string of 1 to 23 case-sensitive characters.
-        required: false
-        default: null
     source_ip:
         description:
             - Log source ip address, IPv4 or IPv6 type. The value is a string of 0 to 255.
               The value can be an valid IPv4 or IPv6 address.
-        required: false
-        default: null
     state:
         description:
             - Specify desired state of the resource.
-        required: false
         default: present
         choices: ['present','absent']
 '''
@@ -323,14 +280,13 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
-import socket
-import sys
+
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import ce_argument_spec, get_nc_config, set_nc_config
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec, get_nc_config, set_nc_config, check_ip_addr
 
 
 CE_NC_GET_CENTER_GLOBAL_INFO_HEADER = """
@@ -571,25 +527,6 @@ CE_NC_DELETE_SERVER_DNS_INFO_TAIL = """
 """
 
 
-def is_valid_address(address):
-    """ check ip address, Supports IPv4 and IPv6"""
-
-    if not address or '\x00' in address:
-        return False
-
-    try:
-        res = socket.getaddrinfo(address, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
-
-
 def get_out_direct_default(out_direct):
     """get default out direct"""
 
@@ -688,7 +625,7 @@ class InfoCenterGlobal(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         channel_info["channelInfos"] = list()
-        channels = root.findall("data/syslog/icChannels/icChannel")
+        channels = root.findall("syslog/icChannels/icChannel")
         if channels:
             for channel in channels:
                 channel_dict = dict()
@@ -779,7 +716,7 @@ class InfoCenterGlobal(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         channel_direct_info["channelDirectInfos"] = list()
-        dir_channels = root.findall("data/syslog/icDirChannels/icDirChannel")
+        dir_channels = root.findall("syslog/icDirChannels/icDirChannel")
         if dir_channels:
             for ic_dir_channel in dir_channels:
                 channel_direct_dict = dict()
@@ -869,7 +806,7 @@ class InfoCenterGlobal(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         filter_info["filterInfos"] = list()
-        ic_filters = root.findall("data/syslog/icFilters/icFilter")
+        ic_filters = root.findall("syslog/icFilters/icFilter")
         if ic_filters:
             for ic_filter in ic_filters:
                 filter_dict = dict()
@@ -957,7 +894,7 @@ class InfoCenterGlobal(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         server_ip_info["serverIpInfos"] = list()
-        syslog_servers = root.findall("data/syslog/syslogServers/syslogServer")
+        syslog_servers = root.findall("syslog/syslogServers/syslogServer")
         if syslog_servers:
             for syslog_server in syslog_servers:
                 server_dict = dict()
@@ -1128,7 +1065,7 @@ class InfoCenterGlobal(object):
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
         root = ElementTree.fromstring(xml_str)
         server_domain_info["serverAddressInfos"] = list()
-        syslog_dnss = root.findall("data/syslog/syslogDNSs/syslogDNS")
+        syslog_dnss = root.findall("syslog/syslogDNSs/syslogDNS")
         if syslog_dnss:
             for syslog_dns in syslog_dnss:
                 dns_dict = dict()
@@ -1235,7 +1172,7 @@ class InfoCenterGlobal(object):
 
             root = ElementTree.fromstring(xml_str)
             global_info = root.findall(
-                "data/syslog/globalParam")
+                "syslog/globalParam")
 
             if global_info:
                 for tmp in global_info:
@@ -1316,7 +1253,7 @@ class InfoCenterGlobal(object):
 
             root = ElementTree.fromstring(xml_str)
             logfile_info = root.findall(
-                "data/syslog/icLogFileInfos/icLogFileInfo")
+                "syslog/icLogFileInfos/icLogFileInfo")
             if logfile_info:
                 for tmp in logfile_info:
                     for site in tmp:
@@ -1433,12 +1370,12 @@ class InfoCenterGlobal(object):
 
         # server_ip check
         if self.server_ip:
-            if not is_valid_address(self.server_ip):
+            if not check_ip_addr(self.server_ip):
                 self.module.fail_json(
                     msg='Error: The %s is not a valid ip address' % self.server_ip)
         # source_ip check
         if self.source_ip:
-            if not is_valid_address(self.source_ip):
+            if not check_ip_addr(self.source_ip):
                 self.module.fail_json(
                     msg='Error: The %s is not a valid ip address' % self.source_ip)
 

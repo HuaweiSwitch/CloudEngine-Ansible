@@ -16,17 +16,15 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {
-    'status': ['preview'],
-    'supported_by': 'community',
-    'metadata_version': '1.0'
-}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = """
 ---
 module: ce_config
 version_added: "2.4"
-author: "QijunPan (@CloudEngine-Ansible)"
+author: "QijunPan (@QijunPan)"
 short_description: Manage Huawei CloudEngine configuration sections.
 description:
   - Huawei CloudEngine configurations use a simple block indent file syntax
@@ -41,16 +39,12 @@ options:
         in the device current-configuration.  Be sure to note the configuration
         command syntax as some commands are automatically modified by the
         device config parser.
-    required: false
-    default: null
   parents:
     description:
-      - The ordered set of parents that uniquely identify the section
+      - The ordered set of parents that uniquely identify the section or hierarchy
         the commands should be checked against.  If the parents argument
         is omitted, the commands are checked against the set of top
         level or global commands.
-    required: false
-    default: null
   src:
     description:
       - The I(src) argument provides a path to the configuration file
@@ -59,8 +53,6 @@ options:
         or relative to the root of the implemented role or playbook.
         This argument is mutually exclusive with the I(lines) and
         I(parents) arguments.
-    required: false
-    default: null
   before:
     description:
       - The ordered set of commands to push on to the command stack if
@@ -68,16 +60,12 @@ options:
         the opportunity to perform configuration commands prior to pushing
         any changes without affecting how the set of commands are matched
         against the system.
-    required: false
-    default: null
   after:
     description:
       - The ordered set of commands to append to the end of the command
         stack if a change needs to be made.  Just like with I(before) this
         allows the playbook designer to append a set of commands to be
         executed after the command set.
-    required: false
-    default: null
   match:
     description:
       - Instructs the module on the way to perform the matching of
@@ -88,7 +76,6 @@ options:
         must be an equal match.  Finally, if match is set to I(none), the
         module will not attempt to compare the source configuration with
         the current-configuration on the remote device.
-    required: false
     default: line
     choices: ['line', 'strict', 'exact', 'none']
   replace:
@@ -99,19 +86,17 @@ options:
         mode.  If the replace argument is set to I(block) then the entire
         command block is pushed to the device in configuration mode if any
         line is not correct.
-    required: false
     default: line
     choices: ['line', 'block']
   backup:
     description:
       - This argument will cause the module to create a full backup of
         the current C(current-configuration) from the remote device before any
-        changes are made.  The backup file is written to the C(backup)
-        folder in the playbook root directory.  If the directory does not
-        exist, it is created.
-    required: false
+        changes are made. If the C(backup_options) value is not given,
+        the backup file is written to the C(backup) folder in the playbook
+        root directory. If the directory does not exist, it is created.
     type: bool
-    default: false
+    default: 'no'
   config:
     description:
       - The module, by default, will connect to the remote device and
@@ -121,8 +106,6 @@ options:
         every task in a playbook.  The I(config) argument allows the
         implementer to pass in the configuration to use as the base
         config for comparison.
-    required: false
-    default: null
   defaults:
     description:
       - The I(defaults) argument will influence how the current-configuration
@@ -130,9 +113,8 @@ options:
         the command used to collect the current-configuration is append with
         the all keyword.  When the value is set to false, the command
         is issued without the all keyword.
-    required: false
     type: bool
-    default: false
+    default: 'no'
   save:
     description:
       - The C(save) argument instructs the module to save the
@@ -141,9 +123,30 @@ options:
         no changes are made, the configuration is still saved to the
         startup config.  This option will always cause the module to
         return changed.
-    required: false
     type: bool
-    default: false
+    default: 'no'
+  backup_options:
+    description:
+      - This is a dict object containing configurable options related to backup file path.
+        The value of this option is read only when C(backup) is set to I(yes), if C(backup) is set
+        to I(no) this option will be silently ignored.
+    suboptions:
+      filename:
+        description:
+          - The filename to be used to store the backup configuration. If the the filename
+            is not given it will be generated based on the hostname, current time and date
+            in format defined by <hostname>_config.<current-date>@<current-time>
+      dir_path:
+        description:
+          - This option provides the path ending with directory name in which the backup
+            configuration file will be stored. If the directory does not exist it will be first
+            created and the filename is either the value of C(filename) or default filename
+            as described in C(filename) options description. If the path value is not given
+            in that case a I(backup) directory will be created in the current working directory
+            and backup configuration will be copied in C(filename) within I(backup) directory.
+        type: path
+    type: dict
+    version_added: "2.8"
 """
 
 EXAMPLES = """
@@ -193,6 +196,15 @@ EXAMPLES = """
       before: undo acl 2000
       replace: block
       provider: "{{ cli }}"
+
+  - name: configurable backup path
+    ce_config:
+      lines: sysname {{ inventory_hostname }}
+      provider: "{{ cli }}"
+      backup: yes
+      backup_options:
+        filename: backup.cfg
+        dir_path: /home/user
 """
 
 RETURN = """
@@ -204,18 +216,66 @@ updates:
 backup_path:
   description: The full path to the backup file
   returned: when backup is yes
-  type: string
+  type: str
   sample: /playbooks/ansible/backup/ce_config.2016-07-16@22:28:34
 """
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.netcfg import NetworkConfig, dumps
-from ansible.module_utils.ce import get_config, load_config, run_commands
-from ansible.module_utils.ce import ce_argument_spec
-from ansible.module_utils.ce import check_args as ce_check_args
+from ansible.module_utils.network.common.config import NetworkConfig as _NetworkConfig
+from ansible.module_utils.network.common.config import dumps, ConfigLine, ignore_line
+from ansible.module_utils.network.cloudengine.ce import get_config, run_commands, exec_command, cli_err_msg
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec, load_config
+from ansible.module_utils.network.cloudengine.ce import check_args as ce_check_args
+import re
 
 
 def check_args(module, warnings):
     ce_check_args(module, warnings)
+
+
+def _load_config(module, config):
+    """Sends configuration commands to the remote device
+    """
+    rc, out, err = exec_command(module, 'mmi-mode enable')
+    if rc != 0:
+        module.fail_json(msg='unable to set mmi-mode enable', output=err)
+    rc, out, err = exec_command(module, 'system-view immediately')
+    if rc != 0:
+        module.fail_json(msg='unable to enter system-view', output=err)
+
+    for index, cmd in enumerate(config):
+        rc, out, err = exec_command(module, cmd)
+        if rc != 0:
+            print_msg = cli_err_msg(cmd.strip(), err)
+            exec_command(module, "quit")
+            rc, out, err = exec_command(module, cmd)
+            if rc != 0:
+                print_msg1 = cli_err_msg(cmd.strip(), err)
+                if not re.findall(r"unrecognized command found", print_msg1):
+                    print_msg = print_msg1
+                exec_command(module, "return")
+                exec_command(module, "system-view immediately")
+                rc, out, err = exec_command(module, cmd)
+                if rc != 0:
+                    print_msg2 = cli_err_msg(cmd.strip(), err)
+                    if not re.findall(r"unrecognized command found", print_msg2):
+                        print_msg = print_msg2
+                    module.fail_json(msg=print_msg)
+
+    exec_command(module, 'return')
+
+
+def conversion_src(module):
+    src_list = module.params['src'].split('\n')
+    src_list_organize = []
+    if src_list[0].strip() == '#':
+        src_list.pop(0)
+    for per_config in src_list:
+        if per_config.strip() == '#':
+            src_list_organize.append('quit')
+        else:
+            src_list_organize.append(per_config)
+    src_str = '\n'.join(src_list_organize)
+    return src_str
 
 
 def get_running_config(module):
@@ -231,7 +291,8 @@ def get_running_config(module):
 def get_candidate(module):
     candidate = NetworkConfig(indent=1)
     if module.params['src']:
-        candidate.load(module.params['src'])
+        config = conversion_src(module)
+        candidate.load(config)
     elif module.params['lines']:
         parents = module.params['parents'] or list()
         candidate.add(module.params['lines'], parents=parents)
@@ -261,18 +322,85 @@ def run(module, result):
             if module.params['after']:
                 commands.extend(module.params['after'])
 
-        result['commands'] = commands
-        result['updates'] = commands
+        command_display = []
+        for per_command in commands:
+            if per_command.strip() not in ['quit', 'return', 'system-view']:
+                command_display.append(per_command)
+
+        result['commands'] = command_display
+        result['updates'] = command_display
 
         if not module.check_mode:
-            load_config(module, commands)
+            if module.params['parents'] is not None:
+                load_config(module, commands)
+            else:
+                _load_config(module, commands)
 
         result['changed'] = True
+
+
+class NetworkConfig(_NetworkConfig):
+
+    def add(self, lines, parents=None):
+        ancestors = list()
+        offset = 0
+        obj = None
+
+        # global config command
+        if not parents:
+            for line in lines:
+                # handle ignore lines
+                if ignore_line(line):
+                    continue
+
+                item = ConfigLine(line)
+                item.raw = line
+                self.items.append(item)
+
+        else:
+            for index, p in enumerate(parents):
+                try:
+                    i = index + 1
+                    obj = self.get_block(parents[:i])[0]
+                    ancestors.append(obj)
+
+                except ValueError:
+                    # add parent to config
+                    offset = index * self._indent
+                    obj = ConfigLine(p)
+                    obj.raw = p.rjust(len(p) + offset)
+                    if ancestors:
+                        obj._parents = list(ancestors)
+                        ancestors[-1]._children.append(obj)
+                    self.items.append(obj)
+                    ancestors.append(obj)
+
+            # add child objects
+            for line in lines:
+                # handle ignore lines
+                if ignore_line(line):
+                    continue
+
+                # check if child already exists
+                for child in ancestors[-1]._children:
+                    if child.text == line:
+                        break
+                else:
+                    offset = len(parents) * self._indent
+                    item = ConfigLine(line)
+                    item.raw = line.rjust(len(line) + offset)
+                    item._parents = ancestors
+                    ancestors[-1]._children.append(item)
+                    self.items.append(item)
 
 
 def main():
     """ main entry point for module execution
     """
+    backup_spec = dict(
+        filename=dict(),
+        dir_path=dict(type='path')
+    )
     argument_spec = dict(
         src=dict(type='path'),
 
@@ -288,12 +416,14 @@ def main():
         defaults=dict(type='bool', default=False),
 
         backup=dict(type='bool', default=False),
+        backup_options=dict(type='dict', options=backup_spec),
         save=dict(type='bool', default=False),
     )
 
     argument_spec.update(ce_argument_spec)
 
-    mutually_exclusive = [('lines', 'src')]
+    mutually_exclusive = [('lines', 'src'),
+                          ('parents', 'src')]
 
     required_if = [('match', 'strict', ['lines']),
                    ('match', 'exact', ['lines']),

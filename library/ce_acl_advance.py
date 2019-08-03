@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,7 +28,7 @@ short_description: Manages advanced ACL configuration on HUAWEI CloudEngine swit
 description:
     - Manages advanced ACL configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     state:
         description:
@@ -47,159 +47,107 @@ options:
         description:
             - ACL number.
               The value is an integer ranging from 3000 to 3999.
-        required: false
-        default: null
     acl_step:
         description:
             - ACL step.
               The value is an integer ranging from 1 to 20. The default value is 5.
-        required: false
-        default: null
     acl_description:
         description:
             - ACL description.
               The value is a string of 1 to 127 characters.
-        required: false
-        default: null
     rule_name:
         description:
             - Name of a basic ACL rule.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     rule_id:
         description:
             - ID of a basic ACL rule in configuration mode.
               The value is an integer ranging from 0 to 4294967294.
-        required: false
-        default: null
     rule_action:
         description:
             - Matching mode of basic ACL rules.
-        required: false
-        default: null
         choices: ['permit','deny']
     protocol:
         description:
             - Protocol type.
-        required: false
-        default: null
         choices: ['ip', 'icmp', 'igmp', 'ipinip', 'tcp', 'udp', 'gre', 'ospf']
     source_ip:
         description:
             - Source IP address.
               The value is a string of 0 to 255 characters.The default value is 0.0.0.0.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     src_mask:
         description:
             - Source IP address mask.
               The value is an integer ranging from 1 to 32.
-        required: false
-        default: null
     src_pool_name:
         description:
             - Name of a source pool.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     dest_ip:
         description:
             - Destination IP address.
               The value is a string of 0 to 255 characters.The default value is 0.0.0.0.
               The value is in dotted decimal notation.
-        required: false
-        default: null
     dest_mask:
         description:
             - Destination IP address mask.
               The value is an integer ranging from 1 to 32.
-        required: false
-        default: null
     dest_pool_name:
         description:
             - Name of a destination pool.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     src_port_op:
         description:
             - Range type of the source port.
-        required: false
-        default: null
         choices: ['lt','eq', 'gt', 'range']
     src_port_begin:
         description:
             - Start port number of the source port.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     src_port_end:
         description:
             - End port number of the source port.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     src_port_pool_name:
         description:
             - Name of a source port pool.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     dest_port_op:
         description:
             - Range type of the destination port.
-        required: false
-        default: null
         choices: ['lt','eq', 'gt', 'range']
     dest_port_begin:
         description:
             - Start port number of the destination port.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     dest_port_end:
         description:
             - End port number of the destination port.
               The value is an integer ranging from 0 to 65535.
-        required: false
-        default: null
     dest_port_pool_name:
         description:
             - Name of a destination port pool.
               The value is a string of 1 to 32 characters.
-        required: false
-        default: null
     frag_type:
         description:
             - Type of packet fragmentation.
-        required: false
-        default: null
         choices: ['fragment', 'clear_fragment']
     precedence:
         description:
             - Data packets can be filtered based on the priority field.
               The value is an integer ranging from 0 to 7.
-        required: false
-        default: null
     tos:
         description:
             - ToS value on which data packet filtering is based.
               The value is an integer ranging from 0 to 15.
-        required: false
-        default: null
     dscp:
         description:
             - Differentiated Services Code Point.
               The value is an integer ranging from 0 to 63.
-        required: false
-        default: null
     icmp_name:
         description:
             - ICMP name.
-        required: false
-        default: null
         choices: ['unconfiged', 'echo', 'echo-reply', 'fragmentneed-DFset', 'host-redirect',
                   'host-tos-redirect', 'host-unreachable', 'information-reply', 'information-request',
                   'net-redirect', 'net-tos-redirect', 'net-unreachable', 'parameter-problem',
@@ -210,67 +158,48 @@ options:
         description:
             - ICMP type. This parameter is available only when the packet protocol is ICMP.
               The value is an integer ranging from 0 to 255.
-        required: false
-        default: null
     icmp_code:
         description:
             - ICMP message code. Data packets can be filtered based on the ICMP message code.
               The value is an integer ranging from 0 to 255.
-        required: false
-        default: null
     ttl_expired:
         description:
             - Whether TTL Expired is matched, with the TTL value of 1.
-        required: false
-        default: false
-        choices: ['true', 'false']
+        type: bool
+        default: 'no'
     vrf_name:
         description:
             - VPN instance name.
               The value is a string of 1 to 31 characters.The default value is _public_.
-        required: false
-        default: null
     syn_flag:
         description:
             - TCP flag value.
               The value is an integer ranging from 0 to 63.
-        required: false
-        default: null
     tcp_flag_mask:
         description:
             - TCP flag mask value.
               The value is an integer ranging from 0 to 63.
-        required: false
-        default: null
     established:
         description:
             - Match established connections.
-        required: false
-        default: false
-        choices: ['true', 'false']
+        type: bool
+        default: 'no'
     time_range:
         description:
             - Name of a time range in which an ACL rule takes effect.
-        required: false
-        default: null
     rule_description:
         description:
             - Description about an ACL rule.
-        required: false
-        default: null
     igmp_type:
         description:
             - Internet Group Management Protocol.
-        required: false
-        default: null
         choices: ['host-query', 'mrouter-adver', 'mrouter-solic', 'mrouter-termi', 'mtrace-resp', 'mtrace-route',
                   'v1host-report', 'v2host-report', 'v2leave-group', 'v3host-report']
     log_flag:
         description:
             - Flag of logging matched data packets.
-        required: false
-        default: false
-        choices: ['true', 'false']
+        type: bool
+        default: 'no'
 '''
 
 EXAMPLES = '''
@@ -291,40 +220,40 @@ EXAMPLES = '''
 
   - name: "Config ACL"
     ce_acl_advance:
-      state:  present
-      acl_name:  3200
+      state: present
+      acl_name: 3200
       provider: "{{ cli }}"
 
   - name: "Undo ACL"
     ce_acl_advance:
-      state:  delete_acl
-      acl_name:  3200
+      state: delete_acl
+      acl_name: 3200
       provider: "{{ cli }}"
 
   - name: "Config ACL advance rule"
     ce_acl_advance:
-      state:  present
-      acl_name:  test
-      rule_name:  test_rule
-      rule_id:  111
-      rule_action:  permit
-      protocol:  tcp
-      source_ip:  10.10.10.10
-      src_mask:  24
-      frag_type:  fragment
+      state: present
+      acl_name: test
+      rule_name: test_rule
+      rule_id: 111
+      rule_action: permit
+      protocol: tcp
+      source_ip: 10.10.10.10
+      src_mask: 24
+      frag_type: fragment
       provider: "{{ cli }}"
 
   - name: "Undo ACL advance rule"
     ce_acl_advance:
-      state:  absent
-      acl_name:  test
-      rule_name:  test_rule
-      rule_id:  111
-      rule_action:  permit
-      protocol:  tcp
-      source_ip:  10.10.10.10
-      src_mask:  24
-      frag_type:  fragment
+      state: absent
+      acl_name: test
+      rule_name: test_rule
+      rule_id: 111
+      rule_action: permit
+      protocol: tcp
+      source_ip: 10.10.10.10
+      src_mask: 24
+      frag_type: fragment
       provider: "{{ cli }}"
 '''
 
@@ -332,7 +261,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -356,11 +285,9 @@ updates:
     sample: ["undo acl name test"]
 '''
 
-import socket
-import sys
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec, check_ip_addr
 
 
 # get acl
@@ -484,25 +411,6 @@ IGMP_TYPE_NUM = {"host-query": "17",
                  "v2host-report": "22",
                  "v2leave-group": "23",
                  "v3host-report": "34"}
-
-
-def check_ip_addr(ipaddr):
-    """ check ip address, Supports IPv4 and IPv6 """
-
-    if not ipaddr or '\x00' in ipaddr:
-        return False
-
-    try:
-        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
 
 
 def get_wildcard_mask(mask):
@@ -694,7 +602,7 @@ class AdvanceAcl(object):
 
             if self.acl_type:
                 conf_str += "<aclType></aclType>"
-            if self.acl_num:
+            if self.acl_num or self.acl_name.isdigit():
                 conf_str += "<aclNumber></aclNumber>"
             if self.acl_step:
                 conf_str += "<aclStep></aclStep>"
@@ -716,7 +624,7 @@ class AdvanceAcl(object):
 
                 # parse acl
                 acl_info = root.findall(
-                    "data/acl/aclGroups/aclGroup")
+                    "acl/aclGroups/aclGroup")
                 if acl_info:
                     for tmp in acl_info:
                         tmp_dict = dict()
@@ -727,22 +635,42 @@ class AdvanceAcl(object):
                         self.cur_acl_cfg["acl_info"].append(tmp_dict)
 
                 if self.cur_acl_cfg["acl_info"]:
+                    find_list = list()
                     for tmp in self.cur_acl_cfg["acl_info"]:
-                        find_flag = True
+                        cur_cfg_dict = dict()
+                        exist_cfg_dict = dict()
 
-                        if self.acl_name and tmp.get("aclNumOrName") != self.acl_name:
-                            find_flag = False
-                        if self.acl_type and tmp.get("aclType") != self.acl_type:
-                            find_flag = False
-                        if self.acl_num and tmp.get("aclNumber") != self.acl_num:
-                            find_flag = False
-                        if self.acl_step and tmp.get("aclStep") != self.acl_step:
-                            find_flag = False
-                        if self.acl_description and tmp.get("aclDescription") != self.acl_description:
-                            find_flag = False
+                        if self.acl_name:
+                            if self.acl_name.isdigit() and tmp.get("aclNumber"):
+                                cur_cfg_dict["aclNumber"] = self.acl_name
+                                exist_cfg_dict["aclNumber"] = tmp.get("aclNumber")
+                            else:
+                                cur_cfg_dict["aclNumOrName"] = self.acl_name
+                                exist_cfg_dict["aclNumOrName"] = tmp.get("aclNumOrName")
+                        if self.acl_type:
+                            cur_cfg_dict["aclType"] = self.acl_type
+                            exist_cfg_dict["aclType"] = tmp.get("aclType")
+                        if self.acl_num:
+                            cur_cfg_dict["aclNumber"] = self.acl_num
+                            exist_cfg_dict["aclNumber"] = tmp.get("aclNumber")
+                        if self.acl_step:
+                            cur_cfg_dict["aclStep"] = self.acl_step
+                            exist_cfg_dict["aclStep"] = tmp.get("aclStep")
+                        if self.acl_description:
+                            cur_cfg_dict["aclDescription"] = self.acl_description
+                            exist_cfg_dict["aclDescription"] = tmp.get("aclDescription")
 
-                        if find_flag:
+                        if cur_cfg_dict == exist_cfg_dict:
+                            find_bool = True
+                        else:
+                            find_bool = False
+                        find_list.append(find_bool)
+                    for mem in find_list:
+                        if mem:
+                            find_flag = True
                             break
+                        else:
+                            find_flag = False
                 else:
                     find_flag = False
 
@@ -1093,7 +1021,7 @@ class AdvanceAcl(object):
 
                     # parse advance rule
                     adv_rule_info = root.findall(
-                        "data/acl/aclGroups/aclGroup/aclRuleAdv4s/aclRuleAdv4")
+                        "acl/aclGroups/aclGroup/aclRuleAdv4s/aclRuleAdv4")
                     if adv_rule_info:
                         for tmp in adv_rule_info:
                             tmp_dict = dict()

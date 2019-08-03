@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = """
 ---
@@ -27,52 +27,39 @@ version_added: "2.4"
 short_description: Manages VXLAN virtual access point on HUAWEI CloudEngine Devices.
 description:
     - Manages VXLAN Virtual access point on HUAWEI CloudEngine Devices.
-author: QijunPan (@CloudEngine-Ansible)
+author: QijunPan (@QijunPan)
 options:
     bridge_domain_id:
         description:
             - Specifies a bridge domain ID.
               The value is an integer ranging from 1 to 16777215.
-        required: false
-        default: null
     bind_vlan_id:
         description:
             - Specifies the VLAN binding to a BD(Bridge Domain).
               The value is an integer ranging ranging from 1 to 4094.
-        required: false
-        default: null
     l2_sub_interface:
         description:
             - Specifies an Sub-Interface full name, i.e. "10GE1/0/41.1".
               The value is a string of 1 to 63 case-insensitive characters, spaces supported.
-        required: false
-        default: null
     encapsulation:
         description:
             - Specifies an encapsulation type of packets allowed to pass through a Layer 2 sub-interface.
         choices: ['dot1q', 'default', 'untag', 'qinq', 'none']
-        required: false
-        default: null
     ce_vid:
         description:
             - When I(encapsulation) is 'dot1q', specifies a VLAN ID in the outer VLAN tag.
               When I(encapsulation) is 'qinq', specifies an outer VLAN ID for
               double-tagged packets to be received by a Layer 2 sub-interface.
               The value is an integer ranging from 1 to 4094.
-        required: false
-        default: null
     pe_vid:
         description:
             - When I(encapsulation) is 'qinq', specifies an inner VLAN ID for
               double-tagged packets to be received by a Layer 2 sub-interface.
               The value is an integer ranging from 1 to 4094.
-        required: false
-        default: null
     state:
         description:
             - Determines whether the config should be present or not
               on the device.
-        required: false
         default: present
         choices: ['present', 'absent']
 """
@@ -138,13 +125,13 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_BD_VAP = """
     <filter type="subtree">
@@ -464,9 +451,6 @@ class VxlanVap(object):
         conf_str = CE_NC_GET_BD_VAP % self.bridge_domain_id
         xml_str = get_nc_config(self.module, conf_str)
 
-        if "<data/>" in xml_str:
-            return vap_info
-
         xml_str = xml_str.replace('\r', '').replace('\n', '').\
             replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
             replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
@@ -475,8 +459,7 @@ class VxlanVap(object):
         vap_info["bdId"] = self.bridge_domain_id
         root = ElementTree.fromstring(xml_str)
         vap_info["vlanList"] = ""
-        vap_vlan = root.find("data/evc/bds/bd/bdBindVlan")
-        vap_info["vlanList"] = ""
+        vap_vlan = root.find("evc/bds/bd/bdBindVlan")
         if vap_vlan:
             for ele in vap_vlan:
                 if ele.tag == "vlanList":
@@ -484,7 +467,7 @@ class VxlanVap(object):
 
         # get vap: l2 su-interface
         vap_ifs = root.findall(
-            "data/evc/bds/bd/servicePoints/servicePoint/ifName")
+            "evc/bds/bd/servicePoints/servicePoint/ifName")
         if_list = list()
         if vap_ifs:
             for vap_if in vap_ifs:
@@ -513,7 +496,7 @@ class VxlanVap(object):
 
         # get l2 sub interface encapsulation info
         root = ElementTree.fromstring(xml_str)
-        bds = root.find("data/ethernet/servicePoints/servicePoint")
+        bds = root.find("ethernet/servicePoints/servicePoint")
         if not bds:
             return intf_info
 
@@ -523,7 +506,7 @@ class VxlanVap(object):
 
         if intf_info.get("flowType") == "dot1q":
             ce_vid = root.find(
-                "data/ethernet/servicePoints/servicePoint/flowDot1qs")
+                "ethernet/servicePoints/servicePoint/flowDot1qs")
             intf_info["dot1qVids"] = ""
             if ce_vid:
                 for ele in ce_vid:
@@ -531,7 +514,7 @@ class VxlanVap(object):
                         intf_info["dot1qVids"] = ele.text
         elif intf_info.get("flowType") == "qinq":
             vids = root.find(
-                "data/ethernet/servicePoints/servicePoint/flowQinqs/flowQinq")
+                "ethernet/servicePoints/servicePoint/flowQinqs/flowQinq")
             if vids:
                 for ele in vids:
                     if ele.tag in ["peVlanId", "ceVids"]:
@@ -720,9 +703,6 @@ class VxlanVap(object):
 
     def config_vap_vlan(self):
         """configure a VLAN as a service access point"""
-
-        if not self.vap_info:
-            self.module.fail_json(msg="Error: Bridge domain %s does not exist." % self.bridge_domain_id)
 
         xml_str = ""
         if self.state == "present":

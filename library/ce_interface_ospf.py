@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = """
 ---
@@ -27,7 +27,7 @@ version_added: "2.4"
 short_description: Manages configuration of an OSPF interface instanceon HUAWEI CloudEngine switches.
 description:
     - Manages configuration of an OSPF interface instanceon HUAWEI CloudEngine switches.
-author: QijunPan (@CloudEngine-Ansible)
+author: QijunPan (@QijunPan)
 options:
     interface:
         description:
@@ -48,56 +48,41 @@ options:
         description:
             - The cost associated with this interface.
               Valid values are an integer in the range from 1 to 65535.
-        required: false
-        default: null
     hello_interval:
         description:
             - Time between sending successive hello packets.
               Valid values are an integer in the range from 1 to 65535.
-        required: false
-        default: null
     dead_interval:
         description:
             - Time interval an ospf neighbor waits for a hello
               packet before tearing down adjacencies. Valid values are an
               integer in the range from 1 to 235926000.
-        required: false
-        default: null
     silent_interface:
         description:
             - Setting to true will prevent this interface from receiving
               HELLO packets. Valid values are 'true' and 'false'.
-        required: false
-        default: false
+        type: bool
+        default: 'no'
     auth_mode:
         description:
             - Specifies the authentication type.
-        required: false
         choices: ['none', 'null', 'hmac-sha256', 'md5', 'hmac-md5', 'simple']
-        default: null
     auth_text_simple:
         description:
             - Specifies a password for simple authentication.
               The value is a string of 1 to 8 characters.
-        required: false
-        default: null
     auth_key_id:
         description:
             - Authentication key id when C(auth_mode) is 'hmac-sha256', 'md5' or 'hmac-md5.
               Valid value is an integer is in the range from 1 to 255.
-        required: false
-        default: null
     auth_text_md5:
         description:
             - Specifies a password for MD5, HMAC-MD5, or HMAC-SHA256 authentication.
               The value is a string of 1 to 255 case-sensitive characters, spaces not supported.
-        required: false
-        default: null
     state:
         description:
             - Determines whether the config should be present or not
               on the device.
-        required: false
         default: present
         choices: ['present','absent']
 """
@@ -166,7 +151,7 @@ end_state:
     type: dict
     sample: {"process_id": "1", "area": "0.0.0.100", "interface": "10GE1/0/30",
              "cost": "100", "dead_interval": "40", "hello_interval": "10",
-             "process_id": "6", "silent_interface": "false", "auth_mode": "none"}
+             "silent_interface": "false", "auth_mode": "none"}
 updates:
     description: commands sent to the device
     returned: always
@@ -177,13 +162,13 @@ updates:
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 '''
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, ce_argument_spec
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, ce_argument_spec
 
 CE_NC_GET_OSPF = """
     <filter type="subtree">
@@ -439,7 +424,7 @@ class InterfaceOSPF(object):
 
         # get process base info
         root = ElementTree.fromstring(xml_str)
-        ospfsite = root.find("data/ospfv2/ospfv2comm/ospfSites/ospfSite")
+        ospfsite = root.find("ospfv2/ospfv2comm/ospfSites/ospfSite")
         if not ospfsite:
             self.module.fail_json(msg="Error: ospf process does not exist.")
 
@@ -450,7 +435,7 @@ class InterfaceOSPF(object):
         # get areas info
         ospf_info["areaId"] = ""
         areas = root.find(
-            "data/ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area")
+            "ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area")
         if areas:
             for area in areas:
                 if area.tag == "areaId":
@@ -460,7 +445,7 @@ class InterfaceOSPF(object):
         # get interface info
         ospf_info["interface"] = dict()
         intf = root.find(
-            "data/ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area/interfaces/interface")
+            "ospfv2/ospfv2comm/ospfSites/ospfSite/areas/area/interfaces/interface")
         if intf:
             for attr in intf:
                 if attr.tag in ["ifName", "networkType",

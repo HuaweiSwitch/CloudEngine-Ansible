@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -29,7 +29,7 @@ short_description: Get interface link status on HUAWEI CloudEngine switches.
 description:
     - Get interface link status on HUAWEI CloudEngine switches.
 author:
-    - Zhijin Zhou (@CloudEngine-Ansible)
+    - Zhijin Zhou (@QijunPan)
 notes:
     - Current physical state shows an interface's physical status.
     - Current link state shows an interface's link layer protocol status.
@@ -128,7 +128,7 @@ result:
 
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import ce_argument_spec, get_nc_config
+from ansible.module_utils.network.cloudengine.ce import ce_argument_spec, get_nc_config
 
 CE_NC_GET_PORT_SPEED = """
 <filter type="subtree">
@@ -406,7 +406,7 @@ class LinkStatus(object):
 
         # get link status information
         root = ElementTree.fromstring(xml_str)
-        intfs_info = root.find("data/ifm/interfaces")
+        intfs_info = root.find("ifm/interfaces")
         if not intfs_info:
             return
 
@@ -452,7 +452,7 @@ class LinkStatus(object):
 
         # get link status information
         root = ElementTree.fromstring(xml_str)
-        intf_info = root.find("data/ifm/interfaces/interface")
+        intf_info = root.find("ifm/interfaces/interface")
         if intf_info:
             for eles in intf_info:
                 if eles.tag in ["ifDynamicInfo", "ifStatistics", "ifClearedStat"]:
@@ -508,7 +508,7 @@ class LinkStatus(object):
 
         # get link status information
         root = ElementTree.fromstring(xml_str)
-        port_info = root.find("data/devm/ports/port")
+        port_info = root.find("devm/ports/port")
         if port_info:
             for eles in port_info:
                 if eles.tag == "ethernetPort":

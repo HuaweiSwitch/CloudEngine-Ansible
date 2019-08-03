@@ -16,9 +16,9 @@
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ANSIBLE_METADATA = {'status': ['preview'],
-                    'supported_by': 'community',
-                    'metadata_version': '1.0'}
+ANSIBLE_METADATA = {'metadata_version': '1.1',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
 
 DOCUMENTATION = '''
 ---
@@ -28,78 +28,53 @@ short_description: Manages SNMP target host configuration on HUAWEI CloudEngine 
 description:
     - Manages SNMP target host configurations on HUAWEI CloudEngine switches.
 author:
-    - wangdezhuang (@CloudEngine-Ansible)
+    - wangdezhuang (@QijunPan)
 options:
     version:
         description:
             - Version(s) Supported by SNMP Engine.
-        required: false
-        default: null
         choices: ['none', 'v1', 'v2c', 'v3', 'v1v2c', 'v1v3', 'v2cv3', 'all']
     connect_port:
         description:
             - Udp port used by SNMP agent to connect the Network management.
-        required: false
-        default: null
     host_name:
         description:
             - Unique name to identify target host entry.
-        required: false
-        default: null
     address:
         description:
             - Network Address.
-        required: false
-        default: null
     notify_type:
         description:
             - To configure notify type as trap or inform.
-        required: false
-        default: null
         choices: ['trap','inform']
     vpn_name:
         description:
             - VPN instance Name.
-        required: false
-        default: null
     recv_port:
         description:
             - UDP Port number used by network management to receive alarm messages.
-        required: false
-        default: null
     security_model:
         description:
             - Security Model.
-        required: false
-        default: null
         choices: ['v1','v2c', 'v3']
     security_name:
         description:
             - Security Name.
-        required: false
-        default: null
     security_name_v3:
         description:
             - Security Name V3.
-        required: false
-        default: null
     security_level:
         description:
             - Security level indicating whether to use authentication and encryption.
-        required: false
-        default: null
         choices: ['noAuthNoPriv','authentication', 'privacy']
     is_public_net:
         description:
             - To enable or disable Public Net-manager for target Host.
-        required: false
         default: no_use
         choices: ['no_use','true','false']
     interface_name:
         description:
             - Name of the interface to send the trap message.
-        required: false
-        default: null
 '''
 
 EXAMPLES = '''
@@ -120,19 +95,19 @@ EXAMPLES = '''
 
   - name: "Config SNMP version"
     ce_snmp_target_host:
-      state:  present
-      version:  v2cv3
+      state: present
+      version: v2cv3
       provider: "{{ cli }}"
 
   - name: "Config SNMP target host"
     ce_snmp_target_host:
-      state:  present
-      host_name:  test1
-      address:  1.1.1.1
-      notify_type:  trap
-      vpn_name:  js
-      security_model:  v2c
-      security_name:  wdz
+      state: present
+      host_name: test1
+      address: 1.1.1.1
+      notify_type: trap
+      vpn_name: js
+      security_model: v2c
+      security_name: wdz
       provider: "{{ cli }}"
 '''
 
@@ -140,7 +115,7 @@ RETURN = '''
 changed:
     description: check to see if a change was made on the device
     returned: always
-    type: boolean
+    type: bool
     sample: true
 proposed:
     description: k/v pairs of parameters passed into module
@@ -170,13 +145,10 @@ updates:
     sample: ["snmp-agent target-host host-name test2 trap address udp-domain 10.135.182.158 vpn-instance js params securityname wdz v3 authentication"]
 '''
 
-import sys
-import socket
 from xml.etree import ElementTree
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.ce import get_nc_config, set_nc_config, \
-    ce_argument_spec, get_config, load_config
-
+from ansible.module_utils.network.cloudengine.ce import get_nc_config, set_nc_config, \
+    ce_argument_spec, load_config, check_ip_addr
 
 # get snmp version
 CE_GET_SNMP_VERSION = """
@@ -259,27 +231,31 @@ CE_DELETE_SNMP_TARGET_HOST_TAIL = """
     </config>
 """
 
+# get snmp listen port
+CE_GET_SNMP_PORT = """
+    <filter type="subtree">
+      <snmp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+        <systemCfg>
+          <snmpListenPort></snmpListenPort>
+        </systemCfg>
+      </snmp>
+    </filter>
+"""
+
+# merge snmp listen port
+CE_MERGE_SNMP_PORT = """
+    <config>
+      <snmp xmlns="http://www.huawei.com/netconf/vrp" content-version="1.0" format-version="1.0">
+        <systemCfg operation="merge">
+          <snmpListenPort>%s</snmpListenPort>
+        </systemCfg>
+      </snmp>
+    </config>
+"""
+
+
 INTERFACE_TYPE = ['ethernet', 'eth-trunk', 'tunnel', 'null', 'loopback',
                   'vlanif', '100ge', '40ge', 'mtunnel', '10ge', 'ge', 'meth', 'vbdif', 'nve']
-
-
-def check_ip_addr(ipaddr):
-    """ check_ip_addr, Supports IPv4 and IPv6 """
-
-    if not ipaddr or '\x00' in ipaddr:
-        return False
-
-    try:
-        res = socket.getaddrinfo(ipaddr, 0, socket.AF_UNSPEC,
-                                 socket.SOCK_STREAM,
-                                 0, socket.AI_NUMERICHOST)
-        return bool(res)
-    except socket.gaierror:
-        err = sys.exc_info()[1]
-        if err.args[0] == socket.EAI_NONAME:
-            return False
-        raise
-    return True
 
 
 class SnmpTargetHost(object):
@@ -453,7 +429,7 @@ class SnmpTargetHost(object):
 
                 root = ElementTree.fromstring(xml_str)
                 target_host_info = root.findall(
-                    "data/snmp/targetHosts/targetHost")
+                    "snmp/targetHosts/targetHost")
                 if target_host_info:
                     for tmp in target_host_info:
                         tmp_dict = dict()
@@ -517,7 +493,10 @@ class SnmpTargetHost(object):
                                 same_flag = False
 
                         if "interface-name" in tmp.keys():
-                            if tmp["interface-name"] != self.interface_name:
+                            if tmp.get("interface-name") is not None:
+                                if tmp["interface-name"].lower() != self.interface_name.lower():
+                                    same_flag = False
+                            else:
                                 same_flag = False
 
                         if same_flag:
@@ -556,7 +535,7 @@ class SnmpTargetHost(object):
                 replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
             root = ElementTree.fromstring(xml_str)
-            version_info = root.find("data/snmp/engine")
+            version_info = root.find("snmp/engine")
             if version_info:
                 for site in version_info:
                     if site.tag in ["version"]:
@@ -564,15 +543,24 @@ class SnmpTargetHost(object):
 
         return version
 
-    def cli_get_connect_port(self):
-        """ Get connect port by cli """
+    def xml_get_connect_port(self):
+        """ Get connect port by xml """
+        tmp_cfg = None
+        conf_str = CE_GET_SNMP_PORT
+        recv_xml = self.netconf_get_config(conf_str=conf_str)
+        if "<data/>" in recv_xml:
+            pass
+        else:
+            xml_str = recv_xml.replace('\r', '').replace('\n', '').\
+                replace('xmlns="urn:ietf:params:xml:ns:netconf:base:1.0"', "").\
+                replace('xmlns="http://www.huawei.com/netconf/vrp"', "")
 
-        regular = "| include snmp | include snmp-agent udp-port"
-        flags = list()
-        flags.append(regular)
-        tmp_cfg = get_config(self.module, flags)
+            root = ElementTree.fromstring(xml_str)
+            snmp_port_info = root.findall("snmp/systemCfg/snmpListenPort")
 
-        return tmp_cfg
+            if snmp_port_info:
+                tmp_cfg = snmp_port_info[0].text
+            return tmp_cfg
 
     def get_proposed(self):
         """ Get proposed state """
@@ -616,11 +604,10 @@ class SnmpTargetHost(object):
                 self.existing["version"] = version
 
         if self.connect_port:
-            tmp_cfg = self.cli_get_connect_port()
+            tmp_cfg = self.xml_get_connect_port()
             if tmp_cfg:
-                temp_data = tmp_cfg.split(r"udp-port ")
-                self.cur_cli_cfg["connect port"] = temp_data[1]
-                self.existing["connect port"] = temp_data[1]
+                self.cur_cli_cfg["connect port"] = tmp_cfg
+                self.existing["connect port"] = tmp_cfg
 
         if self.host_name:
             self.existing["target host info"] = self.cur_netconf_cfg[
@@ -635,10 +622,9 @@ class SnmpTargetHost(object):
                 self.end_state["version"] = version
 
         if self.connect_port:
-            tmp_cfg = self.cli_get_connect_port()
+            tmp_cfg = self.xml_get_connect_port()
             if tmp_cfg:
-                temp_data = tmp_cfg.split(r"udp-port ")
-                self.end_state["connect port"] = temp_data[1]
+                self.end_state["connect port"] = tmp_cfg
 
         if self.host_name:
             self.end_state["target host info"] = self.end_netconf_cfg[
@@ -687,8 +673,8 @@ class SnmpTargetHost(object):
             self.cli_load_config(cmds)
             self.changed = True
 
-    def config_connect_port_cli(self):
-        """ Config connect port by cli """
+    def config_connect_port_xml(self):
+        """ Config connect port by xml """
 
         if "connect port" in self.cur_cli_cfg.keys():
             if self.cur_cli_cfg["connect port"] == self.connect_port:
@@ -700,7 +686,8 @@ class SnmpTargetHost(object):
                 cmds.append(cmd)
 
                 self.updates_cmd.append(cmd)
-                self.cli_load_config(cmds)
+                conf_str = CE_MERGE_SNMP_PORT % self.connect_port
+                self.netconf_set_config(conf_str=conf_str)
                 self.changed = True
         else:
             cmd = "snmp-agent udp-port %s" % self.connect_port
@@ -709,7 +696,8 @@ class SnmpTargetHost(object):
             cmds.append(cmd)
 
             self.updates_cmd.append(cmd)
-            self.cli_load_config(cmds)
+            conf_str = CE_MERGE_SNMP_PORT % self.connect_port
+            self.netconf_set_config(conf_str=conf_str)
             self.changed = True
 
     def undo_config_connect_port_cli(self):
@@ -725,7 +713,9 @@ class SnmpTargetHost(object):
                 cmds.append(cmd)
 
                 self.updates_cmd.append(cmd)
-                self.cli_load_config(cmds)
+                connect_port = "161"
+                conf_str = CE_MERGE_SNMP_PORT % connect_port
+                self.netconf_set_config(conf_str=conf_str)
                 self.changed = True
 
     def merge_snmp_target_host(self):
@@ -890,7 +880,7 @@ class SnmpTargetHost(object):
                 if self.version != self.cur_cli_cfg["version"]:
                     self.merge_snmp_version()
             if self.connect_port:
-                self.config_connect_port_cli()
+                self.config_connect_port_xml()
             if self.cur_netconf_cfg["need_cfg"]:
                 self.merge_snmp_target_host()
 
