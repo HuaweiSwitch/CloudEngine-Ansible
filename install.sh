@@ -5,8 +5,8 @@ if [ -z `which pip` ]  ; then
 fi
 
 pip install --upgrade pip
-if [ `ansible --version | head -1 | cut -f2 -d' '|cut -c1-3` != "2.3" ]; then
-   echo "Error: The script only supports ansible 2.3."
+if [ `ansible --version | head -1 | cut -f2 -d' '|cut -c1-3` != "2.7" ]; then
+   echo "Error: The script only supports ansible 2.7."
    exit 1
 fi
 
@@ -51,4 +51,4 @@ if [ -z "$ce_exist" ]; then
     fi
 fi
 
-echo "CloudEngine Ansible 2.3 library installed."
+echo "CloudEngine Ansible 2.7 library installed."
